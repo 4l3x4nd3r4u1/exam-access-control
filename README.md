@@ -84,22 +84,4 @@ cd backend
 php artisan migrate
 ```
 
-## 5. Flujo de Trabajo Git
 
-- `main`: Rama de produccion/entrega oficial.
-- `develop`: Rama de integracion diaria.
-
-No hacer push directo a `main` ni `develop`. Trabajar mediante ramas y Pull Requests hacia `develop`:
-
-```bash
-git checkout develop
-git pull origin develop
-git checkout -b feature/HU-XX-nombre-tarea
-
-# Hacer cambios
-git add .
-git commit -m "feat(HU-XX): descripcion del cambio"
-git push -u origin feature/HU-XX-nombre-tarea
-```
-
-Abrir el Pull Request en GitHub hacia `develop` para revision y ejecucion de pruebas.
