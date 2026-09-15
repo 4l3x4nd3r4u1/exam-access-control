@@ -1,7 +1,7 @@
-import LoginPage from './views/pages/LoginPage';
+import PanelPage from './views/pages/PanelPage';
 
 function App() {
-  return <LoginPage />;
+  return <PanelPage />;
 }
 
 export default App;
