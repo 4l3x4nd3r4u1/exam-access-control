@@ -4,14 +4,56 @@ namespace App\Modules;
 
 use App\DTOs\RawFileData;
 use App\DTOs\ImportSummary;
+use App\DTOs\UserSession;
+use App\Exceptions\InvalidCredentialsException;
 use App\Models\User;
 use App\Models\Student;
 use App\Models\CourseGroup;
 use App\Models\StudentCourseEnrollment;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class CoreDataStorage
 {
+    /**
+     * Authenticates a user by email and password, returning an authenticated UserSession with JWT.
+     *
+     * @param string $email User email
+     * @param string $password Plaintext password
+     * @return UserSession
+     * @throws InvalidCredentialsException
+     */
+    public function authenticate(string $email, string $password): UserSession
+    {
+        $user = User::where('email', strtolower(trim($email)))->first();
+
+        if (!$user) {
+            throw new InvalidCredentialsException('Credenciales incorrectas');
+        }
+
+        if (!Hash::check($password, $user->password)) {
+            throw new InvalidCredentialsException('Credenciales incorrectas');
+        }
+
+        if (!$user->is_active) {
+            throw new InvalidCredentialsException('Usuario inactivo o deshabilitado');
+        }
+
+        $token = JWTAuth::fromUser($user);
+        $ttlMinutes = (int) config('jwt.ttl', 360);
+
+        return new UserSession(
+            userId: (int) $user->id,
+            role: (string) $user->role,
+            fullName: (string) $user->name,
+            email: (string) $user->email,
+            token: $token,
+            isActive: (bool) $user->is_active,
+            tokenType: 'bearer',
+            expiresIn: $ttlMinutes * 60,
+        );
+    }
     /**
      * Mandatory column headers required in the roster file.
      */
