@@ -15,4 +15,3 @@ Route::get('/health', function () {
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/students/import', [StudentRosterController::class, 'import']);
-

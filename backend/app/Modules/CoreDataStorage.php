@@ -54,6 +54,7 @@ class CoreDataStorage
             expiresIn: $ttlMinutes * 60,
         );
     }
+
     /**
      * Mandatory column headers required in the roster file.
      */
