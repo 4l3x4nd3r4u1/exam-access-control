@@ -5,6 +5,8 @@ namespace App\Modules;
 use App\DTOs\RawFileData;
 use App\DTOs\ImportSummary;
 use App\DTOs\UserSession;
+use App\DTOs\UserSummary;
+use App\DTOs\CourseGroupSummary;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\User;
 use App\Models\Student;
@@ -53,6 +55,51 @@ class CoreDataStorage
             tokenType: 'bearer',
             expiresIn: $ttlMinutes * 60,
         );
+    }
+
+    /**
+     * Retrieves all active academic staff members ordered alphabetically by name.
+     *
+     * @return array<UserSummary>
+     */
+    public function getAcademicStaff(): array
+    {
+        $users = User::where('is_active', true)
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return $users->map(fn(User $user) => new UserSummary(
+            userId: (int) $user->id,
+            fullName: (string) $user->name,
+            email: (string) $user->email,
+            role: (string) $user->role,
+            isActive: (bool) $user->is_active,
+        ))->all();
+    }
+
+    /**
+     * Retrieves all course groups assigned to a specific teacher with the enrolled student count.
+     *
+     * @param int $teacherId
+     * @return array<CourseGroupSummary>
+     */
+    public function getTeacherCourses(int $teacherId): array
+    {
+        $courses = CourseGroup::where('teacher_id', $teacherId)
+            ->withCount('enrollments')
+            ->orderBy('subject_code', 'asc')
+            ->orderBy('group_code', 'asc')
+            ->get();
+
+        return $courses->map(fn(CourseGroup $c) => new CourseGroupSummary(
+            courseGroupId: (string) $c->course_group_id,
+            subjectCode: (string) $c->subject_code,
+            subjectName: (string) $c->subject_name,
+            groupCode: (string) $c->group_code,
+            academicTerm: (string) $c->academic_term,
+            totalEnrolled: (int) ($c->enrollments_count ?? 0),
+            teacherId: (int) $c->teacher_id,
+        ))->all();
     }
 
     /**
