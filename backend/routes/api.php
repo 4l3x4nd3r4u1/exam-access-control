@@ -6,6 +6,7 @@ use App\Http\Controllers\StudentRosterController;
 use App\Http\Controllers\TeacherCourseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AcademicUserController;
 
 Route::get('/health', function () {
     return response()->json([
@@ -19,5 +20,6 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/students/import', [StudentRosterController::class, 'import']);
 Route::get('/academic-staff', [AcademicStaffController::class, 'index']);
 Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
+Route::post('/academic-users', [AcademicUserController::class, 'store']);
 
 
