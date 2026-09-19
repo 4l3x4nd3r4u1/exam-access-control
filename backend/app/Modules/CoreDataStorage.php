@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\DTOs\UserRegistrationData;
 use App\DTOs\OperationResult;
-use DateTimeImmutable;
+
 
 class CoreDataStorage
 {
@@ -65,63 +65,62 @@ class CoreDataStorage
     * @param UserRegistrationData $data
     * @return OperationResult
     */
-public function registerAcademicUser(UserRegistrationData $data): OperationResult
-{
-    $email = strtolower(trim($data->email));
+ public function registerAcademicUser(UserRegistrationData $data): OperationResult
+    {
+        $email = strtolower(trim($data->email));
 
-    // Validate institutional email domain
-    if (!str_ends_with($email, '@umss.edu.bo')) {
-        return new OperationResult(
-            esExitoso: false,
-            mensaje: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
-        );
+        // Validate institutional email domain
+        if (!str_ends_with($email, '@umss.edu.bo')) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
+            );
+        }
+
+        // Check if email already exists
+        if (User::where('email', $email)->exists()) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo ya está registrado'
+            );
+        }
+
+        // Convert functional roles to database roles
+        $role = match ($data->role) {
+            'DOCENTE' => 'TEACHER',
+            'AUXILIAR' => 'ASSISTANT',
+            'ADMIN' => 'ADMIN',
+            default => null
+        };
+
+        if ($role === null) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Rol no válido'
+            );
+        }
+
+        try {
+            User::create([
+                'name' => $data->fullName,
+                'email' => $email,
+                'password' => $data->password,
+                'role' => $role,
+                'is_active' => true,
+            ]);
+
+            return new OperationResult(
+                isSuccessful: true,
+                message: 'Usuario registrado correctamente'
+            );
+
+        } catch (\Throwable $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Error al registrar usuario: ' . $e->getMessage()
+            );
+        }
     }
-
-    // Check if email already exists
-    if (User::where('email', $email)->exists()) {
-        return new OperationResult(
-            esExitoso: false,
-            mensaje: 'El correo ya está registrado'
-        );
-    }
-
-    // Convert functional roles to database roles
-    $role = match ($data->rol) {
-        'DOCENTE' => 'TEACHER',
-        'AUXILIAR' => 'ASSISTANT',
-        'ADMIN' => 'ADMIN',
-        default => null
-    };
-
-    if ($role === null) {
-        return new OperationResult(
-            esExitoso: false,
-            mensaje: 'Rol no válido'
-        );
-    }
-
-    try {
-        User::create([
-            'name' => $data->nombreCompleto,
-            'email' => $email,
-            'password' => $data->passwordProvisional,
-            'role' => $role,
-            'is_active' => true,
-        ]);
-
-        return new OperationResult(
-            esExitoso: true,
-            mensaje: 'Usuario registrado correctamente'
-        );
-
-    } catch (\Throwable $e) {
-
-        return new OperationResult(
-            esExitoso: false,
-            mensaje: 'Error al registrar usuario: ' . $e->getMessage()
-        );
-    }
-}
     /**
      * Retrieves all active academic staff members ordered alphabetically by name.
      *

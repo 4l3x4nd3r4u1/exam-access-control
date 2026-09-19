@@ -332,21 +332,21 @@ CSV;
         $this->assertEmpty($courses);
     }
 
-    public function test_register_academic_user_successfully(): void
+ public function test_register_academic_user_successfully(): void
 {
     $data = new UserRegistrationData(
-        nombreCompleto: 'Juan Perez',
+        fullName: 'Juan Perez',
         email: 'juan.perez@umss.edu.bo',
-        passwordProvisional: 'password123',
-        rol: 'DOCENTE'
+        password: 'password123',
+        role: 'DOCENTE'
     );
 
     $result = $this->storage->registerAcademicUser($data);
 
-    $this->assertTrue($result->esExitoso);
+    $this->assertTrue($result->isSuccessful);
     $this->assertEquals(
         'Usuario registrado correctamente',
-        $result->mensaje
+        $result->message
     );
 
     $this->assertDatabaseHas('users', [
@@ -359,19 +359,19 @@ CSV;
 public function test_register_academic_user_rejects_invalid_email_domain(): void
 {
     $data = new UserRegistrationData(
-        nombreCompleto: 'Juan Perez',
+        fullName: 'Juan Perez',
         email: 'juan@gmail.com',
-        passwordProvisional: 'password123',
-        rol: 'DOCENTE'
+        password: 'password123',
+        role: 'DOCENTE'
     );
 
     $result = $this->storage->registerAcademicUser($data);
 
-    $this->assertFalse($result->esExitoso);
+    $this->assertFalse($result->isSuccessful);
 
     $this->assertStringContainsString(
         '@umss.edu.bo',
-        $result->mensaje
+        $result->message
     );
 }
 
@@ -386,18 +386,18 @@ public function test_register_academic_user_rejects_existing_email(): void
     ]);
 
     $data = new UserRegistrationData(
-        nombreCompleto: 'Nuevo Usuario',
+        fullName: 'Nuevo Usuario',
         email: 'existente@umss.edu.bo',
-        passwordProvisional: 'password123',
-        rol: 'DOCENTE'
+        password: 'password123',
+        role: 'DOCENTE'
     );
 
     $result = $this->storage->registerAcademicUser($data);
 
-    $this->assertFalse($result->esExitoso);
+    $this->assertFalse($result->isSuccessful);
     $this->assertEquals(
         'El correo ya está registrado',
-        $result->mensaje
+        $result->message
     );
 }
 

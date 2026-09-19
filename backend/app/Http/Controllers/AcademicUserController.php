@@ -15,24 +15,24 @@ class AcademicUserController extends Controller
         private readonly CoreDataStorage $coreDataStorage
     ) {}
 
-    /**
+        /**
      * Registers a new academic user.
      */
     public function store(RegisterAcademicUserRequest $request): JsonResponse
     {
         $data = new UserRegistrationData(
-            nombreCompleto: $request->input('nombreCompleto'),
+            fullName: $request->input('fullName'),
             email: $request->input('email'),
-            passwordProvisional: $request->input('passwordProvisional'),
-            rol: $request->input('rol')
+            password: $request->input('password'),
+            role: $request->input('role')
         );
 
         $result = $this->coreDataStorage->registerAcademicUser($data);
 
         return response()->json([
-            'success' => $result->esExitoso,
-            'message' => $result->mensaje,
+            'success' => $result->isSuccessful,
+            'message' => $result->message,
             'timestamp' => $result->timestamp,
-        ], $result->esExitoso ? 201 : 400);
+        ], $result->isSuccessful ? 201 : 400);
     }
 }

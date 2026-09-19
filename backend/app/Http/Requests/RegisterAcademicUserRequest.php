@@ -15,7 +15,7 @@ class RegisterAcademicUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombreCompleto' => [
+            'fullName' => [
                 'required',
                 'string',
                 'max:150',
@@ -26,13 +26,13 @@ class RegisterAcademicUserRequest extends FormRequest
                 'email',
             ],
 
-            'passwordProvisional' => [
+            'password' => [
                 'required',
                 'string',
                 'min:8',
             ],
 
-            'rol' => [
+            'role' => [
                 'required',
                 'string',
                 'in:DOCENTE,AUXILIAR,ADMIN',
@@ -43,17 +43,17 @@ class RegisterAcademicUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'nombreCompleto.required' => 'El nombre completo es obligatorio.',
-            'nombreCompleto.string' => 'El nombre debe ser texto.',
+            'fullName.required' => 'El nombre completo es obligatorio.',
+            'fullName.string' => 'El nombre debe ser texto.',
 
             'email.required' => 'El correo es obligatorio.',
             'email.email' => 'El correo no tiene un formato válido.',
 
-            'passwordProvisional.required' => 'La contraseña provisional es obligatoria.',
-            'passwordProvisional.min' => 'La contraseña debe tener mínimo 8 caracteres.',
+            'password.required' => 'La contraseña provisional es obligatoria.',
+            'password.min' => 'La contraseña debe tener mínimo 8 caracteres.',
 
-            'rol.required' => 'El rol es obligatorio.',
-            'rol.in' => 'El rol seleccionado no es válido.',
+            'role.required' => 'El rol es obligatorio.',
+            'role.in' => 'El rol seleccionado no es válido.',
         ];
     }
 }
