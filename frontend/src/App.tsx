@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import logoSvg from './assets/Group 9.svg';
 import importDocSvg from './assets/image 23.svg';
+import { ImportedPlanDetailPage } from './features/imported-plans/ImportedPlanDetailPage';
+import { ImportedPlansPage } from './features/imported-plans/ImportedPlansPage';
 import './App.css';
 
 interface UserSession {
@@ -22,13 +24,36 @@ interface ImportSummaryData {
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
+type AuthenticatedView = 'home' | 'imported-plans' | 'plan-detail';
+
+const readRouteState = (): { view: AuthenticatedView; courseGroupId: string | null } => {
+  const path = window.location.pathname;
+
+  if (path === '/planillas') {
+    return { view: 'imported-plans', courseGroupId: null };
+  }
+
+  if (path.startsWith('/planillas/')) {
+    const encodedId = path.replace('/planillas/', '');
+    return {
+      view: 'plan-detail',
+      courseGroupId: decodeURIComponent(encodedId),
+    };
+  }
+
+  return { view: 'home', courseGroupId: null };
+};
+
 export default function App() {
+  const initialRoute = readRouteState();
   // Authentication State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [session, setSession] = useState<UserSession | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const [activeView, setActiveView] = useState<AuthenticatedView>(initialRoute.view);
+  const [selectedCourseGroupId, setSelectedCourseGroupId] = useState<string | null>(initialRoute.courseGroupId);
 
   // Import State (Admin)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -36,6 +61,17 @@ export default function App() {
   const [importResult, setImportResult] = useState<ImportSummaryData | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const routeState = readRouteState();
+      setActiveView(routeState.view);
+      setSelectedCourseGroupId(routeState.courseGroupId);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Handle Login Submit
   const handleLogin = async (e: React.FormEvent) => {
@@ -73,10 +109,31 @@ export default function App() {
   const handleLogout = () => {
     setSession(null);
     setAuthError(null);
+    setActiveView('home');
+    setSelectedCourseGroupId(null);
     setSelectedFile(null);
     setImportResult(null);
     setImportError(null);
+    window.history.pushState(null, '', '/');
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const navigateHome = () => {
+    setActiveView('home');
+    setSelectedCourseGroupId(null);
+    window.history.pushState(null, '', '/');
+  };
+
+  const navigateImportedPlans = () => {
+    setActiveView('imported-plans');
+    setSelectedCourseGroupId(null);
+    window.history.pushState(null, '', '/planillas');
+  };
+
+  const navigateImportedPlanDetail = (courseGroupId: string) => {
+    setActiveView('plan-detail');
+    setSelectedCourseGroupId(courseGroupId);
+    window.history.pushState(null, '', `/planillas/${encodeURIComponent(courseGroupId)}`);
   };
 
   // Open native file dialog
@@ -276,6 +333,28 @@ export default function App() {
     );
   }
 
+  if (activeView === 'imported-plans') {
+    return (
+      <ImportedPlansPage
+        apiBaseUrl={API_BASE_URL}
+        token={session.token}
+        onBack={navigateHome}
+        onSelectPlan={navigateImportedPlanDetail}
+      />
+    );
+  }
+
+  if (activeView === 'plan-detail' && selectedCourseGroupId) {
+    return (
+      <ImportedPlanDetailPage
+        apiBaseUrl={API_BASE_URL}
+        token={session.token}
+        courseGroupId={selectedCourseGroupId}
+        onBack={navigateImportedPlans}
+      />
+    );
+  }
+
   // admin view
   return (
     <main className="panel-container">
@@ -421,6 +500,14 @@ export default function App() {
           </div>
         )}
       </section>
+
+      <button
+        type="button"
+        className="btn-secondary panel-action-btn"
+        onClick={navigateImportedPlans}
+      >
+        Ver planillas importadas
+      </button>
     </main>
   );
 }

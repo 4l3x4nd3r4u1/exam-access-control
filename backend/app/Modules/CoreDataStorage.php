@@ -4,6 +4,9 @@ namespace App\Modules;
 
 use App\DTOs\RawFileData;
 use App\DTOs\ImportSummary;
+use App\DTOs\ImportedPlanDetail;
+use App\DTOs\ImportedPlanStudent;
+use App\DTOs\ImportedPlanSummary;
 use App\DTOs\UserSession;
 use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
@@ -164,6 +167,90 @@ class CoreDataStorage
             totalEnrolled: (int) ($c->enrollments_count ?? 0),
             teacherId: (int) $c->teacher_id,
         ))->all();
+    }
+
+    /**
+     * Retrieves official rosters imported through course groups, newest first.
+     *
+     * @return array<ImportedPlanSummary>
+     */
+    public function getImportedPlans(): array
+    {
+        $plans = CourseGroup::query()
+            ->select([
+                'course_group_id',
+                'subject_code',
+                'subject_name',
+                'group_code',
+                'academic_term',
+                'teacher_id',
+                'updated_at',
+            ])
+            ->with(['teacher:id,name'])
+            ->withCount('enrollments')
+            ->orderByDesc('updated_at')
+            ->orderBy('subject_code')
+            ->orderBy('group_code')
+            ->get();
+
+        return $plans->map(fn(CourseGroup $plan) => $this->mapImportedPlanSummary($plan))->all();
+    }
+
+    /**
+     * Retrieves an imported roster with enrolled students ordered by name.
+     */
+    public function getImportedPlanDetail(string $courseGroupId): ?ImportedPlanDetail
+    {
+        $plan = CourseGroup::query()
+            ->select([
+                'course_group_id',
+                'subject_code',
+                'subject_name',
+                'group_code',
+                'academic_term',
+                'teacher_id',
+                'updated_at',
+            ])
+            ->with(['teacher:id,name'])
+            ->withCount('enrollments')
+            ->where('course_group_id', $courseGroupId)
+            ->first();
+
+        if ($plan === null) {
+            return null;
+        }
+
+        $students = Student::query()
+            ->select(['students.student_key', 'students.ci', 'students.full_name'])
+            ->join('student_course_enrollments', 'students.student_key', '=', 'student_course_enrollments.student_key')
+            ->where('student_course_enrollments.course_group_id', $courseGroupId)
+            ->orderBy('students.full_name')
+            ->get()
+            ->map(fn(Student $student) => new ImportedPlanStudent(
+                sis: (string) $student->student_key,
+                ci: (string) $student->ci,
+                fullName: (string) $student->full_name,
+            ))
+            ->all();
+
+        return new ImportedPlanDetail(
+            plan: $this->mapImportedPlanSummary($plan),
+            students: $students,
+        );
+    }
+
+    private function mapImportedPlanSummary(CourseGroup $plan): ImportedPlanSummary
+    {
+        return new ImportedPlanSummary(
+            courseGroupId: (string) $plan->course_group_id,
+            subjectCode: (string) $plan->subject_code,
+            subjectName: (string) $plan->subject_name,
+            groupCode: (string) $plan->group_code,
+            academicTerm: (string) $plan->academic_term,
+            teacherName: $plan->teacher?->name,
+            totalEnrolled: (int) ($plan->enrollments_count ?? 0),
+            updatedAt: $plan->updated_at?->toIso8601String() ?? '',
+        );
     }
 
     /**
