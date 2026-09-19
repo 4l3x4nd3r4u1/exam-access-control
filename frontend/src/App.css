@@ -469,10 +469,10 @@
 }
 
 .plans-hero-icon {
-  width: 112px;
-  height: 112px;
+  width: 82px;
+  height: 100px;
   object-fit: contain;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .plans-title {

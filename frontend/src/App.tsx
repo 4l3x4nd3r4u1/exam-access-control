@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import logoSvg from './assets/Group 9.svg';
 import importDocSvg from './assets/image 23.svg';
-import { ImportedPlanDetailPage } from './features/imported-plans/ImportedPlanDetailPage';
-import { ImportedPlansPage } from './features/imported-plans/ImportedPlansPage';
+import { ProcessedRosterDetailPage } from './pages/ProcessedRosterDetailPage';
+import { ProcessedRostersPage } from './pages/ProcessedRostersPage';
 import './App.css';
 
 interface UserSession {
@@ -24,19 +24,19 @@ interface ImportSummaryData {
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
-type AuthenticatedView = 'home' | 'imported-plans' | 'plan-detail';
+type AuthenticatedView = 'home' | 'processed-rosters' | 'processed-roster-detail';
 
 const readRouteState = (): { view: AuthenticatedView; courseGroupId: string | null } => {
   const path = window.location.pathname;
 
   if (path === '/planillas') {
-    return { view: 'imported-plans', courseGroupId: null };
+    return { view: 'processed-rosters', courseGroupId: null };
   }
 
   if (path.startsWith('/planillas/')) {
     const encodedId = path.replace('/planillas/', '');
     return {
-      view: 'plan-detail',
+      view: 'processed-roster-detail',
       courseGroupId: decodeURIComponent(encodedId),
     };
   }
@@ -125,13 +125,13 @@ export default function App() {
   };
 
   const navigateImportedPlans = () => {
-    setActiveView('imported-plans');
+    setActiveView('processed-rosters');
     setSelectedCourseGroupId(null);
     window.history.pushState(null, '', '/planillas');
   };
 
   const navigateImportedPlanDetail = (courseGroupId: string) => {
-    setActiveView('plan-detail');
+    setActiveView('processed-roster-detail');
     setSelectedCourseGroupId(courseGroupId);
     window.history.pushState(null, '', `/planillas/${encodeURIComponent(courseGroupId)}`);
   };
@@ -333,20 +333,20 @@ export default function App() {
     );
   }
 
-  if (activeView === 'imported-plans') {
+  if (activeView === 'processed-rosters') {
     return (
-      <ImportedPlansPage
+      <ProcessedRostersPage
         apiBaseUrl={API_BASE_URL}
         token={session.token}
         onBack={navigateHome}
-        onSelectPlan={navigateImportedPlanDetail}
+        onSelectRoster={navigateImportedPlanDetail}
       />
     );
   }
 
-  if (activeView === 'plan-detail' && selectedCourseGroupId) {
+  if (activeView === 'processed-roster-detail' && selectedCourseGroupId) {
     return (
-      <ImportedPlanDetailPage
+      <ProcessedRosterDetailPage
         apiBaseUrl={API_BASE_URL}
         token={session.token}
         courseGroupId={selectedCourseGroupId}

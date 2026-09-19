@@ -1,34 +1,33 @@
-import importDocSvg from '../../assets/image 23.svg';
-import importedPlansImage from '../../assets/imagen PLAN IMPOR.png';
-import { useImportedPlans } from './hooks';
 import type { ReactNode } from 'react';
-import type { ImportedPlan } from './types';
+import importDocSvg from '../assets/image 23.svg';
+import { useProcessedRosters } from '../hooks/useProcessedRosters';
+import type { ProcessedRoster } from '../types/processedRoster';
 
-interface ImportedPlansPageProps {
+interface ProcessedRostersPageProps {
   apiBaseUrl: string;
   token: string;
   onBack: () => void;
-  onSelectPlan: (courseGroupId: string) => void;
+  onSelectRoster: (courseGroupId: string) => void;
 }
 
-export function ImportedPlansPage({
+export function ProcessedRostersPage({
   apiBaseUrl,
   token,
   onBack,
-  onSelectPlan,
-}: ImportedPlansPageProps) {
-  const { data, error, loading, retry } = useImportedPlans(apiBaseUrl, token);
-  const plans = data?.plans ?? [];
+  onSelectRoster,
+}: ProcessedRostersPageProps) {
+  const { data, error, loading, retry } = useProcessedRosters(apiBaseUrl, token);
+  const rosters = data?.rosters ?? [];
   const total = data?.total ?? 0;
 
   return (
     <main className="plans-container">
       <button type="button" className="back-btn" onClick={onBack} aria-label="Volver">
-        <span aria-hidden="true">←</span>
+        <span aria-hidden="true">{'<'}</span>
       </button>
 
       <header className="plans-hero">
-        <img src={importedPlansImage} alt="" className="plans-hero-icon" aria-hidden="true" />
+        <img src={importDocSvg} alt="" className="plans-hero-icon" aria-hidden="true" />
         <h1 className="plans-title">Planillas importadas</h1>
         <p className="plans-count" aria-live="polite">
           {total} {total === 1 ? 'documento' : 'documentos'}
@@ -45,14 +44,18 @@ export function ImportedPlansPage({
         </StatusMessage>
       )}
 
-      {!loading && !error && plans.length === 0 && (
+      {!loading && !error && rosters.length === 0 && (
         <StatusMessage text="No hay planillas importadas." />
       )}
 
-      {!loading && !error && plans.length > 0 && (
+      {!loading && !error && rosters.length > 0 && (
         <section className="plans-grid" aria-label="Planillas importadas">
-          {plans.map((plan) => (
-            <ImportedPlanCard key={plan.course_group_id} plan={plan} onSelect={onSelectPlan} />
+          {rosters.map((roster) => (
+            <ProcessedRosterCard
+              key={roster.courseGroupId}
+              roster={roster}
+              onSelect={onSelectRoster}
+            />
           ))}
         </section>
       )}
@@ -60,24 +63,24 @@ export function ImportedPlansPage({
   );
 }
 
-function ImportedPlanCard({
-  plan,
+function ProcessedRosterCard({
+  roster,
   onSelect,
 }: {
-  plan: ImportedPlan;
+  roster: ProcessedRoster;
   onSelect: (courseGroupId: string) => void;
 }) {
   return (
     <button
       type="button"
       className="plan-card"
-      onClick={() => onSelect(plan.course_group_id)}
-      aria-label={`Ver planilla ${plan.subject_code}, grupo ${plan.group_code}`}
+      onClick={() => onSelect(roster.courseGroupId)}
+      aria-label={`Ver planilla ${roster.subjectCode}, grupo ${roster.groupCode}`}
     >
       <img src={importDocSvg} alt="" className="plan-card-icon" aria-hidden="true" />
-      <span className="plan-card-code">{plan.subject_code}</span>
-      <span className="plan-card-name">{plan.subject_name}</span>
-      <span className="plan-card-group">Grupo {plan.group_code}</span>
+      <span className="plan-card-code">{roster.subjectCode}</span>
+      <span className="plan-card-name">{roster.subjectName}</span>
+      <span className="plan-card-group">Grupo {roster.groupCode}</span>
     </button>
   );
 }

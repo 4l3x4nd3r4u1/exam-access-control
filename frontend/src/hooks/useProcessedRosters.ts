@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getImportedPlanDetail, getImportedPlans } from './services';
-import type { ImportedPlanDetail, ImportedPlansResponse } from './types';
+import { getProcessedRosterDetail, getProcessedRosters } from '../services/processedRostersService';
+import type { ProcessedRosterDetail, ProcessedRostersResponse } from '../types/processedRoster';
 
 interface AsyncState<T> {
   data: T | null;
@@ -8,8 +8,8 @@ interface AsyncState<T> {
   loading: boolean;
 }
 
-export const useImportedPlans = (apiBaseUrl: string, token: string) => {
-  const [state, setState] = useState<AsyncState<ImportedPlansResponse>>({
+export const useProcessedRosters = (apiBaseUrl: string, token: string) => {
+  const [state, setState] = useState<AsyncState<ProcessedRostersResponse>>({
     data: null,
     error: null,
     loading: true,
@@ -20,7 +20,7 @@ export const useImportedPlans = (apiBaseUrl: string, token: string) => {
 
     setState((current) => ({ ...current, error: null, loading: true }));
 
-    getImportedPlans(apiBaseUrl, token, controller.signal)
+    getProcessedRosters(apiBaseUrl, token, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
@@ -33,7 +33,7 @@ export const useImportedPlans = (apiBaseUrl: string, token: string) => {
   useEffect(() => {
     const controller = new AbortController();
 
-    getImportedPlans(apiBaseUrl, token, controller.signal)
+    getProcessedRosters(apiBaseUrl, token, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
@@ -46,12 +46,12 @@ export const useImportedPlans = (apiBaseUrl: string, token: string) => {
   return { ...state, retry };
 };
 
-export const useImportedPlanDetail = (
+export const useProcessedRosterDetail = (
   apiBaseUrl: string,
   token: string,
   courseGroupId: string,
 ) => {
-  const [state, setState] = useState<AsyncState<ImportedPlanDetail>>({
+  const [state, setState] = useState<AsyncState<ProcessedRosterDetail>>({
     data: null,
     error: null,
     loading: true,
@@ -62,7 +62,7 @@ export const useImportedPlanDetail = (
 
     setState((current) => ({ ...current, error: null, loading: true }));
 
-    getImportedPlanDetail(apiBaseUrl, token, courseGroupId, controller.signal)
+    getProcessedRosterDetail(apiBaseUrl, token, courseGroupId, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
@@ -75,7 +75,7 @@ export const useImportedPlanDetail = (
   useEffect(() => {
     const controller = new AbortController();
 
-    getImportedPlanDetail(apiBaseUrl, token, courseGroupId, controller.signal)
+    getProcessedRosterDetail(apiBaseUrl, token, courseGroupId, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
