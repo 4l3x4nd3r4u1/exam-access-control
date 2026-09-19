@@ -78,6 +78,34 @@ class CoreDataStorage
     }
 
     /**
+     * Registers a new academic staff member in the system (HU-02).
+     *
+     * @param string $name Full name
+     * @param string $email Institutional email
+     * @param string $password Plaintext password
+     * @param string $role Academic role (TEACHER, ADMIN)
+     * @return UserSummary
+     */
+    public function registerAcademicStaff(string $name, string $email, string $password, string $role): UserSummary
+    {
+        $user = User::create([
+            'name' => trim($name),
+            'email' => strtolower(trim($email)),
+            'password' => Hash::make($password),
+            'role' => strtoupper(trim($role)),
+            'is_active' => true,
+        ]);
+
+        return new UserSummary(
+            userId: (int) $user->id,
+            fullName: (string) $user->name,
+            email: (string) $user->email,
+            role: (string) $user->role,
+            isActive: (bool) $user->is_active,
+        );
+    }
+
+    /**
      * Retrieves all course groups assigned to a specific teacher with the enrolled student count.
      *
      * @param int $teacherId
