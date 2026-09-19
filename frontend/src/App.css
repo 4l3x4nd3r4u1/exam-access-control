@@ -182,3 +182,1011 @@
     border-right-color: var(--border);
   }
 }
+
+/* =======================================================
+   ACCESOS RÁPIDOS DE DEMO (LOGIN)
+   ======================================================= */
+.demo-shortcuts-box {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.demo-shortcuts-title {
+  font-size: 12px;
+  color: #888888;
+  font-family: 'SF Pro Text', sans-serif;
+}
+
+.demo-shortcuts-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.demo-btn {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #d0d0d0;
+  background: #f0f0f0;
+  color: #333333;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.demo-btn:hover {
+  background: #e2e2e2;
+}
+
+/* =======================================================
+   CONTENEDOR DE PANTALLA MOBILE (FIGMA IPHONE 402px)
+   ======================================================= */
+.ios-screen-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 16px 10px;
+}
+
+.teacher-courses-screen,
+.admin-screen-container {
+  width: 100%;
+  max-width: 402px;
+  min-height: 874px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* CABECERA */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* =======================================================
+   VISTA DE MATERIAS (FIGMA TEACHER VIEW)
+   ======================================================= */
+.courses-header-section {
+  margin-top: 12px;
+  margin-bottom: 20px;
+}
+
+.courses-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.courses-main-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-style: normal;
+  font-weight: 510;
+  font-size: 44px;
+  line-height: 48px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+}
+
+.btn-import-roster-header {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-import-roster-header:hover {
+  opacity: 0.85;
+}
+
+.teacher-import-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Frame 94: Resumen de métricas de materias */
+.courses-metrics-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.metric-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metric-text {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  line-height: 14px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.metric-counter-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ededed;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Lista de Tarjetas de Materias (Frames 77, 84, 89, 91 de Figma) */
+.courses-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.figma-course-card {
+  width: 100%;
+  background: #ededed;
+  border-radius: 20px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 110px;
+  cursor: default;
+}
+
+.course-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.course-card-badge-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.badge-code {
+  background: #e0e7ff;
+}
+
+.badge-math {
+  background: #f3e8ff;
+}
+
+.course-card-title-box {
+  flex: 1;
+}
+
+.course-subject-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+}
+
+.course-chevron-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #c1c1c1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Footer de la tarjeta de materia (Frame 82) */
+.course-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 12px;
+  padding-left: 66px; /* alinea con el inicio del título */
+}
+
+.course-group-tag {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.course-enrolled-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.status-dot-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.course-term-tag {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.courses-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  gap: 12px;
+  color: #666666;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+}
+
+.spinner-dot {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #000000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =======================================================
+   VISTA DE ADMINISTRACIÓN (PERSONAL ACADÉMICO & PADRÓN)
+   ======================================================= */
+.admin-tabs-nav {
+  display: flex;
+  background: #f0f0f2;
+  border-radius: 12px;
+  padding: 3px;
+  margin: 12px 0 20px;
+  gap: 4px;
+}
+
+.admin-tab-btn {
+  flex: 1;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #666666;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-tab-btn.tab-active {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+.toast-success-banner {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+/* Gráfico Folder de Figma con Gradiente Azul */
+.figma-staff-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.figma-folder-graphic {
+  position: relative;
+  width: 140px;
+  height: 96px;
+  margin: 8px auto 16px;
+}
+
+.folder-back-body {
+  position: absolute;
+  width: 125px;
+  height: 80px;
+  left: 8px;
+  top: 12px;
+  background: linear-gradient(180deg, #5fb6fb -8.53%, #3369f9 44.72%);
+  box-shadow: 0px 20px 30px rgba(64, 126, 244, 0.18);
+  border-radius: 24px;
+}
+
+.folder-back-tab {
+  position: absolute;
+  width: 54px;
+  height: 40px;
+  left: 8px;
+  top: 0;
+  background: #5fb6fb;
+  border-radius: 12px 12px 0 0;
+}
+
+.folder-sheet {
+  position: absolute;
+  width: 110px;
+  height: 65px;
+  left: 15px;
+  top: 8px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.folder-frosted-front {
+  position: absolute;
+  width: 136px;
+  height: 64px;
+  left: 2px;
+  top: 32px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.35) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  box-shadow: 0px 8px 20px rgba(68, 135, 250, 0.15);
+}
+
+/* Título de personal según Figma */
+.figma-staff-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+  text-align: center;
+}
+
+.figma-staff-subtitle {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #555555;
+  margin: 4px 0 16px;
+  text-align: center;
+}
+
+.staff-actions-bar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.btn-create-user {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-create-user:hover {
+  opacity: 0.85;
+}
+
+/* Tabla de Personal de Figma */
+.figma-staff-table-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.figma-table-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.th-rol {
+  width: 80px;
+}
+
+.th-nombre {
+  flex: 1;
+}
+
+.th-accion {
+  width: 50px;
+}
+
+.figma-table-divider {
+  width: 100%;
+  height: 2px;
+  background: #ededed;
+  margin-bottom: 6px;
+}
+
+.figma-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.figma-table-row {
+  display: flex;
+  align-items: center;
+  padding: 7px 8px;
+  min-height: 32px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #000000;
+  letter-spacing: -0.02em;
+  box-sizing: border-box;
+}
+
+.row-alt-bg {
+  background: #ededed;
+  border-radius: 4px;
+}
+
+.td-rol {
+  width: 80px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.td-nombre {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
+}
+
+.td-editar-btn {
+  width: 50px;
+  background: transparent;
+  border: none;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  color: #000000;
+  cursor: pointer;
+  text-align: right;
+  padding: 0;
+  text-decoration: underline;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.td-editar-btn:hover {
+  opacity: 1;
+}
+
+/* =======================================================
+   DASHBOARD DE ADMINISTRACIÓN (FIGMA iPhone 17 - 14)
+   ======================================================= */
+.figma-admin-dashboard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Tarjeta Resumen general de métricas (Frame 96 de Figma) */
+.figma-resumen-card {
+  background: #ededed;
+  border-radius: 20px;
+  padding: 16px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resumen-card-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0 0 4px 0;
+}
+
+.resumen-metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.resumen-metric-row.row-bordered {
+  border-top: 1px solid #d5d5d5;
+  border-bottom: 1px solid #d5d5d5;
+  padding: 9px 0;
+}
+
+.resumen-metric-row.row-bordered-top {
+  border-top: 1px solid #d5d5d5;
+  padding-top: 9px;
+}
+
+.metric-label-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot-purple {
+  background-color: #7a4cc9;
+}
+
+.dot-sky {
+  background-color: #38bdf8;
+}
+
+.dot-orange {
+  background-color: #ffa500;
+}
+
+.dot-magenta {
+  background-color: #f200ff;
+}
+
+.metric-name {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #222222;
+  letter-spacing: -0.01em;
+}
+
+.metric-val {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.01em;
+}
+
+/* Cabecera Frame 95 & Frame 79 de Figma iPhone 17 - 14 */
+.figma-header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.figma-header-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-weight: 510;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+}
+
+.figma-sub-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  margin-bottom: 6px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 16px;
+  color: #000000;
+  letter-spacing: -0.02em;
+}
+
+.figma-meta-role {
+  font-weight: 600;
+  color: #000000;
+}
+
+.figma-meta-dot {
+  font-size: 18px;
+  line-height: 1;
+  color: #555555;
+}
+
+.figma-meta-name {
+  font-weight: 400;
+  color: #333333;
+}
+
+/* Grilla de 2 columnas superiores: Importar planilla & Planillas importadas */
+.admin-two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.admin-action-card {
+  background: #ededed;
+  border-radius: 20px;
+  padding: 20px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.card-static {
+  cursor: default;
+}
+
+.card-icon-container {
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.card-doc-img {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(4px 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.card-action-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: #000000;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-align: center;
+}
+
+/* Módulo inferior de ancho completo: Personal Académico */
+.admin-wide-card {
+  background: #ededed;
+  border-radius: 20px;
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.admin-wide-card:hover {
+  transform: translateY(-2px);
+  background-color: #e5e5e5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.admin-wide-card:focus-visible {
+  box-shadow: 0 0 0 2px #000000;
+}
+
+.card-sub-count {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #666666;
+  margin-top: 4px;
+}
+
+/* Vistas de Detalle (Personal Académico y Planillas) */
+.figma-staff-list-screen {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-sub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 10px;
+  margin-bottom: 6px;
+}
+
+.btn-back-figma {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #000000;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.btn-back-figma:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.btn-add-user-figma {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-add-user-figma:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  opacity: 0.8;
+}
+
+/* =======================================================
+   MODAL DE NUEVO USUARIO (FIGMA RECTANGLE 24 & HU-02)
+   ======================================================= */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3); /* Rectangle 24 de Figma */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-container {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  padding: 24px 22px;
+  box-sizing: border-box;
+  animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: #e5e5ea;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #444444;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.modal-close-btn:hover {
+  background: #d1d1d6;
+}
+
+.modal-description {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #666666;
+  margin-top: 0;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.new-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333333;
+}
+
+.modal-input,
+.modal-select {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #dcdcdc;
+  background: #fafafa;
+  color: #000000;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.modal-input:focus,
+.modal-select:focus {
+  border-color: #000000;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.06);
+}
+
+.input-error {
+  border-color: #ef4444 !important;
+  background: #fff5f5 !important;
+}
+
+.field-hint-error {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+.form-alert-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.btn-cancel {
+  flex: 1;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1px solid #d1d1d6;
+  background: #ffffff;
+  color: #333333;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-cancel:hover {
+  background: #f2f2f7;
+}
+
+.btn-submit {
+  flex: 2;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px;
+  border-radius: 12px;
+  border: none;
+  background: #000000;
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.btn-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
