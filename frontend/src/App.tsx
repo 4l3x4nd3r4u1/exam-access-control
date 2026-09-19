@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import logoSvg from './assets/Group 9.svg';
 import importDocSvg from './assets/image 23.svg';
+import { TeacherSubjectDetailPage } from './features/teacher-subjects/TeacherSubjectDetailPage';
+import { TeacherSubjectsPage } from './features/teacher-subjects/TeacherSubjectsPage';
 import './App.css';
 
 interface UserSession {
@@ -20,24 +22,59 @@ interface ImportSummaryData {
   isSuccessful: boolean;
 }
 
+type AuthenticatedView = 'home' | 'teacher-subjects' | 'teacher-subject-detail';
+
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
+const readRouteState = (): { view: AuthenticatedView; courseGroupId: string | null } => {
+  const path = window.location.pathname;
+
+  if (path === '/teacher/subjects') {
+    return { view: 'teacher-subjects', courseGroupId: null };
+  }
+
+  if (path.startsWith('/teacher/subjects/')) {
+    return {
+      view: 'teacher-subject-detail',
+      courseGroupId: decodeURIComponent(path.replace('/teacher/subjects/', '')),
+    };
+  }
+
+  return { view: 'home', courseGroupId: null };
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
+
 export default function App() {
-  // Authentication State
+  const initialRoute = readRouteState();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [session, setSession] = useState<UserSession | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const [activeView, setActiveView] = useState<AuthenticatedView>(initialRoute.view);
+  const [selectedCourseGroupId, setSelectedCourseGroupId] = useState<string | null>(initialRoute.courseGroupId);
 
-  // Import State (Admin)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [importResult, setImportResult] = useState<ImportSummaryData | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle Login Submit
+  useEffect(() => {
+    const handlePopState = () => {
+      const routeState = readRouteState();
+      setActiveView(routeState.view);
+      setSelectedCourseGroupId(routeState.courseGroupId);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
@@ -62,29 +99,46 @@ export default function App() {
       }
 
       setSession(json.data);
-    } catch (err: any) {
-      setAuthError(err.message || 'Error de conexión con el servidor');
+
+      if (json.data.role === 'TEACHER' && activeView === 'home') {
+        setActiveView('teacher-subjects');
+        window.history.replaceState(null, '', '/teacher/subjects');
+      }
+    } catch (error: unknown) {
+      setAuthError(getErrorMessage(error, 'Error de conexion con el servidor'));
     } finally {
       setAuthLoading(false);
     }
   };
 
-  // Handle Logout
   const handleLogout = () => {
     setSession(null);
     setAuthError(null);
+    setActiveView('home');
+    setSelectedCourseGroupId(null);
     setSelectedFile(null);
     setImportResult(null);
     setImportError(null);
+    window.history.pushState(null, '', '/');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Open native file dialog
+  const navigateTeacherSubjects = () => {
+    setActiveView('teacher-subjects');
+    setSelectedCourseGroupId(null);
+    window.history.pushState(null, '', '/teacher/subjects');
+  };
+
+  const navigateTeacherSubjectDetail = (courseGroupId: string) => {
+    setActiveView('teacher-subject-detail');
+    setSelectedCourseGroupId(courseGroupId);
+    window.history.pushState(null, '', `/teacher/subjects/${encodeURIComponent(courseGroupId)}`);
+  };
+
   const handleTriggerFilePicker = () => {
     fileInputRef.current?.click();
   };
 
-  // File chosen
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -94,13 +148,11 @@ export default function App() {
     }
   };
 
-  // Remove selected file
   const handleRemoveFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Upload CSV to Backend
   const handleUploadRoster = async () => {
     if (!selectedFile) return;
 
@@ -125,16 +177,15 @@ export default function App() {
       if (response.ok && json.data) {
         setImportResult(json.data);
       } else {
-        throw new Error(json.message || 'Error al procesar el padrón');
+        throw new Error(json.message || 'Error al procesar el padron');
       }
-    } catch (err: any) {
-      setImportError(err.message || 'No se pudo conectar con el servidor');
+    } catch (error: unknown) {
+      setImportError(getErrorMessage(error, 'No se pudo conectar con el servidor'));
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Reset to import another file
   const handleResetImport = () => {
     setSelectedFile(null);
     setImportResult(null);
@@ -145,20 +196,16 @@ export default function App() {
   if (!session) {
     return (
       <main className="login-container">
-        {/* Logo */}
         <div className="logo-wrapper">
           <img src={logoSvg} alt="Logo" className="logo-img" />
         </div>
 
-        {/* Título */}
         <h1 className="login-title">
           Sistema de Control de<br />
-          Ingreso a Exámenes
+          Ingreso a Examenes
         </h1>
 
-        {/* Formulario */}
         <form className="login-form" onSubmit={handleLogin}>
-          {/* Input Correo */}
           <div className="input-card">
             <label htmlFor="email-input" className="input-label">
               Correo
@@ -170,7 +217,7 @@ export default function App() {
                 className="text-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="doncente@umss.edu.bo"
+                placeholder="docente@umss.edu.bo"
                 autoComplete="email"
                 required
               />
@@ -182,16 +229,15 @@ export default function App() {
                   title="Limpiar"
                   aria-label="Limpiar correo"
                 >
-                  ✕
+                  x
                 </button>
               )}
             </div>
           </div>
 
-          {/* Input Contraseña */}
           <div className="input-card">
             <label htmlFor="password-input" className="input-label">
-              Contraseña
+              Contrasena
             </label>
             <div className="input-field-wrapper">
               <input
@@ -200,7 +246,7 @@ export default function App() {
                 className="text-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••••••"
+                placeholder="password123"
                 autoComplete="current-password"
                 required
               />
@@ -210,24 +256,22 @@ export default function App() {
                   className="clear-btn"
                   onClick={() => setPassword('')}
                   title="Limpiar"
-                  aria-label="Limpiar contraseña"
+                  aria-label="Limpiar contrasena"
                 >
-                  ✕
+                  x
                 </button>
               )}
             </div>
           </div>
 
-          {/* Botón Empezar */}
           <button
             type="submit"
             className="submit-btn"
             disabled={authLoading || !email || !password}
           >
-            {authLoading ? 'Iniciando sesión...' : 'Empezar'}
+            {authLoading ? 'Iniciando sesion...' : 'Empezar'}
           </button>
 
-          {/* Mensaje de Error (Limpio en rojo, sin emojis) */}
           {authError && (
             <p className="auth-error-text" role="alert">
               {authError}
@@ -238,48 +282,31 @@ export default function App() {
     );
   }
 
-  // teacher view
   if (session.role !== 'ADMIN') {
-    return (
-      <main className="panel-container">
-        <header className="panel-header">
-          <div className="panel-top-row">
-            <h1 className="panel-title">Panel</h1>
-            <button
-              type="button"
-              className="header-icon-btn"
-              onClick={handleLogout}
-              title="Cerrar sesión"
-              aria-label="Cerrar sesión"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
-          </div>
-          <p className="panel-subtitle">
-            Docente &nbsp;•&nbsp; {session.full_name}
-          </p>
-        </header>
+    if (activeView === 'teacher-subject-detail' && selectedCourseGroupId) {
+      return (
+        <TeacherSubjectDetailPage
+          apiBaseUrl={API_BASE_URL}
+          token={session.token}
+          courseGroupId={selectedCourseGroupId}
+          onBack={navigateTeacherSubjects}
+        />
+      );
+    }
 
-        <div className="import-box" style={{ marginTop: '40px' }}>
-          <p style={{ fontSize: '15px', color: '#555', textAlign: 'center', marginBottom: '24px' }}>
-            Bienvenido. El módulo docente estará disponible próximamente.
-          </p>
-          <button type="button" className="submit-btn" onClick={handleLogout}>
-            Cerrar sesión
-          </button>
-        </div>
-      </main>
+    return (
+      <TeacherSubjectsPage
+        apiBaseUrl={API_BASE_URL}
+        token={session.token}
+        teacherName={session.full_name}
+        onLogout={handleLogout}
+        onSelectSubject={navigateTeacherSubjectDetail}
+      />
     );
   }
 
-  // admin view
   return (
     <main className="panel-container">
-      {/* Input nativo oculto para archivo */}
       <input
         type="file"
         ref={fileInputRef}
@@ -288,7 +315,6 @@ export default function App() {
         onChange={handleFileChange}
       />
 
-      {/* Header */}
       <header className="panel-header">
         <div className="panel-top-row">
           <h1 className="panel-title">Panel</h1>
@@ -296,8 +322,8 @@ export default function App() {
             type="button"
             className="header-icon-btn"
             onClick={handleLogout}
-            title="Cerrar sesión"
-            aria-label="Cerrar sesión"
+            title="Cerrar sesion"
+            aria-label="Cerrar sesion"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -307,25 +333,23 @@ export default function App() {
           </button>
         </div>
         <p className="panel-subtitle">
-          Administrador &nbsp;•&nbsp; {session.full_name || 'Administrador del Sistema'}
+          Administrador &nbsp;-&nbsp; {session.full_name || 'Administrador del Sistema'}
         </p>
       </header>
 
-      {/* Tarjeta Única: Importar Padrón */}
-      <section className="import-box" aria-label="Subir padrón de estudiantes">
+      <section className="import-box" aria-label="Subir padron de estudiantes">
         <div className="import-doc-wrapper">
-          <img src={importDocSvg} alt="Padrón" className="import-doc-img" />
+          <img src={importDocSvg} alt="Padron" className="import-doc-img" />
         </div>
 
         <h2 className="import-title">
-          Importar padrón<br />de estudiantes
+          Importar padron<br />de estudiantes
         </h2>
 
         <p className="import-subtitle">
           Carga la planilla oficial en formato CSV para registrar o actualizar a los estudiantes.
         </p>
 
-        {/* ESTADO 1: Sin resultado y sin archivo seleccionado */}
         {!importResult && !selectedFile && (
           <button
             type="button"
@@ -336,7 +360,6 @@ export default function App() {
           </button>
         )}
 
-        {/* ESTADO 2: Con archivo seleccionado listo para subir */}
         {!importResult && selectedFile && (
           <div className="file-upload-action-box">
             <div className="file-badge">
@@ -351,7 +374,7 @@ export default function App() {
                   title="Quitar"
                   aria-label="Quitar archivo"
                 >
-                  ✕
+                  x
                 </button>
               )}
             </div>
@@ -367,20 +390,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Error en importación */}
         {importError && (
           <p className="auth-error-text" style={{ marginTop: '16px' }} role="alert">
             {importError}
           </p>
         )}
 
-        {/* ESTADO 3: Resultado de la importación (Estilo Neutro y Limpio) */}
         {importResult && (
           <div className="result-container">
             <div className="result-status-pill">
               {importResult.isSuccessful
                 ? 'Planilla importada correctamente'
-                : 'Se procesó con observaciones'}
+                : 'Se proceso con observaciones'}
             </div>
 
             <div className="result-stats-card">
@@ -389,7 +410,7 @@ export default function App() {
                 <strong className="stat-value">{importResult.totalProcessed}</strong>
               </div>
               <div className="stat-line">
-                <span className="stat-label">Guardados con éxito</span>
+                <span className="stat-label">Guardados con exito</span>
                 <strong className="stat-value">{importResult.successful}</strong>
               </div>
               <div className="stat-line">
@@ -404,8 +425,8 @@ export default function App() {
                   Observaciones ({importResult.observations.length})
                 </div>
                 <ul className="result-obs-list">
-                  {importResult.observations.map((obs, idx) => (
-                    <li key={idx}>{obs}</li>
+                  {importResult.observations.map((obs) => (
+                    <li key={obs}>{obs}</li>
                   ))}
                 </ul>
               </div>
