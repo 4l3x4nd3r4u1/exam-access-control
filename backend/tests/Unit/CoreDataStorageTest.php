@@ -401,7 +401,7 @@ public function test_register_academic_user_rejects_existing_email(): void
     );
 }
 
-public function test_get_processed_rosters_returns_all_rosters_with_student_count(): void
+    public function test_get_processed_rosters_returns_all_rosters_with_student_count(): void
 {
     $teacher = User::create([
         'name' => 'Walter Sanchez',
@@ -468,7 +468,7 @@ public function test_get_processed_rosters_returns_all_rosters_with_student_coun
     $this->assertEquals(0, $rosters[1]->totalStudents);
 } 
 
-public function test_get_processed_rosters_returns_empty_array_when_no_rosters_exist(): void
+    public function test_get_processed_rosters_returns_empty_array_when_no_rosters_exist(): void
 {
     $rosters = $this->storage->getProcessedRosters();
 

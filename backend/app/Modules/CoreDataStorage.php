@@ -167,27 +167,27 @@ class CoreDataStorage
         ))->all();
     }
     
-/**
- * Retrieves all processed course rosters with the enrolled student count.
- *
- * @return array<ProcessedRosterSummary>
- */
-public function getProcessedRosters(): array
-{
-    $courses = CourseGroup::withCount('enrollments')
-        ->orderBy('subject_code', 'asc')
-        ->orderBy('group_code', 'asc')
-        ->get();
+    /**
+    * Retrieves all processed course rosters with the enrolled student count.
+    *
+    *   @return array<ProcessedRosterSummary>
+    */
+    public function getProcessedRosters(): array
+    {
+        $courses = CourseGroup::withCount('enrollments')
+            ->orderBy('subject_code', 'asc')
+            ->orderBy('group_code', 'asc')
+            ->get();
 
-    return $courses->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
-        courseGroupId: (string) $course->course_group_id,
-        subjectCode: (string) $course->subject_code,
-        subjectName: (string) $course->subject_name,
-        groupCode: (string) $course->group_code,
-        academicTerm: (string) $course->academic_term,
-        totalStudents: (int) ($course->enrollments_count ?? 0),
-    ))->all();
-}
+        return $courses->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
+            courseGroupId: (string) $course->course_group_id,
+            subjectCode: (string) $course->subject_code,
+            subjectName: (string) $course->subject_name,
+            groupCode: (string) $course->group_code,
+            academicTerm: (string) $course->academic_term,
+            totalStudents: (int) ($course->enrollments_count ?? 0),
+        ))->all();
+    }
 
     /**
      * Mandatory column headers required in the roster file.
