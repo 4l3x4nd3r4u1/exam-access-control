@@ -1458,3 +1458,436 @@
   cursor: not-allowed;
 }
 
+/* =======================================================
+   MOCKUPS DOCENTE: DETALLE, LISTA DE ESTUDIANTES Y MODAL
+   ======================================================= */
+
+.figma-course-card-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.figma-course-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+}
+
+/* =======================================================
+   MOCKUP 2: VISTA DETALLE DE MATERIA (COURSE_DETAIL)
+   ======================================================= */
+.course-detail-view,
+.students-roster-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: fadeInCourse 0.2s ease-out;
+}
+
+@keyframes fadeInCourse {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-top-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 26px;
+  margin-top: 4px;
+}
+
+.detail-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #000000;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.detail-back-btn:hover {
+  background: #f0f0f0;
+}
+
+.course-detail-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 34px;
+}
+
+.course-detail-artwork-wrap {
+  margin-bottom: 18px;
+}
+
+.course-detail-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0 0 12px 0;
+  max-width: 310px;
+}
+
+.course-detail-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  color: #111111;
+}
+
+.meta-separator {
+  color: #888888;
+}
+
+.course-action-card {
+  width: 100%;
+  background: #ededed;
+  border-radius: 18px;
+  padding: 14px 18px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.course-action-card:hover {
+  background: #e2e2e2;
+  transform: translateY(-2px);
+}
+
+.action-card-folder-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-folder-icon {
+  width: 46px;
+  height: auto;
+  object-fit: contain;
+}
+
+.action-card-text-box {
+  flex: 1;
+  padding: 0 16px;
+}
+
+.action-card-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #000000;
+  letter-spacing: -0.01em;
+}
+
+.action-card-chevron {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #c1c1c1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* =======================================================
+   MOCKUP 3: ESTUDIANTES INSCRITOS (STUDENTS_LIST)
+   ======================================================= */
+.students-roster-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.students-roster-folder-img {
+  width: 78px;
+  height: auto;
+  margin-bottom: 12px;
+}
+
+.students-roster-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
+  color: #000000;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.roster-table-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.roster-table-header {
+  display: grid;
+  grid-template-columns: 96px 1fr 94px;
+  align-items: center;
+  padding: 8px 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+  border-bottom: 1px solid transparent;
+}
+
+.roster-table-header .roster-col-sis {
+  position: relative;
+}
+
+.roster-table-header .roster-col-sis::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: #bcbcbc;
+}
+
+.roster-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.roster-table-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 94px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #000000;
+  cursor: pointer;
+  background: #ffffff;
+  transition: background 0.12s ease;
+}
+
+.roster-table-row:hover {
+  background: #e5e5e5 !important;
+}
+
+.roster-row-alt {
+  background: #ededed;
+}
+
+.roster-col-sis {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #111111;
+}
+
+.roster-col-nombre {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 6px;
+}
+
+.roster-col-estado {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: 13px;
+}
+
+.student-status-badge {
+  font-size: 13px;
+  color: #000000;
+}
+
+/* =======================================================
+   MOCKUP 4: MODAL EMERGENTE CENTRADO "EDITAR ESTADO"
+   ======================================================= */
+.student-status-modal-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 360px;
+  border-radius: 24px;
+  padding: 24px 20px 22px 20px;
+  box-sizing: border-box;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+  animation: modalScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  margin: auto;
+}
+
+.student-status-modal-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.02em;
+}
+
+.student-status-modal-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-status-info-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+}
+
+.status-info-label {
+  font-weight: 700;
+  color: #000000;
+  width: 88px;
+  flex-shrink: 0;
+}
+
+.status-info-value {
+  color: #111111;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.student-status-select-row {
+  margin-bottom: 16px;
+}
+
+.status-select-wrapper {
+  display: inline-block;
+}
+
+.student-status-dropdown {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #000000;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.student-status-dropdown:focus {
+  border-color: #2563eb;
+}
+
+.status-motive-box {
+  background: #dedede;
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-motive-label {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 10px;
+  color: #555555;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.status-motive-textarea {
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #000000;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.status-motive-textarea::placeholder {
+  color: #777777;
+}
+
+.student-status-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status-modal-cancel-btn {
+  flex: 1;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.status-modal-cancel-btn:hover {
+  opacity: 0.85;
+}
+
+.status-modal-save-btn {
+  flex: 1.4;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.status-modal-save-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.status-modal-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

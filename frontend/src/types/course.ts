@@ -13,3 +13,16 @@ export interface TeacherCoursesResponse {
   message: string;
   data: TeacherCourse[];
 }
+
+export interface EnrolledStudent {
+  studentKey: string;
+  fullName: string;
+  status: 'Habilitado' | 'Inhabilitado';
+  ineligibilityReason?: string;
+}
+
+export interface EnrolledStudentsResponse {
+  success: boolean;
+  message: string;
+  data: EnrolledStudent[];
+}
