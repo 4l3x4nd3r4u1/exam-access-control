@@ -42,11 +42,26 @@ class StudentRosterController extends Controller
                 'successful' => $summary->successful,
                 'skipped' => $summary->skipped,
                 'observations' => $summary->observations,
+                'failedRows' => $summary->failedRows,
+                'metadata' => $summary->metadata,
                 'isSuccessful' => $summary->isSuccessful,
             ],
             'message' => $summary->isSuccessful
-                ? 'Student roster processed successfully.'
+                ? ($summary->skipped > 0 ? 'Nómina procesada con observaciones.' : 'Student roster processed successfully.')
                 : 'Failed to process student roster.',
         ], $summary->isSuccessful ? 200 : 422);
+    }
+
+    /**
+     * Endpoint to download official roster template.
+     */
+    public function template(Request $request): \Illuminate\Http\Response
+    {
+        $content = $this->storage->generateCsvTemplate();
+
+        return response($content, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="plantilla_nomina_estudiantes.csv"',
+        ]);
     }
 }

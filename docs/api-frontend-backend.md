@@ -120,27 +120,95 @@ Formato general de peticiones:
 
 ## 3. Padron y Planillas de Estudiantes
 
+### Descargar Plantilla Oficial (CSV)
+- **Ruta:** `GET /api/courses/roster-template` (o `/api/students/roster-template`)
+- **Respuesta (200 OK):**
+  - Content-Type: `text/csv; charset=UTF-8`
+  - Descarga directa de `plantilla_nomina_estudiantes.csv` con el formato requerido:
+```csv
+Docente: Lic. Juan Carlos Perez Gomez
+Email Docente: juan.perez@umss.edu.bo
+Materia: INF110 - INTRODUCCION A LA PROGRAMACION
+Grupo: 1
+Gestion: 2/2026
+
+Codigo SIS,CI,Nombre Completo
+202001234,7891234,ALVAREZ CLAROS PEDRO
+202005678,6543210,BENITEZ LOPEZ CARMEN
+202109876,8912345,CASTRO ROJAS MARIO
+```
+
 ### Importar Padron Oficial (CSV)
-- **Ruta:** `POST /api/students/import`
+- **Ruta:** `POST /api/courses/import-roster` (o `/api/students/import`)
 - **Content-Type:** `multipart/form-data`
 - **Body Form-Data:**
   - `file`: Archivo binario `.csv`.
-- **Respuesta Exitosa (200 OK):**
+- **Respuesta Exitosa / Con Observaciones (200 OK):**
 ```json
 {
   "success": true,
   "data": {
-    "totalProcessed": 5,
-    "successful": 5,
-    "skipped": 0,
-    "observations": [],
+    "totalProcessed": 3,
+    "successful": 1,
+    "skipped": 2,
+    "observations": [
+      "Row 9: Falta Código SIS del estudiante.",
+      "Row 10: Falta CI del estudiante."
+    ],
+    "metadata": {
+      "teacherName": "Lic. Juan Carlos Perez Gomez",
+      "teacherEmail": "juan.perez@umss.edu.bo",
+      "subjectCode": "INF110",
+      "subjectName": "INTRODUCCION A LA PROGRAMACION",
+      "groupCode": "1",
+      "academicTerm": "2/2026"
+    },
+    "failedRows": [
+      {
+        "rowNumber": 9,
+        "reason": "Falta Código SIS del estudiante.",
+        "data": {
+          "codigo_sis": "",
+          "ci": "6543210",
+          "nombre_completo": "BENITEZ SIN SIS"
+        }
+      },
+      {
+        "rowNumber": 10,
+        "reason": "Falta CI del estudiante.",
+        "data": {
+          "codigo_sis": "202109876",
+          "ci": "",
+          "nombre_completo": "CASTRO SIN CI"
+        }
+      }
+    ],
     "isSuccessful": true
   },
-  "message": "Student roster processed successfully."
+  "message": "Nómina procesada con observaciones."
 }
 ```
+*Nota para el Frontend: Si `skipped > 0`, el frontend puede usar `metadata` y `failedRows` para ofrecer el boton "Descargar filas para corregir (.csv)" construyendo el CSV en el cliente.*
+
 - **Errores:**
-  - `422 Unprocessable Entity`: Formato de archivo o columnas invalidas.
+  - `422 Unprocessable Entity`: Falta de metadatos requeridos o archivo invalido.
+```json
+{
+  "success": false,
+  "data": {
+    "totalProcessed": 0,
+    "successful": 0,
+    "skipped": 0,
+    "observations": [
+      "Faltan metadatos requeridos en el encabezado: Email Docente, Materia, Gestion. Puede descargar la plantilla oficial."
+    ],
+    "failedRows": [],
+    "metadata": null,
+    "isSuccessful": false
+  },
+  "message": "Failed to process student roster."
+}
+```
 
 ### Listar Planillas Procesadas
 - **Ruta:** `GET /api/processed-rosters`
