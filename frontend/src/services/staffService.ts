@@ -1,4 +1,5 @@
-import type { AcademicStaffMember, NewStaffPayload, StaffListResponse, StaffCreateResponse } from '../types/staff';
+import type { AcademicStaffMember, NewStaffPayload, StaffListResponse } from '../types/staff';
+import type { UserRole } from '../types/auth';
 import { apiRequest } from './apiClient';
 
 // Fallback in-memory list seeded with Figma design items (35 usuarios)
