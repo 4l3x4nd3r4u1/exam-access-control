@@ -1202,7 +1202,8 @@
 }
 
 /* Vistas de Detalle (Personal Académico y Planillas) */
-.figma-staff-list-screen {
+.figma-staff-list-screen,
+.figma-import-roster-screen {
   width: 100%;
   display: flex;
   flex-direction: column;

@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { UserSession } from '../types/auth';
 import type { AcademicStaffMember } from '../types/staff';
+import type { ImportSummaryData } from '../types/roster';
 import { staffService } from '../services/staffService';
+import { rosterService } from '../services/rosterService';
 import { NewUserModal } from '../components/NewUserModal';
 import importDocSvg from '../assets/image 23.svg';
 
@@ -10,7 +12,7 @@ interface AdminDashboardViewProps {
   onLogout: () => void;
 }
 
-type AdminScreen = 'MAIN_DASHBOARD' | 'STAFF_LIST';
+type AdminScreen = 'MAIN_DASHBOARD' | 'STAFF_LIST' | 'IMPORT_ROSTER';
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   session,
@@ -20,6 +22,59 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [staffList, setStaffList] = useState<AcademicStaffMember[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Estados para Importar Planilla
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [importResult, setImportResult] = useState<ImportSummaryData | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Abrir selector de archivos nativo
+  const handleTriggerFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Archivo seleccionado
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setImportResult(null);
+      setImportError(null);
+    }
+  };
+
+  // Quitar archivo seleccionado
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Subir planilla CSV al backend
+  const handleUploadRoster = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    setImportError(null);
+
+    try {
+      const result = await rosterService.importRoster(selectedFile, session.token);
+      setImportResult(result);
+    } catch (err: any) {
+      setImportError(err.message || 'No se pudo conectar con el servidor');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Reiniciar para importar otra planilla
+  const handleResetImport = () => {
+    setSelectedFile(null);
+    setImportResult(null);
+    setImportError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +96,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   return (
     <main className="admin-screen-container">
+      {/* Input nativo oculto para archivo */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".csv,text/csv"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
       {/* ============================================================== */}
       {/* PANTALLA 1: DASHBOARD PRINCIPAL AL LOGUEARSE (FIGMA iPhone 17-14) */}
       {/* ============================================================== */}
@@ -134,7 +198,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               {/* Grilla de Acciones de Figma (Importar planilla, Planillas importadas, Personal Académico) */}
               <section className="admin-two-col-grid">
                 {/* Botón: Importar planilla */}
-                <div className="admin-action-card card-static" title="Importar planilla">
+                <div
+                  className="admin-action-card card-interactive"
+                  onClick={() => setCurrentScreen('IMPORT_ROSTER')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && setCurrentScreen('IMPORT_ROSTER')}
+                  title="Importar planilla"
+                >
                   <div className="card-icon-container">
                     <img src={importDocSvg} alt="Importar planilla" className="card-doc-img" />
                   </div>
@@ -267,6 +338,140 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   })}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* PANTALLA 3: IMPORTAR PLANILLA / PADRÓN DE ESTUDIANTES          */}
+          {/* ============================================================== */}
+          {currentScreen === 'IMPORT_ROSTER' && (
+            <div className="figma-import-roster-screen">
+              {/* Barra superior con botón regresar ← */}
+              <div className="screen-sub-header">
+                <button
+                  type="button"
+                  className="btn-back-figma"
+                  onClick={() => {
+                    handleResetImport();
+                    setCurrentScreen('MAIN_DASHBOARD');
+                  }}
+                  aria-label="Regresar al panel principal"
+                  title="Regresar al panel"
+                >
+                  ←
+                </button>
+              </div>
+
+              {/* Tarjeta: Importar Padrón */}
+              <section className="import-box" aria-label="Subir padrón de estudiantes">
+                <div className="import-doc-wrapper">
+                  <img src={importDocSvg} alt="Padrón" className="import-doc-img" />
+                </div>
+
+                <h2 className="import-title">
+                  Importar padrón<br />de estudiantes
+                </h2>
+
+                <p className="import-subtitle">
+                  Carga la planilla oficial en formato CSV para registrar o actualizar a los estudiantes.
+                </p>
+
+                {/* ESTADO 1: Sin resultado y sin archivo seleccionado */}
+                {!importResult && !selectedFile && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleTriggerFilePicker}
+                  >
+                    Seleccionar archivo CSV
+                  </button>
+                )}
+
+                {/* ESTADO 2: Con archivo seleccionado listo para subir */}
+                {!importResult && selectedFile && (
+                  <div className="file-upload-action-box">
+                    <div className="file-badge">
+                      <span className="file-name" title={selectedFile.name}>
+                        {selectedFile.name}
+                      </span>
+                      {!isUploading && (
+                        <button
+                          type="button"
+                          className="file-remove-btn"
+                          onClick={handleRemoveFile}
+                          title="Quitar"
+                          aria-label="Quitar archivo"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={handleUploadRoster}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? 'Procesando planilla...' : 'Importar archivo'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Error en importación */}
+                {importError && (
+                  <p className="auth-error-text" style={{ marginTop: '16px' }} role="alert">
+                    {importError}
+                  </p>
+                )}
+
+                {/* ESTADO 3: Resultado de la importación (Estilo Neutro y Limpio) */}
+                {importResult && (
+                  <div className="result-container">
+                    <div className="result-status-pill">
+                      {importResult.isSuccessful
+                        ? 'Planilla importada correctamente'
+                        : 'Se procesó con observaciones'}
+                    </div>
+
+                    <div className="result-stats-card">
+                      <div className="stat-line">
+                        <span className="stat-label">Total registros</span>
+                        <strong className="stat-value">{importResult.totalProcessed}</strong>
+                      </div>
+                      <div className="stat-line">
+                        <span className="stat-label">Guardados con éxito</span>
+                        <strong className="stat-value">{importResult.successful}</strong>
+                      </div>
+                      <div className="stat-line">
+                        <span className="stat-label">Omitidos</span>
+                        <strong className="stat-value">{importResult.skipped}</strong>
+                      </div>
+                    </div>
+
+                    {importResult.observations && importResult.observations.length > 0 && (
+                      <div className="result-obs-box">
+                        <div className="result-obs-title">
+                          Observaciones ({importResult.observations.length})
+                        </div>
+                        <ul className="result-obs-list">
+                          {importResult.observations.map((obs, idx) => (
+                            <li key={idx}>{obs}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={handleResetImport}
+                    >
+                      Importar otro archivo
+                    </button>
+                  </div>
+                )}
+              </section>
             </div>
           )}
 
