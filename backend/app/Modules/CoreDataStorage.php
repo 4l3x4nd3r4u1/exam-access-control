@@ -2,9 +2,12 @@
 
 namespace App\Modules;
 
+use App\DTOs\ProcessedRosterSummary;
 use App\DTOs\RawFileData;
 use App\DTOs\ImportSummary;
 use App\DTOs\UserSession;
+use App\DTOs\UserSummary;
+use App\DTOs\CourseGroupSummary;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\User;
 use App\Models\Student;
@@ -13,6 +16,9 @@ use App\Models\StudentCourseEnrollment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use App\DTOs\UserRegistrationData;
+use App\DTOs\OperationResult;
+
 
 class CoreDataStorage
 {
@@ -54,6 +60,135 @@ class CoreDataStorage
             expiresIn: $ttlMinutes * 60,
         );
     }
+    /**
+    * Registers a new academic user in the system.
+    *
+    * @param UserRegistrationData $data
+    * @return OperationResult
+    */
+ public function registerAcademicUser(UserRegistrationData $data): OperationResult
+    {
+        $email = strtolower(trim($data->email));
+
+        // Validate institutional email domain
+        if (!str_ends_with($email, '@umss.edu.bo')) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
+            );
+        }
+
+        // Check if email already exists
+        if (User::where('email', $email)->exists()) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo ya está registrado'
+            );
+        }
+
+        // Convert functional roles to database roles
+        $role = match ($data->role) {
+            'DOCENTE' => 'TEACHER',
+            'AUXILIAR' => 'ASSISTANT',
+            'ADMIN' => 'ADMIN',
+            default => null
+        };
+
+        if ($role === null) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Rol no válido'
+            );
+        }
+
+        try {
+            User::create([
+                'name' => $data->fullName,
+                'email' => $email,
+                'password' => $data->password,
+                'role' => $role,
+                'is_active' => true,
+            ]);
+
+            return new OperationResult(
+                isSuccessful: true,
+                message: 'Usuario registrado correctamente'
+            );
+
+        } catch (\Throwable $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Error al registrar usuario: ' . $e->getMessage()
+            );
+        }
+    }
+    /**
+     * Retrieves all active academic staff members ordered alphabetically by name.
+     *
+     * @return array<UserSummary>
+     */
+    public function getAcademicStaff(): array
+    {
+        $users = User::where('is_active', true)
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return $users->map(fn(User $user) => new UserSummary(
+            userId: (int) $user->id,
+            fullName: (string) $user->name,
+            email: (string) $user->email,
+            role: (string) $user->role,
+            isActive: (bool) $user->is_active,
+        ))->all();
+    }
+
+    /**
+     * Retrieves all course groups assigned to a specific teacher with the enrolled student count.
+     *
+     * @param int $teacherId
+     * @return array<CourseGroupSummary>
+     */
+    public function getTeacherCourses(int $teacherId): array
+    {
+        $courses = CourseGroup::where('teacher_id', $teacherId)
+            ->withCount('enrollments')
+            ->orderBy('subject_code', 'asc')
+            ->orderBy('group_code', 'asc')
+            ->get();
+
+        return $courses->map(fn(CourseGroup $c) => new CourseGroupSummary(
+            courseGroupId: (string) $c->course_group_id,
+            subjectCode: (string) $c->subject_code,
+            subjectName: (string) $c->subject_name,
+            groupCode: (string) $c->group_code,
+            academicTerm: (string) $c->academic_term,
+            totalEnrolled: (int) ($c->enrollments_count ?? 0),
+            teacherId: (int) $c->teacher_id,
+        ))->all();
+    }
+    
+    /**
+    * Retrieves all processed course rosters with the enrolled student count.
+    *
+    *   @return array<ProcessedRosterSummary>
+    */
+    public function getProcessedRosters(): array
+    {
+        $courses = CourseGroup::withCount('enrollments')
+            ->orderBy('subject_code', 'asc')
+            ->orderBy('group_code', 'asc')
+            ->get();
+
+        return $courses->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
+            courseGroupId: (string) $course->course_group_id,
+            subjectCode: (string) $course->subject_code,
+            subjectName: (string) $course->subject_name,
+            groupCode: (string) $course->group_code,
+            academicTerm: (string) $course->academic_term,
+            totalStudents: (int) ($course->enrollments_count ?? 0),
+        ))->all();
+    }
+
     /**
      * Mandatory column headers required in the roster file.
      */

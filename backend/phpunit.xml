@@ -18,6 +18,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:IdwVIvh1yiF+0+XtBc6Pp3o0ndGX8X2pA81itNrRjU4="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
@@ -26,5 +27,7 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="JWT_SECRET" value="s9jC5gayuxKiVmBauA26PAu4JCcxEL1Xo5YyX2CV4ad1WVyxWB8dsNMi2WbH4COC"/>
+        <env name="JWT_ALGO" value="HS256"/>
     </php>
 </phpunit>
