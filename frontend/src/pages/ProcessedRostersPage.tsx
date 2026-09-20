@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import importDocSvg from '../assets/image 23.svg';
+import importedRostersHeroSvg from '../assets/imported-rosters-hero.svg';
 import { useProcessedRosters } from '../hooks/useProcessedRosters';
 import type { ProcessedRoster } from '../types/processedRoster';
 
@@ -27,7 +27,7 @@ export function ProcessedRostersPage({
       </button>
 
       <header className="plans-hero">
-        <img src={importDocSvg} alt="" className="plans-hero-icon" aria-hidden="true" />
+        <img src={importedRostersHeroSvg} alt="" className="plans-hero-icon" aria-hidden="true" />
         <h1 className="plans-title">Planillas importadas</h1>
         <p className="plans-count" aria-live="polite">
           {total} {total === 1 ? 'documento' : 'documentos'}
@@ -77,7 +77,7 @@ function ProcessedRosterCard({
       onClick={() => onSelect(roster.courseGroupId)}
       aria-label={`Ver planilla ${roster.subjectCode}, grupo ${roster.groupCode}`}
     >
-      <img src={importDocSvg} alt="" className="plan-card-icon" aria-hidden="true" />
+      <img src={importedRostersHeroSvg} alt="" className="plan-card-icon" aria-hidden="true" />
       <span className="plan-card-code">{roster.subjectCode}</span>
       <span className="plan-card-name">{roster.subjectName}</span>
       <span className="plan-card-group">Grupo {roster.groupCode}</span>

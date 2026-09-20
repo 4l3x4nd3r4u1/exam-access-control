@@ -465,14 +465,14 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .plans-hero-icon {
-  width: 82px;
-  height: 100px;
+  width: 158px;
+  height: 158px;
   object-fit: contain;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .plans-title {
@@ -494,11 +494,11 @@
 .plans-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px 18px;
+  gap: 30px 14px;
 }
 
 .plan-card {
-  min-height: 168px;
+  min-height: 252px;
   border: none;
   background: transparent;
   color: #000000;
@@ -518,10 +518,10 @@
 }
 
 .plan-card-icon {
-  height: 106px;
-  width: 86px;
+  height: 194px;
+  width: min(150px, 100%);
   object-fit: contain;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .plan-card-code {
