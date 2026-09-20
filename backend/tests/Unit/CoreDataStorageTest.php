@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Modules\CoreDataStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\DTOs\UserRegistrationData;
 
 class CoreDataStorageTest extends TestCase
 {
@@ -330,6 +331,151 @@ CSV;
         $this->assertIsArray($courses);
         $this->assertEmpty($courses);
     }
+
+ public function test_register_academic_user_successfully(): void
+{
+    $data = new UserRegistrationData(
+        fullName: 'Juan Perez',
+        email: 'juan.perez@umss.edu.bo',
+        password: 'password123',
+        role: 'DOCENTE'
+    );
+
+    $result = $this->storage->registerAcademicUser($data);
+
+    $this->assertTrue($result->isSuccessful);
+    $this->assertEquals(
+        'Usuario registrado correctamente',
+        $result->message
+    );
+
+    $this->assertDatabaseHas('users', [
+        'email' => 'juan.perez@umss.edu.bo',
+        'role' => 'TEACHER',
+        'is_active' => true,
+    ]);
+}
+
+public function test_register_academic_user_rejects_invalid_email_domain(): void
+{
+    $data = new UserRegistrationData(
+        fullName: 'Juan Perez',
+        email: 'juan@gmail.com',
+        password: 'password123',
+        role: 'DOCENTE'
+    );
+
+    $result = $this->storage->registerAcademicUser($data);
+
+    $this->assertFalse($result->isSuccessful);
+
+    $this->assertStringContainsString(
+        '@umss.edu.bo',
+        $result->message
+    );
+}
+
+public function test_register_academic_user_rejects_existing_email(): void
+{
+    User::create([
+        'name' => 'Usuario Existente',
+        'email' => 'existente@umss.edu.bo',
+        'password' => bcrypt('password123'),
+        'role' => 'TEACHER',
+        'is_active' => true,
+    ]);
+
+    $data = new UserRegistrationData(
+        fullName: 'Nuevo Usuario',
+        email: 'existente@umss.edu.bo',
+        password: 'password123',
+        role: 'DOCENTE'
+    );
+
+    $result = $this->storage->registerAcademicUser($data);
+
+    $this->assertFalse($result->isSuccessful);
+    $this->assertEquals(
+        'El correo ya está registrado',
+        $result->message
+    );
+}
+
+    public function test_get_processed_rosters_returns_all_rosters_with_student_count(): void
+{
+    $teacher = User::create([
+        'name' => 'Walter Sanchez',
+        'email' => 'wsanchez@umss.edu.bo',
+        'password' => bcrypt('password'),
+        'role' => 'TEACHER',
+        'is_active' => true,
+    ]);
+
+    CourseGroup::create([
+        'course_group_id' => 'INF110-G1-2/2026',
+        'subject_code' => 'INF110',
+        'subject_name' => 'Introduccion a la Programacion',
+        'group_code' => '1',
+        'academic_term' => '2/2026',
+        'teacher_id' => $teacher->id,
+    ]);
+
+    CourseGroup::create([
+        'course_group_id' => 'INF120-G2-2/2026',
+        'subject_code' => 'INF120',
+        'subject_name' => 'Estructura de Datos',
+        'group_code' => '2',
+        'academic_term' => '2/2026',
+        'teacher_id' => $teacher->id,
+    ]);
+
+    Student::create([
+        'student_key' => '20210001',
+        'ci' => '111111',
+        'full_name' => 'Student One',
+    ]);
+
+    Student::create([
+        'student_key' => '20210002',
+        'ci' => '222222',
+        'full_name' => 'Student Two',
+    ]);
+
+    StudentCourseEnrollment::create([
+        'student_key' => '20210001',
+        'course_group_id' => 'INF110-G1-2/2026',
+        'status' => 'HABILITADO',
+    ]);
+
+    StudentCourseEnrollment::create([
+        'student_key' => '20210002',
+        'course_group_id' => 'INF110-G1-2/2026',
+        'status' => 'HABILITADO',
+    ]);
+
+    $rosters = $this->storage->getProcessedRosters();
+
+    $this->assertCount(2, $rosters);
+
+    $this->assertEquals('INF110-G1-2/2026', $rosters[0]->courseGroupId);
+    $this->assertEquals('INF110', $rosters[0]->subjectCode);
+    $this->assertEquals('Introduccion a la Programacion', $rosters[0]->subjectName);
+    $this->assertEquals('1', $rosters[0]->groupCode);
+    $this->assertEquals('2/2026', $rosters[0]->academicTerm);
+    $this->assertEquals(2, $rosters[0]->totalStudents);
+
+    $this->assertEquals('INF120-G2-2/2026', $rosters[1]->courseGroupId);
+    $this->assertEquals(0, $rosters[1]->totalStudents);
+} 
+
+    public function test_get_processed_rosters_returns_empty_array_when_no_rosters_exist(): void
+{
+    $rosters = $this->storage->getProcessedRosters();
+
+    $this->assertIsArray($rosters);
+    $this->assertEmpty($rosters);
+}
+
 }
 
 
