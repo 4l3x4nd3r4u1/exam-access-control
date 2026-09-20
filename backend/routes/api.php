@@ -20,7 +20,6 @@ Route::get('/health', function () {
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/students/import', [StudentRosterController::class, 'import']);
 Route::get('/academic-staff', [AcademicStaffController::class, 'index']);
-Route::post('/academic-staff', [AcademicStaffController::class, 'store']);
 Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
 Route::post('/academic-users', [AcademicUserController::class, 'store']);
 Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);

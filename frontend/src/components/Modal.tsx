@@ -29,14 +29,6 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           {title && <h2 className="modal-title">{title}</h2>}
-          <button
-            type="button"
-            className="modal-close-btn"
-            onClick={onClose}
-            aria-label="Cerrar modal"
-          >
-            ✕
-          </button>
         </div>
         <div className="modal-body">{children}</div>
       </div>

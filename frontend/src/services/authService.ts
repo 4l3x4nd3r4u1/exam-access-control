@@ -43,12 +43,12 @@ export const authService = {
         throw new Error('Credenciales incorrectas. La contraseña es demasiado corta.');
       }
 
-      // Cuenta Administrador de prueba
+      // Cuenta Administrador de prueba (según Mockup Figma iPhone 17-14)
       if (cleanEmail === 'admin@umss.edu.bo' || cleanEmail.startsWith('admin')) {
         const adminSession: UserSession = {
           user_id: 1,
           role: 'ADMIN',
-          full_name: 'Administrador del Sistema',
+          full_name: 'Perez Gomez Juan',
           email: cleanEmail,
           token: 'demo-jwt-admin-token',
           is_active: true,
@@ -57,12 +57,19 @@ export const authService = {
         return adminSession;
       }
 
-      // Cuenta Docente de prueba
-      if (cleanEmail === 'docente@fcyt.umss.edu.bo' || cleanEmail.includes('docente') || cleanEmail.endsWith('@fcyt.umss.edu.bo') || cleanEmail.endsWith('@umss.edu.bo')) {
+      // Cuenta Docente de prueba (según Mockup Figma)
+      if (
+        cleanEmail === 'docente@fcyt.umss.edu.bo' ||
+        cleanEmail === 'docente@umss.edu.bo' ||
+        cleanEmail === 'doncente@umss.edu.bo' ||
+        cleanEmail.includes('docente') ||
+        cleanEmail.endsWith('@fcyt.umss.edu.bo') ||
+        cleanEmail.endsWith('@umss.edu.bo')
+      ) {
         const teacherSession: UserSession = {
           user_id: 2,
           role: 'TEACHER',
-          full_name: 'Eddy Escalera Balderrama',
+          full_name: 'Perez Gomez Juan',
           email: cleanEmail,
           token: 'demo-jwt-teacher-token',
           is_active: true,

@@ -37,121 +37,90 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         <img src={logoSvg} alt="Logo institucional" className="logo-img" />
       </div>
 
-      {/* Título */}
-      <h1 className="login-title">
-        Sistema de Control de<br />
-        Ingreso a Exámenes
-      </h1>
+          {/* Título */}
+          <h1 className="login-title">
+            Sistema de Control de<br />
+            Ingreso a Exámenes
+          </h1>
 
-      {/* Formulario de Login (HU-01) */}
-      <form className="login-form" onSubmit={handleSubmit}>
-        {/* Input Correo */}
-        <div className="input-card">
-          <label htmlFor="email-input" className="input-label">
-            Correo institucional
-          </label>
-          <div className="input-field-wrapper">
-            <input
-              id="email-input"
-              type="email"
-              className="text-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="docente@fcyt.umss.edu.bo"
-              autoComplete="email"
-              required
-            />
-            {email.length > 0 && (
-              <button
-                type="button"
-                className="clear-btn"
-                onClick={() => setEmail('')}
-                title="Limpiar"
-                aria-label="Limpiar correo"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
+          {/* Formulario de Login (HU-01) */}
+          <form className="login-form" onSubmit={handleSubmit}>
+            {/* Input Correo */}
+            <div className="input-card">
+              <label htmlFor="email-input" className="input-label">
+                Correo
+              </label>
+              <div className="input-field-wrapper">
+                <input
+                  id="email-input"
+                  type="email"
+                  className="text-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="doncente@umss.edu.bo"
+                  autoComplete="email"
+                  required
+                />
+                {email.length > 0 && (
+                  <button
+                    type="button"
+                    className="clear-btn"
+                    onClick={() => setEmail('')}
+                    title="Limpiar"
+                    aria-label="Limpiar correo"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
 
-        {/* Input Contraseña */}
-        <div className="input-card">
-          <label htmlFor="password-input" className="input-label">
-            Contraseña
-          </label>
-          <div className="input-field-wrapper">
-            <input
-              id="password-input"
-              type="password"
-              className="text-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••••••"
-              autoComplete="current-password"
-              required
-            />
-            {password.length > 0 && (
-              <button
-                type="button"
-                className="clear-btn"
-                onClick={() => setPassword('')}
-                title="Limpiar"
-                aria-label="Limpiar contraseña"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
+            {/* Input Contraseña */}
+            <div className="input-card">
+              <label htmlFor="password-input" className="input-label">
+                Contraseña
+              </label>
+              <div className="input-field-wrapper">
+                <input
+                  id="password-input"
+                  type="password"
+                  className="text-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+                {password.length > 0 && (
+                  <button
+                    type="button"
+                    className="clear-btn"
+                    onClick={() => setPassword('')}
+                    title="Limpiar"
+                    aria-label="Limpiar contraseña"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
 
-        {/* Botón Empezar */}
-        <button
-          type="submit"
-          className="submit-btn"
-          disabled={loading || !email || !password}
-        >
-          {loading ? 'Iniciando sesión...' : 'Empezar'}
-        </button>
-
-        {/* Mensaje de Error */}
-        {error && (
-          <p className="auth-error-text" role="alert">
-            {error}
-          </p>
-        )}
-
-        {/* Cuentas de prueba para simulación de login */}
-        <div className="demo-shortcuts-box">
-          <span className="demo-shortcuts-title">Cuentas institucionales de prueba:</span>
-          <div className="demo-shortcuts-buttons">
+            {/* Botón Empezar */}
             <button
-              type="button"
-              className="demo-btn"
-              onClick={() => {
-                setEmail('admin@umss.edu.bo');
-                setPassword('admin123');
-                setError(null);
-              }}
-              title="Autocompletar cuenta de Administrador"
+              type="submit"
+              className="submit-btn"
+              disabled={loading || !email || !password}
             >
-              👤 admin@umss.edu.bo
+              {loading ? 'Iniciando sesión...' : 'Empezar'}
             </button>
-            <button
-              type="button"
-              className="demo-btn"
-              onClick={() => {
-                setEmail('docente@fcyt.umss.edu.bo');
-                setPassword('docente123');
-                setError(null);
-              }}
-              title="Autocompletar cuenta de Docente"
-            >
-              🎓 docente@fcyt.umss.edu.bo
-            </button>
-          </div>
-        </div>
-      </form>
+
+            {/* Mensaje de Error */}
+            {error && (
+              <p className="auth-error-text" role="alert">
+                {error}
+              </p>
+            )}
+          </form>
     </main>
   );
 };
