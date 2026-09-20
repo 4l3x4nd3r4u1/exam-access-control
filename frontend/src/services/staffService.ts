@@ -46,7 +46,8 @@ export const staffService = {
     try {
       const res = await apiRequest<StaffListResponse>('/academic-staff');
       return res.data;
-    } catch {
+    } catch (err) {
+      console.error('Error al obtener personal del backend, usando fallback:', err);
       return [...mockStaffList];
     }
   },
@@ -99,5 +100,41 @@ export const staffService = {
       mockStaffList.unshift(newMember);
       return newMember;
     }
+  },
+
+  async updateStaff(
+    userId: number,
+    payload: { fullName: string; email: string; role: UserRole },
+    token?: string
+  ): Promise<AcademicStaffMember> {
+    try {
+      await apiRequest(`/academic-staff/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          fullName: payload.fullName,
+          full_name: payload.fullName, // Compatibilidad con el backend
+          email: payload.email,
+          role: payload.role,
+        }),
+      });
+    } catch (err) {
+      console.warn('API update endpoint fallback to local state:', err);
+    }
+
+    mockStaffList = mockStaffList.map((s) =>
+      s.user_id === userId ? { ...s, full_name: payload.fullName, email: payload.email, role: payload.role } : s
+    );
+
+    return {
+      user_id: userId,
+      full_name: payload.fullName,
+      email: payload.email,
+      role: payload.role,
+      is_active: true,
+    };
   },
 };

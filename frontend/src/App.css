@@ -893,26 +893,29 @@
 }
 
 .figma-table-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 125px 1fr 50px;
   align-items: center;
+  column-gap: 12px;
   padding: 4px 8px;
   font-family: 'SF Pro Text', sans-serif;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #000000;
+  box-sizing: border-box;
 }
 
 .th-rol {
-  width: 80px;
+  width: auto;
 }
 
 .th-nombre {
-  flex: 1;
+  width: auto;
 }
 
 .th-accion {
-  width: 50px;
+  width: auto;
 }
 
 .figma-table-divider {
@@ -931,8 +934,10 @@
 }
 
 .figma-table-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 125px 1fr 50px;
   align-items: center;
+  column-gap: 12px;
   padding: 7px 8px;
   min-height: 32px;
   font-family: 'SF Pro Text', sans-serif;
@@ -948,21 +953,22 @@
 }
 
 .td-rol {
-  width: 80px;
+  width: auto;
   font-weight: 500;
   color: #333333;
+  white-space: nowrap;
 }
 
 .td-nombre {
-  flex: 1;
+  width: auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-right: 8px;
+  padding-right: 4px;
 }
 
 .td-editar-btn {
-  width: 50px;
+  width: 100%;
   background: transparent;
   border: none;
   font-family: 'SF Pro Text', sans-serif;
