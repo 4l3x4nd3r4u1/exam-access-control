@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import logoSvg from './assets/Group 9.svg';
 import importDocSvg from './assets/image 23.svg';
-import { TeacherSubjectDetailPage } from './features/teacher-subjects/TeacherSubjectDetailPage';
-import { TeacherSubjectsPage } from './features/teacher-subjects/TeacherSubjectsPage';
+import { TeacherSubjectDetailPage } from './pages/TeacherSubjectDetailPage';
+import { TeacherSubjectsPage } from './pages/TeacherSubjectsPage';
 import './App.css';
 
 interface UserSession {
@@ -288,6 +288,7 @@ export default function App() {
         <TeacherSubjectDetailPage
           apiBaseUrl={API_BASE_URL}
           token={session.token}
+          teacherId={session.user_id}
           courseGroupId={selectedCourseGroupId}
           onBack={navigateTeacherSubjects}
         />
@@ -298,6 +299,7 @@ export default function App() {
       <TeacherSubjectsPage
         apiBaseUrl={API_BASE_URL}
         token={session.token}
+        teacherId={session.user_id}
         teacherName={session.full_name}
         onLogout={handleLogout}
         onSelectSubject={navigateTeacherSubjectDetail}

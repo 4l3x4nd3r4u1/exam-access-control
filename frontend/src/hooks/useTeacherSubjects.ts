@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getTeacherSubjectDetail, getTeacherSubjects } from './services';
-import type { TeacherSubjectDetail, TeacherSubjectsOverview } from './types';
+import { getTeacherSubject, getTeacherSubjects } from '../services/teacherSubjectsService';
+import type { TeacherSubject, TeacherSubjectsOverview } from '../types/teacherSubject';
 
 interface AsyncState<T> {
   data: T | null;
@@ -8,7 +8,7 @@ interface AsyncState<T> {
   loading: boolean;
 }
 
-export const useTeacherSubjects = (apiBaseUrl: string, token: string) => {
+export const useTeacherSubjects = (apiBaseUrl: string, token: string, teacherId: number) => {
   const [state, setState] = useState<AsyncState<TeacherSubjectsOverview>>({
     data: null,
     error: null,
@@ -20,7 +20,7 @@ export const useTeacherSubjects = (apiBaseUrl: string, token: string) => {
 
     setState((current) => ({ ...current, error: null, loading: true }));
 
-    getTeacherSubjects(apiBaseUrl, token, controller.signal)
+    getTeacherSubjects(apiBaseUrl, token, teacherId, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
@@ -28,12 +28,12 @@ export const useTeacherSubjects = (apiBaseUrl: string, token: string) => {
       });
 
     return controller;
-  }, [apiBaseUrl, token]);
+  }, [apiBaseUrl, token, teacherId]);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    getTeacherSubjects(apiBaseUrl, token, controller.signal)
+    getTeacherSubjects(apiBaseUrl, token, teacherId, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
@@ -41,17 +41,18 @@ export const useTeacherSubjects = (apiBaseUrl: string, token: string) => {
       });
 
     return () => controller.abort();
-  }, [apiBaseUrl, token]);
+  }, [apiBaseUrl, token, teacherId]);
 
   return { ...state, retry };
 };
 
-export const useTeacherSubjectDetail = (
+export const useTeacherSubject = (
   apiBaseUrl: string,
   token: string,
+  teacherId: number,
   courseGroupId: string,
 ) => {
-  const [state, setState] = useState<AsyncState<TeacherSubjectDetail>>({
+  const [state, setState] = useState<AsyncState<TeacherSubject>>({
     data: null,
     error: null,
     loading: true,
@@ -62,7 +63,7 @@ export const useTeacherSubjectDetail = (
 
     setState((current) => ({ ...current, error: null, loading: true }));
 
-    getTeacherSubjectDetail(apiBaseUrl, token, courseGroupId, controller.signal)
+    getTeacherSubject(apiBaseUrl, token, teacherId, courseGroupId, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
@@ -70,12 +71,12 @@ export const useTeacherSubjectDetail = (
       });
 
     return controller;
-  }, [apiBaseUrl, token, courseGroupId]);
+  }, [apiBaseUrl, token, teacherId, courseGroupId]);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    getTeacherSubjectDetail(apiBaseUrl, token, courseGroupId, controller.signal)
+    getTeacherSubject(apiBaseUrl, token, teacherId, courseGroupId, controller.signal)
       .then((data) => setState({ data, error: null, loading: false }))
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
@@ -83,7 +84,7 @@ export const useTeacherSubjectDetail = (
       });
 
     return () => controller.abort();
-  }, [apiBaseUrl, token, courseGroupId]);
+  }, [apiBaseUrl, token, teacherId, courseGroupId]);
 
   return { ...state, retry };
 };

@@ -7,10 +7,6 @@ use App\DTOs\ImportSummary;
 use App\DTOs\UserSession;
 use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
-use App\DTOs\TeacherSubjectDetail;
-use App\DTOs\TeacherSubjectsOverview;
-use App\DTOs\TeacherSubjectStudent;
-use App\DTOs\TeacherSubjectSummary;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\User;
 use App\Models\Student;
@@ -168,91 +164,6 @@ class CoreDataStorage
             totalEnrolled: (int) ($c->enrollments_count ?? 0),
             teacherId: (int) $c->teacher_id,
         ))->all();
-    }
-
-    public function getAuthenticatedTeacherSubjects(User $teacher): TeacherSubjectsOverview
-    {
-        $subjects = CourseGroup::query()
-            ->select([
-                'course_group_id',
-                'subject_code',
-                'subject_name',
-                'group_code',
-                'academic_term',
-                'teacher_id',
-            ])
-            ->where('teacher_id', $teacher->id)
-            ->withCount('enrollments')
-            ->orderBy('academic_term', 'desc')
-            ->orderBy('subject_code')
-            ->orderBy('group_code')
-            ->get();
-
-        $mappedSubjects = $subjects
-            ->map(fn(CourseGroup $subject) => $this->mapTeacherSubjectSummary($subject, $teacher->name))
-            ->all();
-
-        return new TeacherSubjectsOverview(
-            subjectsCount: count($mappedSubjects),
-            studentsCount: array_sum(array_map(fn(TeacherSubjectSummary $subject) => $subject->enrolledCount, $mappedSubjects)),
-            academicPeriod: $mappedSubjects[0]->academicTerm ?? null,
-            subjects: $mappedSubjects,
-        );
-    }
-
-    public function getAuthenticatedTeacherSubjectDetail(User $teacher, string $courseGroupId): TeacherSubjectDetail|false|null
-    {
-        $subject = CourseGroup::query()
-            ->select([
-                'course_group_id',
-                'subject_code',
-                'subject_name',
-                'group_code',
-                'academic_term',
-                'teacher_id',
-            ])
-            ->withCount('enrollments')
-            ->where('course_group_id', $courseGroupId)
-            ->first();
-
-        if ($subject === null) {
-            return null;
-        }
-
-        if ((int) $subject->teacher_id !== (int) $teacher->id) {
-            return false;
-        }
-
-        $students = Student::query()
-            ->select(['students.student_key', 'students.ci', 'students.full_name'])
-            ->join('student_course_enrollments', 'students.student_key', '=', 'student_course_enrollments.student_key')
-            ->where('student_course_enrollments.course_group_id', $courseGroupId)
-            ->orderBy('students.full_name')
-            ->get()
-            ->map(fn(Student $student) => new TeacherSubjectStudent(
-                sis: (string) $student->student_key,
-                ci: (string) $student->ci,
-                fullName: (string) $student->full_name,
-            ))
-            ->all();
-
-        return new TeacherSubjectDetail(
-            subject: $this->mapTeacherSubjectSummary($subject, $teacher->name),
-            students: $students,
-        );
-    }
-
-    private function mapTeacherSubjectSummary(CourseGroup $subject, string $teacherName): TeacherSubjectSummary
-    {
-        return new TeacherSubjectSummary(
-            courseGroupId: (string) $subject->course_group_id,
-            subjectCode: (string) $subject->subject_code,
-            subjectName: (string) $subject->subject_name,
-            groupCode: (string) $subject->group_code,
-            academicTerm: (string) $subject->academic_term,
-            teacherName: $teacherName,
-            enrolledCount: (int) ($subject->enrollments_count ?? 0),
-        );
     }
 
     /**
