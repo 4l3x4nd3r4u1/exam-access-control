@@ -65,8 +65,8 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
       return;
     }
 
-    if (!password || password.length < 4) {
-      setErrorMessage('La contraseña es obligatoria (mínimo 4 caracteres).');
+    if (!password || password.length < 8) {
+      setErrorMessage('La contraseña provisional es obligatoria (mínimo 8 caracteres).');
       return;
     }
 
@@ -97,7 +97,7 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={handleModalClose} title="Nuevo usuario">
-      <form onSubmit={handleSubmit} className="figma-modal-form">
+      <form onSubmit={handleSubmit} className="figma-modal-form" autoComplete="off">
         {errorMessage && (
           <div className="form-alert-error" role="alert">
             {errorMessage}
@@ -111,7 +111,9 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
           </label>
           <input
             id="user-name-input"
+            name="new_user_fullname"
             type="text"
+            autoComplete="off"
             className="figma-field-input"
             placeholder="Escalera Balderrama Eddy"
             value={name}
@@ -128,7 +130,9 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
           </label>
           <input
             id="user-email-input"
+            name="new_user_email"
             type="email"
+            autoComplete="off"
             className="figma-field-input"
             placeholder="eddy@fcyt.umss.edu.bo"
             value={email}
@@ -146,9 +150,11 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
           <div className="figma-password-row">
             <input
               id="user-password-input"
+              name="new_user_password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               className="figma-field-input"
-              placeholder="••••••••••••••••"
+              placeholder="Mínimo 8 caracteres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}

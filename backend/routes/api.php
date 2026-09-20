@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AcademicUserController;
 use App\Http\Controllers\ProcessedRosterController;
+use App\Http\Controllers\StudentStatusController;
 
 Route::get('/health', function () {
     return response()->json([
@@ -20,8 +21,11 @@ Route::get('/health', function () {
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/students/import', [StudentRosterController::class, 'import']);
 Route::get('/academic-staff', [AcademicStaffController::class, 'index']);
-Route::put('/academic-staff/{id}', [AcademicStaffController::class, 'update']);
 Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
 Route::post('/academic-users', [AcademicUserController::class, 'store']);
+Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
 Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
+Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
+    ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
+
 

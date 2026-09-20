@@ -16,12 +16,14 @@ export const EditStudentStatusModal: React.FC<EditStudentStatusModalProps> = ({
 }) => {
   const [selectedStatus, setSelectedStatus] = useState<'Habilitado' | 'Inhabilitado'>('Habilitado');
   const [ineligibilityReason, setIneligibilityReason] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (student) {
       setSelectedStatus(student.status);
       setIneligibilityReason(student.ineligibilityReason || '');
+      setErrorMessage('');
     }
   }, [student]);
 
@@ -89,7 +91,11 @@ export const EditStudentStatusModal: React.FC<EditStudentStatusModalProps> = ({
               <select
                 id="student-status-dropdown"
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as 'Habilitado' | 'Inhabilitado')}
+                onChange={(e) => {
+                  const newStatus = e.target.value as 'Habilitado' | 'Inhabilitado';
+                  setSelectedStatus(newStatus);
+                  if (errorMessage) setErrorMessage('');
+                }}
                 className="student-status-dropdown"
               >
                 <option value="Habilitado">Habilitado</option>
@@ -105,11 +111,19 @@ export const EditStudentStatusModal: React.FC<EditStudentStatusModalProps> = ({
             <textarea
               id="student-ineligibility-motive"
               value={ineligibilityReason}
-              onChange={(e) => setIneligibilityReason(e.target.value)}
+              onChange={(e) => {
+                setIneligibilityReason(e.target.value);
+                if (errorMessage) setErrorMessage('');
+              }}
               placeholder="Ingrese el motivo de habilitación / inhabilitación..."
               rows={3}
               className="status-motive-textarea"
             />
+            {errorMessage && (
+              <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px', fontWeight: 500 }}>
+                {errorMessage}
+              </p>
+            )}
           </div>
 
           <div className="student-status-modal-actions">

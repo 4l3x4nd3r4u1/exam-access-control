@@ -4,6 +4,7 @@ import type { AcademicStaffMember } from '../types/staff';
 import type { ImportSummaryData } from '../types/roster';
 import { staffService } from '../services/staffService';
 import { rosterService } from '../services/rosterService';
+import { getProcessedRosters } from '../services/processedRostersService';
 import { NewUserModal } from '../components/NewUserModal';
 import { EditUserModal } from '../components/EditUserModal';
 import importDocSvg from '../assets/image 23.svg';
@@ -11,6 +12,7 @@ import importDocSvg from '../assets/image 23.svg';
 interface AdminDashboardViewProps {
   session: UserSession;
   onLogout: () => void;
+  onNavigateToProcessedRosters?: () => void;
 }
 
 type AdminScreen = 'MAIN_DASHBOARD' | 'STAFF_LIST' | 'IMPORT_ROSTER';
@@ -18,12 +20,15 @@ type AdminScreen = 'MAIN_DASHBOARD' | 'STAFF_LIST' | 'IMPORT_ROSTER';
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   session,
   onLogout,
+  onNavigateToProcessedRosters,
 }) => {
   const [currentScreen, setCurrentScreen] = useState<AdminScreen>('MAIN_DASHBOARD');
   const [staffList, setStaffList] = useState<AcademicStaffMember[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AcademicStaffMember | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [processedCount, setProcessedCount] = useState<number | null>(null);
+  const [studentsCount, setStudentsCount] = useState<number | null>(null);
 
   // Estados para Importar Planilla
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -53,6 +58,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const refreshProcessedMetrics = () => {
+    getProcessedRosters('http://127.0.0.1:8000/api', session.token)
+      .then((data) => {
+        setProcessedCount(data.total);
+        const total = data.rosters.reduce((acc, r) => acc + (r.totalEnrolled || 0), 0);
+        setStudentsCount(total);
+      })
+      .catch(() => {});
+  };
+
   // Subir planilla CSV al backend
   const handleUploadRoster = async () => {
     if (!selectedFile) return;
@@ -63,6 +78,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     try {
       const result = await rosterService.importRoster(selectedFile, session.token);
       setImportResult(result);
+      refreshProcessedMetrics();
     } catch (err: any) {
       setImportError(err.message || 'No se pudo conectar con el servidor');
     } finally {
@@ -85,22 +101,37 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         setStaffList(data);
       }
     });
+
+    getProcessedRosters('http://127.0.0.1:8000/api', session.token)
+      .then((data) => {
+        if (isMounted) {
+          setProcessedCount(data.total);
+          const total = data.rosters.reduce((acc, r) => acc + (r.totalEnrolled || 0), 0);
+          setStudentsCount(total);
+        }
+      })
+      .catch(() => {});
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [session.token]);
 
   const handleUserCreated = (newUser: AcademicStaffMember) => {
-    setStaffList((prev) => [newUser, ...prev]);
     setSuccessToast(`Usuario ${newUser.full_name} registrado exitosamente.`);
+    staffService.getStaff().then(setStaffList).catch(() => {
+      setStaffList((prev) => [newUser, ...prev]);
+    });
     setTimeout(() => setSuccessToast(null), 4000);
   };
 
   const handleUserUpdated = (updatedUser: AcademicStaffMember) => {
-    setStaffList((prev) =>
-      prev.map((u) => (u.user_id === updatedUser.user_id ? updatedUser : u))
-    );
     setSuccessToast(`Usuario ${updatedUser.full_name} actualizado exitosamente.`);
+    staffService.getStaff().then(setStaffList).catch(() => {
+      setStaffList((prev) =>
+        prev.map((u) => (u.user_id === updatedUser.user_id ? updatedUser : u))
+      );
+    });
     setTimeout(() => setSuccessToast(null), 4000);
   };
 
@@ -183,7 +214,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <span className="dot-indicator dot-sky" />
                 <span className="metric-name">Estudiantes</span>
               </div>
-              <strong className="metric-val">1,240</strong>
+              <strong className="metric-val">{studentsCount !== null ? studentsCount.toLocaleString() : '1,240'}</strong>
             </div>
 
             {/* Frame 103 / 107: Planillas Procesadas */}
@@ -192,7 +223,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <span className="dot-indicator dot-orange" />
                 <span className="metric-name">Planillas Procesadas</span>
               </div>
-              <strong className="metric-val">15</strong>
+              <strong className="metric-val">{processedCount !== null ? processedCount : 15}</strong>
             </div>
 
             {/* Frame 104 / 108: Usuarios */}
@@ -223,7 +254,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
 
             {/* Botón: Planillas importadas */}
-            <div className="admin-action-card card-static" title="Planillas importadas">
+            <div
+              className={`admin-action-card ${onNavigateToProcessedRosters ? 'card-interactive' : 'card-static'}`}
+              onClick={onNavigateToProcessedRosters}
+              role={onNavigateToProcessedRosters ? 'button' : undefined}
+              tabIndex={onNavigateToProcessedRosters ? 0 : undefined}
+              onKeyDown={(e) => e.key === 'Enter' && onNavigateToProcessedRosters?.()}
+              title="Planillas importadas"
+            >
               <div className="card-icon-container">
                 <svg width="68" height="74" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -472,13 +510,27 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={handleResetImport}
-                >
-                  Importar otro archivo
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => {
+                      handleResetImport();
+                      if (onNavigateToProcessedRosters) {
+                        onNavigateToProcessedRosters();
+                      }
+                    }}
+                  >
+                    Ver planillas importadas
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleResetImport}
+                  >
+                    Importar otro archivo
+                  </button>
+                </div>
               </div>
             )}
           </section>

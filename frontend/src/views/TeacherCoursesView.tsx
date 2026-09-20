@@ -59,7 +59,10 @@ export const TeacherCoursesView: React.FC<TeacherCoursesViewProps> = ({
     setCurrentScreen('STUDENTS_LIST');
     setLoadingStudents(true);
     try {
-      const enrolledList = await courseService.getCourseStudents(selectedCourse.course_group_id);
+      const enrolledList = await courseService.getCourseStudents(
+        selectedCourse.course_group_id,
+        selectedCourse.total_enrolled
+      );
       setStudents(enrolledList);
     } finally {
       setLoadingStudents(false);
@@ -371,7 +374,7 @@ export const TeacherCoursesView: React.FC<TeacherCoursesViewProps> = ({
           ) : (
             <div className="roster-table-container">
               <div className="roster-table-header">
-                <div className="roster-col-sis">sis</div>
+                <div className="roster-col-sis" translate="no">SIS</div>
                 <div className="roster-col-nombre">nombre</div>
                 <div className="roster-col-estado">estado</div>
               </div>

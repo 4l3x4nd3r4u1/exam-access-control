@@ -3,19 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\UserRegistrationData;
+use App\DTOs\UserUpdateData;
 use App\Http\Requests\RegisterAcademicUserRequest;
+use App\Http\Requests\UpdateAcademicUserRequest;
 use App\Modules\CoreDataStorage;
 use Illuminate\Http\JsonResponse;
-//Recibe HTTP convierte a DTO el metodo UserRegistrationData y 
-// envia a la clase CoreDataStorage::registerAcademicUser() <- metodo de la clase para que 
-// retorne JSON
+
 class AcademicUserController extends Controller
 {
     public function __construct(
         private readonly CoreDataStorage $coreDataStorage
     ) {}
 
-        /**
+    /**
      * Registers a new academic user.
      */
     public function store(RegisterAcademicUserRequest $request): JsonResponse
@@ -34,5 +34,30 @@ class AcademicUserController extends Controller
             'message' => $result->message,
             'timestamp' => $result->timestamp,
         ], $result->isSuccessful ? 201 : 400);
+    }
+
+    /**
+     * Updates an existing academic user.
+     */
+    public function update(UpdateAcademicUserRequest $request, int $userId): JsonResponse
+    {
+        $data = new UserUpdateData(
+            fullName: $request->input('fullName'),
+            email: $request->input('email'),
+            role: $request->input('role'),
+            newPassword: $request->input('newPassword')
+        );
+
+        $result = $this->coreDataStorage->updateAcademicUser($userId, $data);
+
+        $statusCode = $result->isSuccessful
+            ? 200
+            : ($result->message === 'Usuario no encontrado' ? 404 : 400);
+
+        return response()->json([
+            'success' => $result->isSuccessful,
+            'message' => $result->message,
+            'timestamp' => $result->timestamp,
+        ], $statusCode);
     }
 }
