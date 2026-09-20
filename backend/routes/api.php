@@ -22,5 +22,6 @@ Route::post('/students/import', [StudentRosterController::class, 'import']);
 Route::get('/academic-staff', [AcademicStaffController::class, 'index']);
 Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
 Route::post('/academic-users', [AcademicUserController::class, 'store']);
+Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
 Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
 

@@ -11,6 +11,7 @@ use App\Modules\CoreDataStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\DTOs\UserRegistrationData;
+use App\DTOs\UserUpdateData;
 
 class CoreDataStorageTest extends TestCase
 {
@@ -469,13 +470,136 @@ public function test_register_academic_user_rejects_existing_email(): void
 } 
 
     public function test_get_processed_rosters_returns_empty_array_when_no_rosters_exist(): void
-{
-    $rosters = $this->storage->getProcessedRosters();
+    {
+        $rosters = $this->storage->getProcessedRosters();
 
-    $this->assertIsArray($rosters);
-    $this->assertEmpty($rosters);
-}
+        $this->assertIsArray($rosters);
+        $this->assertEmpty($rosters);
+    }
 
+    public function test_update_academic_user_successfully(): void
+    {
+        $user = User::create([
+            'name' => 'Carlos Morales',
+            'email' => 'carlos.morales@umss.edu.bo',
+            'password' => bcrypt('oldpassword123'),
+            'role' => 'TEACHER',
+            'is_active' => true,
+        ]);
+
+        $updateData = new UserUpdateData(
+            fullName: 'Carlos Morales Modificado',
+            email: 'carlos.m@umss.edu.bo',
+            role: 'DOCENTE',
+            newPassword: null
+        );
+
+        $result = $this->storage->updateAcademicUser($user->id, $updateData);
+
+        $this->assertTrue($result->isSuccessful);
+        $this->assertEquals('Usuario actualizado correctamente', $result->message);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Carlos Morales Modificado',
+            'email' => 'carlos.m@umss.edu.bo',
+            'role' => 'TEACHER',
+        ]);
+    }
+
+    public function test_update_academic_user_with_new_password_successfully(): void
+    {
+        $user = User::create([
+            'name' => 'Ana Torrico',
+            'email' => 'ana.torrico@umss.edu.bo',
+            'password' => bcrypt('oldpassword123'),
+            'role' => 'ASSISTANT',
+            'is_active' => true,
+        ]);
+
+        $updateData = new UserUpdateData(
+            fullName: 'Ana Patricia Torrico',
+            email: 'ana.torrico@umss.edu.bo',
+            role: 'DOCENTE',
+            newPassword: 'NewSecurePassword123'
+        );
+
+        $result = $this->storage->updateAcademicUser($user->id, $updateData);
+
+        $this->assertTrue($result->isSuccessful);
+        $this->assertEquals('Usuario actualizado correctamente', $result->message);
+
+        $user->refresh();
+        $this->assertEquals('Ana Patricia Torrico', $user->name);
+        $this->assertEquals('TEACHER', $user->role);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewSecurePassword123', $user->password));
+    }
+
+    public function test_update_academic_user_returns_error_when_user_not_found(): void
+    {
+        $updateData = new UserUpdateData(
+            fullName: 'Inexistente',
+            email: 'inexistente@umss.edu.bo',
+            role: 'DOCENTE'
+        );
+
+        $result = $this->storage->updateAcademicUser(99999, $updateData);
+
+        $this->assertFalse($result->isSuccessful);
+        $this->assertEquals('Usuario no encontrado', $result->message);
+    }
+
+    public function test_update_academic_user_rejects_invalid_email_domain(): void
+    {
+        $user = User::create([
+            'name' => 'Docente Prueba',
+            'email' => 'prueba@umss.edu.bo',
+            'password' => bcrypt('password123'),
+            'role' => 'TEACHER',
+            'is_active' => true,
+        ]);
+
+        $updateData = new UserUpdateData(
+            fullName: 'Docente Prueba',
+            email: 'prueba@gmail.com',
+            role: 'DOCENTE'
+        );
+
+        $result = $this->storage->updateAcademicUser($user->id, $updateData);
+
+        $this->assertFalse($result->isSuccessful);
+        $this->assertStringContainsString('@umss.edu.bo', $result->message);
+    }
+
+    public function test_update_academic_user_rejects_email_used_by_another_user(): void
+    {
+        User::create([
+            'name' => 'Usuario Uno',
+            'email' => 'usuario.uno@umss.edu.bo',
+            'password' => bcrypt('password123'),
+            'role' => 'TEACHER',
+            'is_active' => true,
+        ]);
+
+        $userTwo = User::create([
+            'name' => 'Usuario Dos',
+            'email' => 'usuario.dos@umss.edu.bo',
+            'password' => bcrypt('password123'),
+            'role' => 'TEACHER',
+            'is_active' => true,
+        ]);
+
+        $updateData = new UserUpdateData(
+            fullName: 'Usuario Dos Modificado',
+            email: 'usuario.uno@umss.edu.bo',
+            role: 'DOCENTE'
+        );
+
+        $result = $this->storage->updateAcademicUser($userTwo->id, $updateData);
+
+        $this->assertFalse($result->isSuccessful);
+        $this->assertEquals('El correo ya está registrado por otro usuario', $result->message);
+    }
 }
 
 

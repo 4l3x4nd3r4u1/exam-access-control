@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\DTOs\UserRegistrationData;
+use App\DTOs\UserUpdateData;
 use App\DTOs\OperationResult;
 
 
@@ -60,13 +61,14 @@ class CoreDataStorage
             expiresIn: $ttlMinutes * 60,
         );
     }
+
     /**
-    * Registers a new academic user in the system.
-    *
-    * @param UserRegistrationData $data
-    * @return OperationResult
-    */
- public function registerAcademicUser(UserRegistrationData $data): OperationResult
+     * Registers a new academic user in the system.
+     *
+     * @param UserRegistrationData $data
+     * @return OperationResult
+     */
+    public function registerAcademicUser(UserRegistrationData $data): OperationResult
     {
         $email = strtolower(trim($data->email));
 
@@ -119,6 +121,80 @@ class CoreDataStorage
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Error al registrar usuario: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Updates an existing academic user in the system.
+     *
+     * @param int $userId
+     * @param UserUpdateData $data
+     * @return OperationResult
+     */
+    public function updateAcademicUser(int $userId, UserUpdateData $data): OperationResult
+    {
+        $user = User::find($userId);
+
+        if (!$user) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Usuario no encontrado'
+            );
+        }
+
+        $email = strtolower(trim($data->email));
+
+        // Validate institutional email domain
+        if (!str_ends_with($email, '@umss.edu.bo')) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
+            );
+        }
+
+        // Check if email already belongs to another user
+        if (User::where('email', $email)->where('id', '!=', $userId)->exists()) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo ya está registrado por otro usuario'
+            );
+        }
+
+        // Convert functional roles to database roles
+        $role = match ($data->role) {
+            'DOCENTE' => 'TEACHER',
+            'AUXILIAR' => 'ASSISTANT',
+            'ADMIN' => 'ADMIN',
+            default => null
+        };
+
+        if ($role === null) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Rol no válido'
+            );
+        }
+
+        try {
+            $user->name = $data->fullName;
+            $user->email = $email;
+            $user->role = $role;
+
+            if (!empty($data->newPassword)) {
+                $user->password = $data->newPassword;
+            }
+
+            $user->save();
+
+            return new OperationResult(
+                isSuccessful: true,
+                message: 'Usuario actualizado correctamente'
+            );
+        } catch (\Throwable $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Error al actualizar usuario: ' . $e->getMessage()
             );
         }
     }
