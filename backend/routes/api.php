@@ -13,6 +13,14 @@ Route::get('/health', function () {
     ]);
 });
 
+use App\Http\Controllers\UserController;
+
+    Route::put(
+        '/users/{userId}',
+        [UserController::class, 'update']
+    );
+
+
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/students/import', [StudentRosterController::class, 'import']);
 
