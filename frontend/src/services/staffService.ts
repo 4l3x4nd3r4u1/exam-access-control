@@ -15,7 +15,7 @@ export const staffService = {
       ADMIN: 'ADMIN',
     };
 
-    const res = await apiRequest<{ success: boolean; message: string; data?: any }>('/academic-users', {
+    await apiRequest<{ success: boolean; message: string; data?: any }>('/academic-users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

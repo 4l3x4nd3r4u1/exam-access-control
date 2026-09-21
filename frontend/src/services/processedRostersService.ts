@@ -134,14 +134,6 @@ export const getProcessedRosters = async (
   };
 };
 
-const fallbackRosterStudents: ProcessedRosterStudent[] = [
-  { sis: '202100482', ci: '8765432', fullName: 'Perez Gomez Juan Carlos' },
-  { sis: '202201934', ci: '7654321', fullName: 'Rodriguez Lopez Maria Elena' },
-  { sis: '202305812', ci: '6543210', fullName: 'Fernandez Quispe Carlos Alberto' },
-  { sis: '202008431', ci: '5482910', fullName: 'Torrico Morales Ana Patricia' },
-  { sis: '202209115', ci: '4321098', fullName: 'Vargas Mamani Diego Alejandro' },
-];
-
 export const getProcessedRosterDetail = async (
   apiBaseUrl: string,
   token: string,
@@ -149,10 +141,17 @@ export const getProcessedRosterDetail = async (
   signal?: AbortSignal,
 ): Promise<ProcessedRosterDetail> => {
   try {
-    const response = await fetch(`${apiBaseUrl}/processed-rosters/${encodeURIComponent(courseGroupId)}`, {
+    let response = await fetch(`${apiBaseUrl}/processed-rosters/${courseGroupId}`, {
       headers: authHeaders(token),
       signal,
     });
+
+    if (!response.ok) {
+      response = await fetch(`${apiBaseUrl}/processed-rosters/${encodeURIComponent(courseGroupId)}`, {
+        headers: authHeaders(token),
+        signal,
+      });
+    }
 
     const data = await readApiResponse<{
       roster?: RawProcessedRoster;
@@ -167,8 +166,7 @@ export const getProcessedRosterDetail = async (
   } catch (error: any) {
     if (signal?.aborted) throw error;
 
-    // Cuando el backend no tiene implementada la ruta de detalle (404),
-    // obtenemos la información real de la planilla desde /processed-rosters o local
+    // Si falló la red, intentar buscar en caché local
     let matchedRoster: ProcessedRoster | undefined;
     try {
       const rostersData = await getProcessedRosters(apiBaseUrl, token, signal);
@@ -188,16 +186,15 @@ export const getProcessedRosterDetail = async (
       matchedRoster = {
         courseGroupId,
         subjectCode,
-        subjectName: subjectCode === 'INF222' ? 'Programación Web' : subjectCode,
+        subjectName: subjectCode,
         groupCode,
         academicTerm,
-        teacherName: 'Docente Titular',
-        totalEnrolled: fallbackRosterStudents.length,
+        teacherName: null,
+        totalEnrolled: 0,
         updatedAt: null,
       };
     }
 
-    // Buscar estudiantes guardados en localStorage o adaptar al total de inscritos
     let realStudents: ProcessedRosterStudent[] = [];
     try {
       const storedStudentsRaw = localStorage.getItem('eac_students_data');
@@ -212,11 +209,6 @@ export const getProcessedRosterDetail = async (
         }
       }
     } catch {
-    }
-
-    if (realStudents.length === 0) {
-      const targetCount = matchedRoster.totalEnrolled > 0 ? matchedRoster.totalEnrolled : 5;
-      realStudents = fallbackRosterStudents.slice(0, Math.min(targetCount, fallbackRosterStudents.length));
     }
 
     return {

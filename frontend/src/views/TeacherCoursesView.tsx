@@ -60,8 +60,7 @@ export const TeacherCoursesView: React.FC<TeacherCoursesViewProps> = ({
     setLoadingStudents(true);
     try {
       const enrolledList = await courseService.getCourseStudents(
-        selectedCourse.course_group_id,
-        selectedCourse.total_enrolled
+        selectedCourse.course_group_id
       );
       setStudents(enrolledList);
     } finally {
