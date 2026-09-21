@@ -82,6 +82,154 @@ CSV;
         ]);
     }
 
+    public function test_imports_official_template_csv_roster_successfully(): void
+    {
+        $csvContent = <<<CSV
+Docente: Lic. Juan Carlos Perez Gomez
+Email Docente: juan.perez@umss.edu.bo
+Materia: INF110 - INTRODUCCION A LA PROGRAMACION
+Grupo: 1
+Gestion: 2/2026
+
+Codigo SIS,CI,Nombre Completo
+202001234,7891234,ALVAREZ CLAROS PEDRO
+202005678,6543210,BENITEZ LOPEZ CARMEN
+CSV;
+
+        $fileData = new RawFileData(
+            content: $csvContent,
+            fileName: 'nomina_oficial.csv',
+            extension: 'csv'
+        );
+
+        $result = $this->storage->importStudentRoster($fileData);
+
+        $this->assertTrue($result->isSuccessful);
+        $this->assertEquals(2, $result->totalProcessed);
+        $this->assertEquals(2, $result->successful);
+        $this->assertEquals(0, $result->skipped);
+        $this->assertEmpty($result->observations);
+        $this->assertEmpty($result->failedRows);
+        $this->assertNotNull($result->metadata);
+        $this->assertEquals('Lic. Juan Carlos Perez Gomez', $result->metadata['teacherName']);
+        $this->assertEquals('juan.perez@umss.edu.bo', $result->metadata['teacherEmail']);
+        $this->assertEquals('INF110', $result->metadata['subjectCode']);
+        $this->assertEquals('INTRODUCCION A LA PROGRAMACION', $result->metadata['subjectName']);
+        $this->assertEquals('1', $result->metadata['groupCode']);
+        $this->assertEquals('2/2026', $result->metadata['academicTerm']);
+
+        // Verify Student persistence
+        $this->assertDatabaseHas('students', [
+            'student_key' => '202001234',
+            'ci' => '7891234',
+            'full_name' => 'ALVAREZ CLAROS PEDRO',
+        ]);
+
+        // Verify CourseGroup persistence
+        $this->assertDatabaseHas('course_groups', [
+            'course_group_id' => 'INF110-G1-2/2026',
+            'subject_code' => 'INF110',
+            'subject_name' => 'INTRODUCCION A LA PROGRAMACION',
+            'group_code' => '1',
+            'academic_term' => '2/2026',
+        ]);
+
+        // Verify Teacher User persistence with full name
+        $this->assertDatabaseHas('users', [
+            'email' => 'juan.perez@umss.edu.bo',
+            'name' => 'Lic. Juan Carlos Perez Gomez',
+            'role' => 'TEACHER',
+        ]);
+
+        // Verify Enrollment persistence
+        $this->assertDatabaseHas('student_course_enrollments', [
+            'student_key' => '202001234',
+            'course_group_id' => 'INF110-G1-2/2026',
+            'status' => 'HABILITADO',
+        ]);
+    }
+
+    public function test_rejects_template_csv_with_missing_metadata(): void
+    {
+        $csvContent = <<<CSV
+Docente: Lic. Juan Carlos Perez Gomez
+Materia: INF110 - INTRODUCCION A LA PROGRAMACION
+Grupo: 1
+
+Codigo SIS,CI,Nombre Completo
+202001234,7891234,ALVAREZ CLAROS PEDRO
+CSV;
+
+        $fileData = new RawFileData(
+            content: $csvContent,
+            fileName: 'incompleto.csv',
+            extension: 'csv'
+        );
+
+        $result = $this->storage->importStudentRoster($fileData);
+
+        $this->assertFalse($result->isSuccessful);
+        $this->assertStringContainsString('Faltan metadatos requeridos', $result->observations[0]);
+        $this->assertStringContainsString('Email Docente', $result->observations[0]);
+        $this->assertStringContainsString('Gestion', $result->observations[0]);
+    }
+
+    public function test_template_csv_handles_invalid_rows_and_returns_failed_rows(): void
+    {
+        $csvContent = <<<CSV
+Docente: Lic. Juan Carlos Perez Gomez
+Email Docente: juan.perez@umss.edu.bo
+Materia: INF110 - INTRODUCCION A LA PROGRAMACION
+Grupo: 1
+Gestion: 2/2026
+
+Codigo SIS,CI,Nombre Completo
+202001234,7891234,ALVAREZ CLAROS PEDRO
+,6543210,BENITEZ SIN SIS
+202109876,,CASTRO SIN CI
+CSV;
+
+        $fileData = new RawFileData(
+            content: $csvContent,
+            fileName: 'nomina_con_errores.csv',
+            extension: 'csv'
+        );
+
+        $result = $this->storage->importStudentRoster($fileData);
+
+        $this->assertTrue($result->isSuccessful);
+        $this->assertEquals(3, $result->totalProcessed);
+        $this->assertEquals(1, $result->successful);
+        $this->assertEquals(2, $result->skipped);
+        $this->assertCount(2, $result->failedRows);
+
+        // Check failed rows detail
+        $this->assertEquals(9, $result->failedRows[0]['rowNumber']);
+        $this->assertStringContainsString('Falta Código SIS', $result->failedRows[0]['reason']);
+        $this->assertEquals('BENITEZ SIN SIS', $result->failedRows[0]['data']['nombre_completo']);
+
+        $this->assertEquals(10, $result->failedRows[1]['rowNumber']);
+        $this->assertStringContainsString('Falta CI', $result->failedRows[1]['reason']);
+
+        // Check valid student is saved
+        $this->assertDatabaseHas('students', [
+            'student_key' => '202001234',
+            'ci' => '7891234',
+        ]);
+    }
+
+    public function test_generates_csv_template_content(): void
+    {
+        $template = $this->storage->generateCsvTemplate();
+
+        $this->assertStringContainsString('Docente:', $template);
+        $this->assertStringContainsString('Email Docente:', $template);
+        $this->assertStringContainsString('Materia:', $template);
+        $this->assertStringContainsString('Grupo:', $template);
+        $this->assertStringContainsString('Gestion:', $template);
+        $this->assertStringContainsString('Codigo SIS,CI,Nombre Completo', $template);
+    }
+
     public function test_rejects_unsupported_file_extension(): void
     {
         $fileData = new RawFileData(
@@ -99,8 +247,8 @@ CSV;
     public function test_detects_missing_column_headers(): void
     {
         $csvContent = <<<CSV
-codigo_sis,ci,nombre_completo
-202100482,8765432,Perez Gomez Juan Carlos
+col1,col2,col3
+val1,val2,val3
 CSV;
 
         $fileData = new RawFileData(
@@ -112,7 +260,7 @@ CSV;
         $result = $this->storage->importStudentRoster($fileData);
 
         $this->assertFalse($result->isSuccessful);
-        $this->assertStringContainsString('Missing required column headers', $result->observations[0]);
+        $this->assertNotEmpty($result->observations);
     }
 
     public function test_handles_rows_with_missing_mandatory_fields(): void

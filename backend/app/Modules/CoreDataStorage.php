@@ -302,8 +302,25 @@ class CoreDataStorage
             successful: 0,
             skipped: 0,
             observations: ["Unsupported file format: .{$extension}. Supported formats are .csv and .xlsx"],
-            isSuccessful: false
+            isSuccessful: false,
+            failedRows: []
         );
+    }
+
+    /**
+     * Generates standard CSV template content for student roster import.
+     */
+    public function generateCsvTemplate(): string
+    {
+        return "Docente: Lic. Juan Carlos Perez Gomez\n"
+            . "Email Docente: juan.perez@umss.edu.bo\n"
+            . "Materia: INF110 - INTRODUCCION A LA PROGRAMACION\n"
+            . "Grupo: 1\n"
+            . "Gestion: 2/2026\n\n"
+            . "Codigo SIS,CI,Nombre Completo\n"
+            . "202001234,7891234,ALVAREZ CLAROS PEDRO\n"
+            . "202005678,6543210,BENITEZ LOPEZ CARMEN\n"
+            . "202109876,8912345,CASTRO ROJAS MARIO\n";
     }
 
     /**
@@ -319,7 +336,8 @@ class CoreDataStorage
                 successful: 0,
                 skipped: 0,
                 observations: ['The CSV file is empty.'],
-                isSuccessful: false
+                isSuccessful: false,
+                failedRows: []
             );
         }
 
@@ -327,30 +345,307 @@ class CoreDataStorage
         fwrite($stream, $content);
         rewind($stream);
 
-        $rawHeaders = fgetcsv($stream, escape: "\\");
+        $rows = [];
+        while (($row = fgetcsv($stream, escape: "\\")) !== false) {
+            $rows[] = $row;
+        }
+        fclose($stream);
 
-        if ($rawHeaders === false || empty($rawHeaders)) {
-            fclose($stream);
+        if (empty($rows)) {
             return new ImportSummary(
                 totalProcessed: 0,
                 successful: 0,
                 skipped: 0,
                 observations: ['Unable to read headers from CSV file.'],
-                isSuccessful: false
+                isSuccessful: false,
+                failedRows: []
             );
         }
 
-        $headerMap = $this->mapHeaders($rawHeaders);
+        // Detect if the file uses legacy flat format or template format with metadata
+        $firstNonEmptyRow = null;
+        foreach ($rows as $r) {
+            if (!$this->isEmptyRow($r)) {
+                $firstNonEmptyRow = $r;
+                break;
+            }
+        }
+
+        if ($firstNonEmptyRow === null) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ['The CSV file is empty.'],
+                isSuccessful: false,
+                failedRows: []
+            );
+        }
+
+        $firstHeaderMap = $this->mapHeaders($firstNonEmptyRow);
+        $isLegacyFlat = array_key_exists('codigo_sis', $firstHeaderMap)
+            && array_key_exists('sigla_materia', $firstHeaderMap)
+            && array_key_exists('email_docente', $firstHeaderMap);
+
+        if ($isLegacyFlat) {
+            return $this->processLegacyFlatCsv($rows, $firstHeaderMap);
+        }
+
+        return $this->processTemplateCsv($rows);
+    }
+
+    /**
+     * Processes template CSV containing metadata header block and student table.
+     *
+     * @param array<array<string|null>> $rows
+     */
+    private function processTemplateCsv(array $rows): ImportSummary
+    {
+        $metadata = [];
+        $tableHeaderIndex = null;
+        $studentHeaderMap = [];
+
+        // 1. Scan for metadata and student table header
+        foreach ($rows as $index => $row) {
+            if ($this->isEmptyRow($row)) {
+                continue;
+            }
+
+            $candidateMap = $this->mapHeaders($row);
+            if (array_key_exists('codigo_sis', $candidateMap) && array_key_exists('ci', $candidateMap)) {
+                $tableHeaderIndex = $index;
+                $studentHeaderMap = $candidateMap;
+                break;
+            }
+
+            $this->extractMetadataFromRow($row, $metadata);
+        }
+
+        // 2. Validate metadata
+        $missingMeta = $this->findMissingMetadata($metadata);
+        if (!empty($missingMeta)) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ['Faltan metadatos requeridos en el encabezado: ' . implode(', ', $missingMeta) . '. Puede descargar la plantilla oficial.'],
+                isSuccessful: false,
+                failedRows: []
+            );
+        }
+
+        // 3. Validate student table headers
+        if ($tableHeaderIndex === null) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ['No se encontró la cabecera de la tabla de estudiantes (Codigo SIS, CI, Nombre Completo). Puede descargar la plantilla oficial.'],
+                isSuccessful: false,
+                failedRows: []
+            );
+        }
+
+        $missingCols = $this->findMissingStudentColumns($studentHeaderMap);
+        if (!empty($missingCols)) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ['Missing required column headers: ' . implode(', ', $missingCols)],
+                isSuccessful: false,
+                failedRows: []
+            );
+        }
+
+        $courseGroupId = $this->buildCourseGroupId(
+            sigla: $metadata['subject_code'],
+            grupo: $metadata['group_code'],
+            gestion: $metadata['academic_term']
+        );
+
+        $totalProcessed = 0;
+        $skipped = 0;
+        $observations = [];
+        $failedRows = [];
+        $validRows = [];
+
+        // 4. Iterate student rows
+        for ($i = $tableHeaderIndex + 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+            $rowNumber = $i + 1;
+
+            if ($this->isEmptyRow($row)) {
+                continue;
+            }
+
+            $totalProcessed++;
+
+            $sisIndex = $studentHeaderMap['codigo_sis'] ?? null;
+            $ciIndex = $studentHeaderMap['ci'] ?? null;
+            $nameIndex = $studentHeaderMap['nombre_completo'] ?? null;
+
+            $sis = ($sisIndex !== null && isset($row[$sisIndex])) ? trim((string)$row[$sisIndex]) : '';
+            $ci = ($ciIndex !== null && isset($row[$ciIndex])) ? trim((string)$row[$ciIndex]) : '';
+            $name = ($nameIndex !== null && isset($row[$nameIndex])) ? trim((string)$row[$nameIndex]) : '';
+
+            $rawRowData = [
+                'codigo_sis' => $sis,
+                'ci' => $ci,
+                'nombre_completo' => $name,
+            ];
+
+            $errors = [];
+            if (empty($sis)) {
+                $errors[] = 'Falta Código SIS del estudiante.';
+            }
+            if (empty($ci)) {
+                $errors[] = 'Falta CI del estudiante.';
+            }
+            if (empty($name)) {
+                $errors[] = 'Falta Nombre Completo del estudiante.';
+            }
+
+            if (!empty($errors)) {
+                $skipped++;
+                $reason = implode(' ', $errors);
+                $observations[] = "Row {$rowNumber}: {$reason}";
+                $failedRows[] = [
+                    'rowNumber' => $rowNumber,
+                    'reason' => $reason,
+                    'data' => $rawRowData,
+                ];
+                continue;
+            }
+
+            $validRows[] = [
+                'rowNumber' => $rowNumber,
+                'studentKey' => $sis,
+                'ci' => $ci,
+                'fullName' => $name,
+                'courseGroupId' => $courseGroupId,
+            ];
+        }
+
+        $extractedMetadata = [
+            'teacherName' => $metadata['teacher_name'] ?? null,
+            'teacherEmail' => $metadata['teacher_email'] ?? null,
+            'subjectCode' => $metadata['subject_code'] ?? null,
+            'subjectName' => $metadata['subject_name'] ?? null,
+            'groupCode' => $metadata['group_code'] ?? null,
+            'academicTerm' => $metadata['academic_term'] ?? null,
+        ];
+
+        if (empty($validRows)) {
+            return new ImportSummary(
+                totalProcessed: $totalProcessed,
+                successful: 0,
+                skipped: $skipped,
+                observations: $observations,
+                isSuccessful: false,
+                failedRows: $failedRows,
+                metadata: $extractedMetadata
+            );
+        }
+
+        // 5. Bulk Persistence in Database Transaction
+        try {
+            DB::transaction(function () use ($metadata, $validRows, $courseGroupId) {
+                $now = now();
+
+                // Teacher
+                $email = strtolower(trim($metadata['teacher_email']));
+                $teacher = User::where('email', $email)->first();
+                if (!$teacher) {
+                    $teacher = User::create([
+                        'email' => $email,
+                        'name' => trim($metadata['teacher_name']),
+                        'role' => 'TEACHER',
+                        'password' => bcrypt('password123'),
+                        'is_active' => true,
+                    ]);
+                }
+
+                // CourseGroup
+                CourseGroup::upsert([
+                    [
+                        'course_group_id' => $courseGroupId,
+                        'subject_code' => strtoupper(trim($metadata['subject_code'])),
+                        'subject_name' => trim($metadata['subject_name']),
+                        'group_code' => strtoupper(trim($metadata['group_code'])),
+                        'academic_term' => trim($metadata['academic_term']),
+                        'teacher_id' => $teacher->id,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]
+                ], ['course_group_id'], ['subject_code', 'subject_name', 'group_code', 'academic_term', 'teacher_id', 'updated_at']);
+
+                // Students
+                $studentsData = [];
+                foreach ($validRows as $item) {
+                    $sKey = $item['studentKey'];
+                    $studentsData[$sKey] = [
+                        'student_key' => $sKey,
+                        'ci' => $item['ci'],
+                        'full_name' => $item['fullName'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                Student::upsert(array_values($studentsData), ['student_key'], ['ci', 'full_name', 'updated_at']);
+
+                // Enrollments
+                $enrollmentsData = [];
+                foreach ($validRows as $item) {
+                    $enrollmentKey = $item['studentKey'] . ':::' . $courseGroupId;
+                    $enrollmentsData[$enrollmentKey] = [
+                        'student_key' => $item['studentKey'],
+                        'course_group_id' => $courseGroupId,
+                        'status' => 'HABILITADO',
+                        'ineligibility_reason' => null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                StudentCourseEnrollment::upsert(array_values($enrollmentsData), ['student_key', 'course_group_id'], ['status', 'updated_at']);
+            });
+
+            $successful = count($validRows);
+        } catch (\Throwable $e) {
+            $skipped += count($validRows);
+            $observations[] = "Bulk import transaction error: " . $e->getMessage();
+            $successful = 0;
+        }
+
+        return new ImportSummary(
+            totalProcessed: $totalProcessed,
+            successful: $successful,
+            skipped: $skipped,
+            observations: $observations,
+            isSuccessful: $successful > 0,
+            failedRows: $failedRows,
+            metadata: $extractedMetadata
+        );
+    }
+
+    /**
+     * Processes legacy flat CSV where all metadata was repeated in each row.
+     *
+     * @param array<array<string|null>> $rows
+     * @param array<string, int> $headerMap
+     */
+    private function processLegacyFlatCsv(array $rows, array $headerMap): ImportSummary
+    {
         $missingColumns = $this->findMissingColumns($headerMap);
 
         if (!empty($missingColumns)) {
-            fclose($stream);
             return new ImportSummary(
                 totalProcessed: 0,
                 successful: 0,
                 skipped: 0,
                 observations: ['Missing required column headers: ' . implode(', ', $missingColumns)],
-                isSuccessful: false
+                isSuccessful: false,
+                failedRows: []
             );
         }
 
@@ -358,38 +653,46 @@ class CoreDataStorage
         $successful = 0;
         $skipped = 0;
         $observations = [];
-        $rowNumber = 1; // Row 1 is header
+        $failedRows = [];
         $validRows = [];
-        $expectedColumnCount = count($rawHeaders);
+        $expectedColumnCount = count($rows[0]);
 
-        while (($row = fgetcsv($stream, escape: "\\")) !== false) {
-            $rowNumber++;
+        for ($i = 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+            $rowNumber = $i + 1;
 
-            // Skip completely empty rows
             if ($this->isEmptyRow($row)) {
                 continue;
             }
 
             $totalProcessed++;
 
-            // Structural validation: check column count against headers
             if (count($row) !== $expectedColumnCount) {
                 $skipped++;
-                $observations[] = "Row {$rowNumber}: Malformed row. Expected {$expectedColumnCount} columns, but found " . count($row) . ".";
+                $reason = "Malformed row. Expected {$expectedColumnCount} columns, but found " . count($row) . ".";
+                $observations[] = "Row {$rowNumber}: {$reason}";
+                $failedRows[] = [
+                    'rowNumber' => $rowNumber,
+                    'reason' => $reason,
+                    'data' => $this->extractRowData($row, $headerMap),
+                ];
                 continue;
             }
 
-            // Extract row fields using mapped header indices
             $rowData = $this->extractRowData($row, $headerMap);
             $validationError = $this->validateRowData($rowData, $rowNumber);
 
             if ($validationError !== null) {
                 $skipped++;
                 $observations[] = $validationError;
+                $failedRows[] = [
+                    'rowNumber' => $rowNumber,
+                    'reason' => $validationError,
+                    'data' => $rowData,
+                ];
                 continue;
             }
 
-            // Build canonical domain identifiers (Parnas design)
             $studentKey = $rowData['codigo_sis'];
             $courseGroupId = $this->buildCourseGroupId(
                 sigla: $rowData['sigla_materia'],
@@ -405,24 +708,21 @@ class CoreDataStorage
             ];
         }
 
-        fclose($stream);
-
         if (empty($validRows)) {
             return new ImportSummary(
                 totalProcessed: $totalProcessed,
                 successful: 0,
                 skipped: $skipped,
                 observations: $observations,
-                isSuccessful: false
+                isSuccessful: false,
+                failedRows: $failedRows
             );
         }
 
-        // High-Performance Bulk Persistence in a single Database Transaction
         try {
             DB::transaction(function () use ($validRows) {
                 $now = now();
 
-                // 1. Resolve / Create Teacher Users in bulk
                 $teacherEmails = array_values(array_unique(array_map(
                     fn($item) => strtolower(trim($item['rowData']['email_docente'])),
                     $validRows
@@ -445,7 +745,6 @@ class CoreDataStorage
                     }
                 }
 
-                // 2. Prepare & Upsert CourseGroups in bulk
                 $courseGroupsData = [];
                 foreach ($validRows as $item) {
                     $cgId = $item['courseGroupId'];
@@ -470,7 +769,6 @@ class CoreDataStorage
                     ['subject_code', 'subject_name', 'group_code', 'academic_term', 'teacher_id', 'updated_at']
                 );
 
-                // 3. Prepare & Upsert Students in bulk
                 $studentsData = [];
                 foreach ($validRows as $item) {
                     $sKey = $item['studentKey'];
@@ -489,7 +787,6 @@ class CoreDataStorage
                     ['ci', 'full_name', 'updated_at']
                 );
 
-                // 4. Prepare & Upsert Student Course Enrollments in bulk
                 $enrollmentsData = [];
                 foreach ($validRows as $item) {
                     $enrollmentKey = $item['studentKey'] . ':::' . $item['courseGroupId'];
@@ -521,8 +818,115 @@ class CoreDataStorage
             successful: $successful,
             skipped: $skipped,
             observations: $observations,
-            isSuccessful: $successful > 0
+            isSuccessful: $successful > 0,
+            failedRows: $failedRows
         );
+    }
+
+    /**
+     * Extracts course/teacher metadata from key-value header line.
+     *
+     * @param array<string|null> $row
+     * @param array<string, string> $metadata
+     */
+    private function extractMetadataFromRow(array $row, array &$metadata): void
+    {
+        $firstCell = trim((string)($row[0] ?? ''));
+        $secondCell = trim((string)($row[1] ?? ''));
+
+        $key = '';
+        $val = '';
+
+        if (str_contains($firstCell, ':')) {
+            $parts = explode(':', $firstCell, 2);
+            $key = $parts[0];
+            $val = trim($parts[1]);
+            if ($val === '' && $secondCell !== '') {
+                $val = $secondCell;
+            }
+        } elseif ($secondCell !== '' && !str_contains($firstCell, ',')) {
+            $key = rtrim(trim($firstCell), ':');
+            $val = $secondCell;
+        }
+
+        if ($key === '') {
+            return;
+        }
+
+        $normalizedKey = strtolower(preg_replace('/[^a-z0-9]/i', '', $key));
+
+        if (in_array($normalizedKey, ['docente', 'nombredocente', 'profesor'])) {
+            $metadata['teacher_name'] = $val;
+        } elseif (in_array($normalizedKey, ['emaildocente', 'email', 'correo', 'correodocente'])) {
+            $metadata['teacher_email'] = $val;
+        } elseif (in_array($normalizedKey, ['materia', 'asignatura', 'siglamateria'])) {
+            if (str_contains($val, '-')) {
+                $parts = explode('-', $val, 2);
+                $metadata['subject_code'] = strtoupper(trim($parts[0]));
+                $metadata['subject_name'] = trim($parts[1]);
+            } else {
+                $metadata['subject_code'] = strtoupper(trim($val));
+                $metadata['subject_name'] ??= trim($val);
+            }
+        } elseif ($normalizedKey === 'sigla') {
+            $metadata['subject_code'] = strtoupper(trim($val));
+        } elseif ($normalizedKey === 'nombremateria') {
+            $metadata['subject_name'] = trim($val);
+        } elseif (in_array($normalizedKey, ['grupo', 'paralelo'])) {
+            $metadata['group_code'] = strtoupper(trim($val));
+        } elseif (in_array($normalizedKey, ['gestion', 'periodo'])) {
+            $metadata['academic_term'] = trim($val);
+        }
+    }
+
+    /**
+     * Checks if any required metadata fields are missing.
+     *
+     * @param array<string, string> $metadata
+     * @return array<string> List of missing metadata labels
+     */
+    private function findMissingMetadata(array $metadata): array
+    {
+        $missing = [];
+        if (empty($metadata['teacher_name'])) {
+            $missing[] = 'Docente';
+        }
+        if (empty($metadata['teacher_email'])) {
+            $missing[] = 'Email Docente';
+        }
+        if (empty($metadata['subject_code'])) {
+            $missing[] = 'Materia';
+        }
+        if (empty($metadata['group_code'])) {
+            $missing[] = 'Grupo';
+        }
+        if (empty($metadata['academic_term'])) {
+            $missing[] = 'Gestion';
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Checks if any required student table columns are missing.
+     *
+     * @param array<string, int> $headerMap
+     * @return array<string> List of missing column names
+     */
+    private function findMissingStudentColumns(array $headerMap): array
+    {
+        $missing = [];
+        if (!array_key_exists('codigo_sis', $headerMap)) {
+            $missing[] = 'codigo_sis';
+        }
+        if (!array_key_exists('ci', $headerMap)) {
+            $missing[] = 'ci';
+        }
+        if (!array_key_exists('nombre_completo', $headerMap)) {
+            $missing[] = 'nombre_completo';
+        }
+
+        return $missing;
     }
 
     /**
@@ -536,7 +940,8 @@ class CoreDataStorage
             successful: 0,
             skipped: 0,
             observations: ['Excel parsing will be implemented with PhpSpreadsheet.'],
-            isSuccessful: true
+            isSuccessful: true,
+            failedRows: []
         );
     }
 
