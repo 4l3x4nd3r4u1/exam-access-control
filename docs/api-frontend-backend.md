@@ -259,7 +259,35 @@ Codigo SIS,CI,Nombre Completo
 
 ## 5. Gestion de Habilitacion de Estudiantes
 
-### Actualizar Estado de Habilitacion de un Estudiante
+### Listar Estudiantes de un Curso con Estado de Habilitacion (HU10)
+- **Ruta:** `GET /api/courses/{courseGroupId}/students`
+- **Parametros en URL:**
+  - `courseGroupId`: Identificador de materia (ej. `INF110-G1-2/2026`).
+- **Respuesta Exitosa (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "studentKey": "202001234",
+      "ci": "7891234",
+      "fullName": "ALVAREZ CLAROS PEDRO",
+      "status": "HABILITADO",
+      "ineligibilityReason": null
+    },
+    {
+      "studentKey": "202005678",
+      "ci": "6543210",
+      "fullName": "BENITEZ LOPEZ CARMEN",
+      "status": "INHABILITADO",
+      "ineligibilityReason": "No entrego Proyecto 2"
+    }
+  ],
+  "message": "Estudiantes del curso obtenidos exitosamente."
+}
+```
+
+### Actualizar Estado de Habilitacion de un Estudiante (HU12)
 - **Ruta:** `PUT /api/courses/{courseGroupId}/students/{studentKey}/status`
 - **Parametros en URL:**
   - `courseGroupId`: Identificador de materia (ej. `INF110-G1-2/2026`).
@@ -287,3 +315,4 @@ Codigo SIS,CI,Nombre Completo
   - `404 Not Found`: `{"success": false, "message": "Estudiante no encontrado."}`
   - `404 Not Found`: `{"success": false, "message": "El estudiante no está inscrito en este grupo de materia."}`
   - `422 Unprocessable Entity`: Validacion de formulario.
+

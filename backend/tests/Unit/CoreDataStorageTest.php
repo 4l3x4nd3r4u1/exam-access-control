@@ -748,6 +748,71 @@ public function test_register_academic_user_rejects_existing_email(): void
         $this->assertFalse($result->isSuccessful);
         $this->assertEquals('El correo ya está registrado por otro usuario', $result->message);
     }
+
+    public function test_get_enrolled_students_returns_students_with_status_ordered_by_name(): void
+    {
+        $teacher = User::create([
+            'name' => 'Docente Titular',
+            'email' => 'docente@umss.edu.bo',
+            'password' => bcrypt('password123'),
+            'role' => 'TEACHER',
+            'is_active' => true,
+        ]);
+
+        CourseGroup::create([
+            'course_group_id' => 'INF110-G1-2/2026',
+            'subject_code' => 'INF110',
+            'subject_name' => 'Introduccion a la Programacion',
+            'group_code' => '1',
+            'academic_term' => '2/2026',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        Student::create([
+            'student_key' => '202001234',
+            'ci' => '7891234',
+            'full_name' => 'ZAMBRANA MARIO',
+        ]);
+
+        Student::create([
+            'student_key' => '202005678',
+            'ci' => '6543210',
+            'full_name' => 'ALVAREZ PEDRO',
+        ]);
+
+        StudentCourseEnrollment::create([
+            'student_key' => '202001234',
+            'course_group_id' => 'INF110-G1-2/2026',
+            'status' => 'INHABILITADO',
+            'ineligibility_reason' => 'No entrego Proyecto 2',
+        ]);
+
+        StudentCourseEnrollment::create([
+            'student_key' => '202005678',
+            'course_group_id' => 'INF110-G1-2/2026',
+            'status' => 'HABILITADO',
+            'ineligibility_reason' => null,
+        ]);
+
+        $results = $this->storage->getEnrolledStudents('INF110-G1-2/2026');
+
+        $this->assertCount(2, $results);
+        $this->assertEquals('ALVAREZ PEDRO', $results[0]->fullName);
+        $this->assertEquals('HABILITADO', $results[0]->status);
+        $this->assertNull($results[0]->ineligibilityReason);
+
+        $this->assertEquals('ZAMBRANA MARIO', $results[1]->fullName);
+        $this->assertEquals('INHABILITADO', $results[1]->status);
+        $this->assertEquals('No entrego Proyecto 2', $results[1]->ineligibilityReason);
+    }
+
+    public function test_get_enrolled_students_returns_empty_when_no_students(): void
+    {
+        $results = $this->storage->getEnrolledStudents('MAT101-G1-2/2026');
+
+        $this->assertIsArray($results);
+        $this->assertEmpty($results);
+    }
 }
 
 

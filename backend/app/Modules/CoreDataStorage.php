@@ -8,6 +8,7 @@ use App\DTOs\ImportSummary;
 use App\DTOs\UserSession;
 use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
+use App\DTOs\EnrolledStudentSummary;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\User;
 use App\Models\Student;
@@ -263,6 +264,29 @@ class CoreDataStorage
             academicTerm: (string) $course->academic_term,
             totalStudents: (int) ($course->enrollments_count ?? 0),
         ))->all();
+    }
+
+    /**
+     * Retrieves the list of enrolled students for a specific course group with their eligibility status.
+     *
+     * @param string $courseGroupId
+     * @return array<EnrolledStudentSummary>
+     */
+    public function getEnrolledStudents(string $courseGroupId): array
+    {
+        $enrollments = StudentCourseEnrollment::where('course_group_id', trim($courseGroupId))
+            ->with('student')
+            ->get();
+
+        return $enrollments->map(function (StudentCourseEnrollment $enrollment) {
+            return new EnrolledStudentSummary(
+                studentKey: (string) $enrollment->student_key,
+                ci: (string) ($enrollment->student?->ci ?? ''),
+                fullName: (string) ($enrollment->student?->full_name ?? ''),
+                status: (string) $enrollment->status,
+                ineligibilityReason: $enrollment->ineligibility_reason,
+            );
+        })->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
     }
 
     /**
