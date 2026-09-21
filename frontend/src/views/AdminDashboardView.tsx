@@ -8,6 +8,8 @@ import { getProcessedRosters } from '../services/processedRostersService';
 import { NewUserModal } from '../components/NewUserModal';
 import { EditUserModal } from '../components/EditUserModal';
 import importDocSvg from '../assets/image 23.svg';
+import importedRostersIcon from '../assets/imported-rosters-icon.png';
+import academicStaffIcon from '../assets/academic-staff-icon.png';
 
 interface AdminDashboardViewProps {
   session: UserSession;
@@ -263,13 +265,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               title="Planillas importadas"
             >
               <div className="card-icon-container">
-                <svg width="68" height="74" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
+                <img src={importedRostersIcon} alt="Planillas importadas" className="card-doc-img" />
               </div>
               <h3 className="card-action-title">Planillas importadas</h3>
             </div>
@@ -284,12 +280,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               title="Entrar a Personal Académico"
             >
               <div className="card-icon-container">
-                <div className="figma-folder-graphic" style={{ transform: 'scale(0.68)', margin: '0' }}>
-                  <div className="folder-back-tab" />
-                  <div className="folder-back-body" />
-                  <div className="folder-sheet" />
-                  <div className="folder-frosted-front" />
-                </div>
+                <img src={academicStaffIcon} alt="Personal Académico" className="card-doc-img" />
               </div>
               <h3 className="card-action-title">Personal Académico</h3>
             </div>
@@ -335,12 +326,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           )}
 
           {/* Gráfico Folder de Figma con gradiente azul */}
-          <div className="figma-folder-graphic" style={{ width: '140px', height: '104px', margin: '4px auto 12px' }}>
-            <div className="folder-back-tab" />
-            <div className="folder-back-body" />
-            <div className="folder-sheet" />
-            <div className="folder-frosted-front" />
-          </div>
+          <img
+            src={academicStaffIcon}
+            alt=""
+            className="figma-staff-hero-icon"
+            style={{ width: '130px', height: 'auto', margin: '4px auto 12px', display: 'block', objectFit: 'contain' }}
+            aria-hidden="true"
+          />
 
           {/* Título y contador de usuarios según Figma iPhone 17-15 */}
           <h2 className="figma-staff-title">Personal Académico</h2>
