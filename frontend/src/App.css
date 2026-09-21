@@ -1,3 +1,16 @@
+/* CONTAINER BASE DE LAS VISTAS */
+.admin-screen-container,
+.teacher-courses-screen {
+  width: 100%;
+  max-width: 480px;
+  padding: 32px 18px 48px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 100vh;
+}
+
 /* LOGIN VIEW */
 .login-container {
   width: 100%;
@@ -422,4 +435,1739 @@
   font-size: 12px;
   color: #555555;
   line-height: 1.4;
+}
+
+/* =======================================================
+   ACCESOS RÁPIDOS DE DEMO (LOGIN)
+   ======================================================= */
+.demo-shortcuts-box {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.demo-shortcuts-title {
+  font-size: 12px;
+  color: #888888;
+  font-family: 'SF Pro Text', sans-serif;
+}
+
+.demo-shortcuts-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.demo-btn {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #d0d0d0;
+  background: #f0f0f0;
+  color: #333333;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.demo-btn:hover {
+  background: #e2e2e2;
+}
+
+/* =======================================================
+   CONTENEDOR DE PANTALLA MOBILE (FIGMA IPHONE 402px)
+   ======================================================= */
+.ios-screen-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 16px 10px;
+}
+
+.teacher-courses-screen,
+.admin-screen-container {
+  width: 100%;
+  max-width: 402px;
+  min-height: 874px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* CABECERA */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* =======================================================
+   VISTA DE MATERIAS (FIGMA TEACHER VIEW)
+   ======================================================= */
+.courses-header-section {
+  margin-top: 12px;
+  margin-bottom: 20px;
+}
+
+.courses-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.courses-main-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-style: normal;
+  font-weight: 510;
+  font-size: 44px;
+  line-height: 48px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+}
+
+.btn-import-roster-header {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-import-roster-header:hover {
+  opacity: 0.85;
+}
+
+.teacher-import-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Frame 94: Resumen de métricas de materias */
+.courses-metrics-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.metric-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metric-text {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  line-height: 14px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.metric-counter-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ededed;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Lista de Tarjetas de Materias (Frames 77, 84, 89, 91 de Figma) */
+.courses-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.figma-course-card {
+  width: 100%;
+  background: #ededed;
+  border-radius: 20px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 110px;
+  cursor: default;
+}
+
+.course-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.course-card-badge-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.badge-code {
+  background: #e0e7ff;
+}
+
+.badge-math {
+  background: #f3e8ff;
+}
+
+.course-card-title-box {
+  flex: 1;
+}
+
+.course-subject-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+}
+
+.course-chevron-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #c1c1c1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Footer de la tarjeta de materia (Frame 82) */
+.course-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 12px;
+  padding-left: 66px; /* alinea con el inicio del título */
+}
+
+.course-group-tag {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.course-enrolled-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.status-dot-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.course-term-tag {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.courses-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  gap: 12px;
+  color: #666666;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+}
+
+.spinner-dot {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #000000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =======================================================
+   VISTA DE ADMINISTRACIÓN (PERSONAL ACADÉMICO & PADRÓN)
+   ======================================================= */
+.admin-tabs-nav {
+  display: flex;
+  background: #f0f0f2;
+  border-radius: 12px;
+  padding: 3px;
+  margin: 12px 0 20px;
+  gap: 4px;
+}
+
+.admin-tab-btn {
+  flex: 1;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #666666;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-tab-btn.tab-active {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+.toast-success-banner {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+/* Gráfico Folder de Figma con Gradiente Azul */
+.figma-staff-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.figma-folder-graphic {
+  position: relative;
+  width: 140px;
+  height: 96px;
+  margin: 8px auto 16px;
+}
+
+.folder-back-body {
+  position: absolute;
+  width: 125px;
+  height: 80px;
+  left: 8px;
+  top: 12px;
+  background: linear-gradient(180deg, #5fb6fb -8.53%, #3369f9 44.72%);
+  box-shadow: 0px 20px 30px rgba(64, 126, 244, 0.18);
+  border-radius: 24px;
+}
+
+.folder-back-tab {
+  position: absolute;
+  width: 54px;
+  height: 40px;
+  left: 8px;
+  top: 0;
+  background: #5fb6fb;
+  border-radius: 12px 12px 0 0;
+}
+
+.folder-sheet {
+  position: absolute;
+  width: 110px;
+  height: 65px;
+  left: 15px;
+  top: 8px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.folder-frosted-front {
+  position: absolute;
+  width: 136px;
+  height: 64px;
+  left: 2px;
+  top: 32px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.35) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  box-shadow: 0px 8px 20px rgba(68, 135, 250, 0.15);
+}
+
+/* Título de personal según Figma */
+.figma-staff-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+  text-align: center;
+}
+
+.figma-staff-subtitle {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #555555;
+  margin: 4px 0 16px;
+  text-align: center;
+}
+
+.staff-actions-bar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.btn-create-user {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-create-user:hover {
+  opacity: 0.85;
+}
+
+/* Tabla de Personal de Figma */
+.figma-staff-table-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.figma-table-header {
+  display: grid;
+  grid-template-columns: 125px 1fr 50px;
+  align-items: center;
+  column-gap: 12px;
+  padding: 4px 8px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #000000;
+  box-sizing: border-box;
+}
+
+.th-rol {
+  width: auto;
+}
+
+.th-nombre {
+  width: auto;
+}
+
+.th-accion {
+  width: auto;
+}
+
+.figma-table-divider {
+  width: 100%;
+  height: 2px;
+  background: #ededed;
+  margin-bottom: 6px;
+}
+
+.figma-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.figma-table-row {
+  display: grid;
+  grid-template-columns: 125px 1fr 50px;
+  align-items: center;
+  column-gap: 12px;
+  padding: 7px 8px;
+  min-height: 32px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #000000;
+  letter-spacing: -0.02em;
+  box-sizing: border-box;
+}
+
+.row-alt-bg {
+  background: #ededed;
+  border-radius: 4px;
+}
+
+.td-rol {
+  width: auto;
+  font-weight: 500;
+  color: #333333;
+  white-space: nowrap;
+}
+
+.td-nombre {
+  width: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 4px;
+}
+
+.td-editar-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  color: #000000;
+  cursor: pointer;
+  text-align: right;
+  padding: 0;
+  text-decoration: underline;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.td-editar-btn:hover {
+  opacity: 1;
+}
+
+/* =======================================================
+   DASHBOARD DE ADMINISTRACIÓN (FIGMA iPhone 17 - 14)
+   ======================================================= */
+.figma-admin-dashboard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Tarjeta Resumen general de métricas (Frame 96 de Figma) */
+.figma-resumen-card {
+  background: #ededed;
+  border-radius: 20px;
+  padding: 16px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resumen-card-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0 0 4px 0;
+}
+
+.resumen-metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.resumen-metric-row.row-bordered {
+  border-top: 1px solid #d5d5d5;
+  border-bottom: 1px solid #d5d5d5;
+  padding: 9px 0;
+}
+
+.resumen-metric-row.row-bordered-top {
+  border-top: 1px solid #d5d5d5;
+  padding-top: 9px;
+}
+
+.metric-label-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot-purple {
+  background-color: #7a4cc9;
+}
+
+.dot-sky {
+  background-color: #38bdf8;
+}
+
+.dot-orange {
+  background-color: #ffa500;
+}
+
+.dot-magenta {
+  background-color: #f200ff;
+}
+
+.metric-name {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #222222;
+  letter-spacing: -0.01em;
+}
+
+.metric-val {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.01em;
+}
+
+/* Cabecera Frame 95 & Frame 79 de Figma iPhone 17 - 14 */
+.figma-header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.figma-header-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-weight: 510;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0;
+}
+
+.figma-sub-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  margin-bottom: 6px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 16px;
+  color: #000000;
+  letter-spacing: -0.02em;
+}
+
+.figma-meta-role {
+  font-weight: 600;
+  color: #000000;
+}
+
+.figma-meta-dot {
+  font-size: 18px;
+  line-height: 1;
+  color: #555555;
+}
+
+.figma-meta-name {
+  font-weight: 400;
+  color: #333333;
+}
+
+/* Grilla de 2 columnas superiores: Importar planilla & Planillas importadas */
+.admin-two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.admin-action-card {
+  background: #ededed;
+  border-radius: 20px;
+  padding: 20px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.card-static {
+  cursor: default;
+}
+
+.card-icon-container {
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.card-doc-img {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(4px 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.card-action-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: #000000;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-align: center;
+}
+
+/* Módulo inferior de ancho completo: Personal Académico */
+.admin-wide-card {
+  background: #ededed;
+  border-radius: 20px;
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.admin-wide-card:hover {
+  transform: translateY(-2px);
+  background-color: #e5e5e5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.admin-wide-card:focus-visible {
+  box-shadow: 0 0 0 2px #000000;
+}
+
+.card-sub-count {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #666666;
+  margin-top: 4px;
+}
+
+/* Vistas de Detalle (Personal Académico y Planillas) */
+.figma-staff-list-screen,
+.figma-import-roster-screen {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-sub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 10px;
+  margin-bottom: 6px;
+}
+
+.btn-back-figma {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #000000;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.btn-back-figma:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.btn-add-user-figma {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-add-user-figma:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  opacity: 0.8;
+}
+
+.figma-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-interactive {
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  background-color: #e5e5e5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* =======================================================
+   MODAL DE NUEVO USUARIO (FIGMA IPHONE 17-15 & HU-02)
+   ======================================================= */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-container {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+  padding: 22px 18px 20px;
+  box-sizing: border-box;
+  animation: modalScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.figma-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.figma-input-card {
+  background-color: #ededed;
+  border-radius: 12px;
+  padding: 6px 14px 7px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.figma-input-card:focus-within {
+  background-color: #e2e2e5;
+}
+
+.figma-field-label {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  color: #666666;
+  font-weight: 500;
+  margin-bottom: 2px;
+  line-height: 1.1;
+}
+
+.figma-field-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #000000;
+  padding: 0;
+  line-height: 1.3;
+}
+
+.figma-field-input::placeholder {
+  color: #888888;
+}
+
+.figma-password-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.figma-eye-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.figma-eye-btn:hover {
+  opacity: 1;
+}
+
+.figma-field-select {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #000000;
+  padding: 0;
+  cursor: pointer;
+}
+
+.figma-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.btn-figma-cancel {
+  flex: 1;
+  background: #1c1c1e;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-figma-cancel:hover {
+  opacity: 0.85;
+}
+
+.btn-figma-create {
+  flex: 1.4;
+  background: #1a73e8;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-figma-create:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-figma-create:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =======================================================
+   MOCKUPS DOCENTE: DETALLE, LISTA DE ESTUDIANTES Y MODAL
+   ======================================================= */
+
+.figma-course-card-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.figma-course-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+}
+
+/* =======================================================
+   MOCKUP 2: VISTA DETALLE DE MATERIA (COURSE_DETAIL)
+   ======================================================= */
+.course-detail-view,
+.students-roster-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: fadeInCourse 0.2s ease-out;
+}
+
+@keyframes fadeInCourse {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-top-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 26px;
+  margin-top: 4px;
+}
+
+.detail-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #000000;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.detail-back-btn:hover {
+  background: #f0f0f0;
+}
+
+.course-detail-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 34px;
+}
+
+.course-detail-artwork-wrap {
+  margin-bottom: 18px;
+}
+
+.course-detail-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin: 0 0 12px 0;
+  max-width: 310px;
+}
+
+.course-detail-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  color: #111111;
+}
+
+.meta-separator {
+  color: #888888;
+}
+
+.course-action-card {
+  width: 100%;
+  background: #ededed;
+  border-radius: 18px;
+  padding: 14px 18px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.course-action-card:hover {
+  background: #e2e2e2;
+  transform: translateY(-2px);
+}
+
+.action-card-folder-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-folder-icon {
+  width: 46px;
+  height: auto;
+  object-fit: contain;
+}
+
+.action-card-text-box {
+  flex: 1;
+  padding: 0 16px;
+}
+
+.action-card-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #000000;
+  letter-spacing: -0.01em;
+}
+
+.action-card-chevron {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #c1c1c1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* =======================================================
+   MOCKUP 3: ESTUDIANTES INSCRITOS (STUDENTS_LIST)
+   ======================================================= */
+.students-roster-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.students-roster-folder-img {
+  width: 78px;
+  height: auto;
+  margin-bottom: 12px;
+}
+
+.students-roster-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
+  color: #000000;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.roster-table-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.roster-table-header {
+  display: grid;
+  grid-template-columns: 96px 1fr 94px;
+  align-items: center;
+  padding: 8px 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+  border-bottom: 1px solid transparent;
+}
+
+.roster-table-header .roster-col-sis {
+  position: relative;
+}
+
+.roster-table-header .roster-col-sis::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: #bcbcbc;
+}
+
+.roster-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.roster-table-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 94px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #000000;
+  cursor: pointer;
+  background: #ffffff;
+  transition: background 0.12s ease;
+}
+
+.roster-table-row:hover {
+  background: #e5e5e5 !important;
+}
+
+.roster-row-alt {
+  background: #ededed;
+}
+
+.roster-col-sis {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #111111;
+}
+
+.roster-col-nombre {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 6px;
+}
+
+.roster-col-estado {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: 13px;
+}
+
+.student-status-badge {
+  font-size: 13px;
+  color: #000000;
+}
+
+/* =======================================================
+   MOCKUP 4: MODAL EMERGENTE CENTRADO "EDITAR ESTADO"
+   ======================================================= */
+.student-status-modal-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 360px;
+  border-radius: 24px;
+  padding: 24px 20px 22px 20px;
+  box-sizing: border-box;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+  animation: modalScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  margin: auto;
+}
+
+.student-status-modal-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.02em;
+}
+
+.student-status-modal-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-status-info-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+}
+
+.status-info-label {
+  font-weight: 700;
+  color: #000000;
+  width: 88px;
+  flex-shrink: 0;
+}
+
+.status-info-value {
+  color: #111111;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.student-status-select-row {
+  margin-bottom: 16px;
+}
+
+.status-select-wrapper {
+  display: inline-block;
+}
+
+.student-status-dropdown {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #000000;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.student-status-dropdown:focus {
+  border-color: #2563eb;
+}
+
+.status-motive-box {
+  background: #dedede;
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-motive-label {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 10px;
+  color: #555555;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.status-motive-textarea {
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #000000;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.status-motive-textarea::placeholder {
+  color: #777777;
+}
+
+.student-status-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status-modal-cancel-btn {
+  flex: 1;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.status-modal-cancel-btn:hover {
+  opacity: 0.85;
+}
+
+.status-modal-save-btn {
+  flex: 1.4;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.status-modal-save-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.status-modal-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.panel-action-btn {
+  align-self: center;
+}
+
+/* Imported plans */
+.plans-container,
+.plan-detail-container {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  padding: 26px 18px 48px;
+  position: relative;
+}
+
+.back-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #000000;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  margin-bottom: 22px;
+}
+
+.back-btn:hover,
+.back-btn:focus-visible {
+  background: #f1f1f3;
+  outline: none;
+}
+
+.plans-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.plans-hero-icon {
+  width: 158px;
+  height: 158px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.plans-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #000000;
+}
+
+.plans-count {
+  margin-top: 4px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  color: #5f5f63;
+  font-weight: 500;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 30px 14px;
+}
+
+.plan-card {
+  min-height: 252px;
+  border: none;
+  background: transparent;
+  color: #000000;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 14px;
+}
+
+.plan-card:hover,
+.plan-card:focus-visible {
+  outline: none;
+  background: #f7f7f8;
+}
+
+.plan-card-icon {
+  height: 194px;
+  width: min(150px, 100%);
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.plan-card-code {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.plan-card-name {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12.5px;
+  color: #242426;
+  line-height: 1.25;
+  margin-top: 2px;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.plan-card-group {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  color: #6b6b70;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.plans-status {
+  width: 100%;
+  min-height: 150px;
+  border: 1px solid #e5e5e7;
+  border-radius: 18px;
+  padding: 26px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  font-family: 'SF Pro Text', sans-serif;
+  color: #555555;
+  background: #ffffff;
+}
+
+.compact-btn {
+  max-width: 180px;
+  margin-top: 0;
+}
+
+.detail-header {
+  margin-bottom: 20px;
+}
+
+.detail-eyebrow {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #6b6b70;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.detail-title {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.14;
+  color: #000000;
+  overflow-wrap: anywhere;
+}
+
+.detail-meta {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.detail-meta div {
+  border: 1px solid #e5e5e7;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fafafa;
+}
+
+.detail-meta dt {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  color: #6b6b70;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.detail-meta dd {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  color: #000000;
+  font-weight: 600;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.students-list {
+  width: 100%;
+  border: 1px solid #e5e5e7;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.students-row {
+  display: grid;
+  grid-template-columns: minmax(68px, 0.8fr) minmax(64px, 0.8fr) minmax(120px, 1.4fr);
+  gap: 8px;
+  padding: 12px 10px;
+  border-bottom: 1px solid #ececef;
+  align-items: center;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12.5px;
+  color: #111111;
+}
+
+.students-row:last-child {
+  border-bottom: none;
+}
+
+.students-head {
+  background: #f4f4f6;
+  color: #555555;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.student-cell {
+  overflow-wrap: anywhere;
+}
+
+.student-name {
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .panel-container,
+  .plans-container,
+  .plan-detail-container {
+    max-width: 760px;
+    padding-top: 40px;
+  }
+
+  .plans-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px 24px;
+  }
+
+  .detail-meta {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+
+  .students-row {
+    grid-template-columns: minmax(110px, 0.8fr) minmax(110px, 0.8fr) minmax(240px, 1.7fr);
+    font-size: 14px;
+    padding: 13px 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .panel-container,
+  .plans-container,
+  .plan-detail-container {
+    max-width: 920px;
+  }
+
+  .plans-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .plans-title,
+  .detail-title {
+    font-size: 34px;
+  }
 }

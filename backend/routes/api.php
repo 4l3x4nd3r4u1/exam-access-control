@@ -28,6 +28,10 @@ Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'in
 Route::post('/academic-users', [AcademicUserController::class, 'store']);
 Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
 Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
+Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::class, 'show'])
+    ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
+Route::get('/courses/{courseGroupId}/students', [ProcessedRosterController::class, 'students'])
+    ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
 Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
     ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
 

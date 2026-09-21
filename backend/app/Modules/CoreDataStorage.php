@@ -266,6 +266,76 @@ class CoreDataStorage
     }
 
     /**
+     * Retrieves all enrolled students for a specific course group.
+     *
+     * @param string $courseGroupId
+     * @return array<int, array{studentKey: string, sis: string, ci: string, fullName: string, status: string, ineligibilityReason: ?string}>
+     */
+    public function getCourseStudents(string $courseGroupId): array
+    {
+        $cleanCourseGroupId = trim($courseGroupId);
+
+        $course = CourseGroup::where('course_group_id', $cleanCourseGroupId)->first();
+        if (!$course) {
+            return [];
+        }
+
+        $students = $course->students()->orderBy('full_name', 'asc')->get();
+
+        return $students->map(function ($student) {
+            $rawStatus = strtoupper(trim((string) ($student->pivot->status ?? 'HABILITADO')));
+            $formattedStatus = in_array($rawStatus, ['HABILITADO', 'ELIGIBLE', 'ENABLED'], true)
+                ? 'Habilitado'
+                : 'Inhabilitado';
+
+            return [
+                'studentKey' => (string) $student->student_key,
+                'sis' => (string) $student->student_key,
+                'ci' => (string) $student->ci,
+                'fullName' => (string) $student->full_name,
+                'status' => $formattedStatus,
+                'ineligibilityReason' => $student->pivot->ineligibility_reason ? (string) $student->pivot->ineligibility_reason : null,
+            ];
+        })->all();
+    }
+
+    /**
+     * Retrieves full roster detail with course info and enrolled students.
+     *
+     * @param string $courseGroupId
+     * @return array{roster: array, students: array}|null
+     */
+    public function getProcessedRosterDetail(string $courseGroupId): ?array
+    {
+        $cleanCourseGroupId = trim($courseGroupId);
+
+        $course = CourseGroup::where('course_group_id', $cleanCourseGroupId)
+            ->with(['teacher'])
+            ->withCount('enrollments')
+            ->first();
+
+        if (!$course) {
+            return null;
+        }
+
+        $students = $this->getCourseStudents($cleanCourseGroupId);
+
+        return [
+            'roster' => [
+                'courseGroupId' => (string) $course->course_group_id,
+                'subjectCode' => (string) $course->subject_code,
+                'subjectName' => (string) $course->subject_name,
+                'groupCode' => (string) $course->group_code,
+                'academicTerm' => (string) $course->academic_term,
+                'teacherName' => $course->teacher ? (string) $course->teacher->name : null,
+                'totalEnrolled' => (int) ($course->enrollments_count ?? count($students)),
+                'updatedAt' => $course->updated_at ? $course->updated_at->toIso8601String() : null,
+            ],
+            'students' => $students,
+        ];
+    }
+
+    /**
      * Mandatory column headers required in the roster file.
      */
     private const REQUIRED_COLUMNS = [
