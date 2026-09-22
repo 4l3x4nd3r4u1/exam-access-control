@@ -20,6 +20,7 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\DTOs\UserRegistrationData;
 use App\DTOs\UserUpdateData;
 use App\DTOs\OperationResult;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 
 class CoreDataStorage
@@ -959,15 +960,57 @@ class CoreDataStorage
      */
     private function processExcel(RawFileData $fileData): ImportSummary
     {
-        // TODO: Implement parsing via PhpSpreadsheet
-        return new ImportSummary(
-            totalProcessed: 0,
-            successful: 0,
-            skipped: 0,
-            observations: ['Excel parsing will be implemented with PhpSpreadsheet.'],
-            isSuccessful: true,
-            failedRows: []
-        );
+        $extension = strtolower(trim($fileData->extension, '. '));
+        $readerType = $extension === 'xls' ? 'Xls' : 'Xlsx';
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'student-roster-');
+
+        if ($temporaryPath === false) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ['No se pudo preparar el archivo Excel para su lectura.'],
+                isSuccessful: false,
+                failedRows: []
+            );
+        }
+
+        try {
+            file_put_contents($temporaryPath, $fileData->content);
+
+            $reader = IOFactory::createReader($readerType);
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($temporaryPath);
+            $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, false);
+            $spreadsheet->disconnectWorksheets();
+
+            // Se convierte la hoja a CSV en memoria para reutilizar exactamente
+            // la misma detección de metadatos, validación y persistencia del CSV.
+            $stream = fopen('php://memory', 'r+');
+            foreach ($rows as $row) {
+                fputcsv($stream, $row);
+            }
+            rewind($stream);
+            $csvContent = stream_get_contents($stream);
+            fclose($stream);
+
+            return $this->processCsv(new RawFileData(
+                content: $csvContent,
+                fileName: $fileData->fileName . '.csv',
+                extension: 'csv'
+            ));
+        } catch (\Throwable $exception) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ['No se pudo leer el archivo Excel. Verifique que no esté dañado y vuelva a intentarlo.'],
+                isSuccessful: false,
+                failedRows: []
+            );
+        } finally {
+            @unlink($temporaryPath);
+        }
     }
 
     /**

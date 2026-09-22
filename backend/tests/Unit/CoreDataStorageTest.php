@@ -12,6 +12,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\DTOs\UserRegistrationData;
 use App\DTOs\UserUpdateData;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class CoreDataStorageTest extends TestCase
 {
@@ -172,6 +174,38 @@ CSV;
         $this->assertStringContainsString('Faltan metadatos requeridos', $result->observations[0]);
         $this->assertStringContainsString('Email Docente', $result->observations[0]);
         $this->assertStringContainsString('Gestion', $result->observations[0]);
+    }
+
+    public function test_imports_official_xlsx_roster_with_the_same_result_as_csv(): void
+    {
+        $content = $this->makeXlsxContent([
+            ['Docente: Lic. Ana Morales'],
+            ['Email Docente: ana.morales@umss.edu.bo'],
+            ['Materia: INF110 - INTRODUCCION A LA PROGRAMACION'],
+            ['Grupo: 2'],
+            ['Gestion: 2/2026'],
+            [],
+            ['Codigo SIS', 'CI', 'Nombre Completo'],
+            ['202600001', '7891234', 'ALVAREZ CLAROS PEDRO'],
+            ['', '6543210', 'BENITEZ SIN SIS'],
+            ['202600003', '', 'CASTRO SIN CI'],
+        ]);
+
+        $result = $this->storage->importStudentRoster(new RawFileData(
+            content: $content,
+            fileName: 'nomina.xlsx',
+            extension: 'xlsx'
+        ));
+
+        $this->assertTrue($result->isSuccessful);
+        $this->assertEquals(3, $result->totalProcessed);
+        $this->assertEquals(1, $result->successful);
+        $this->assertEquals(2, $result->skipped);
+        $this->assertCount(2, $result->failedRows);
+        $this->assertEquals(9, $result->failedRows[0]['rowNumber']);
+        $this->assertEquals('BENITEZ SIN SIS', $result->failedRows[0]['data']['nombre_completo']);
+        $this->assertEquals('Lic. Ana Morales', $result->metadata['teacherName']);
+        $this->assertDatabaseHas('students', ['student_key' => '202600001']);
     }
 
     public function test_template_csv_handles_invalid_rows_and_returns_failed_rows(): void
@@ -813,6 +847,23 @@ public function test_register_academic_user_rejects_existing_email(): void
         $this->assertIsArray($results);
         $this->assertEmpty($results);
     }
-}
 
+    /** @param array<int, array<int, string>> $rows */
+    private function makeXlsxContent(array $rows): string
+    {
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getActiveSheet()->fromArray($rows, null, 'A1');
+        $path = tempnam(sys_get_temp_dir(), 'roster-test-');
+
+        try {
+            (new Xlsx($spreadsheet))->save($path);
+            $content = file_get_contents($path);
+            $this->assertNotFalse($content);
+            return $content;
+        } finally {
+            $spreadsheet->disconnectWorksheets();
+            @unlink($path);
+        }
+    }
+}
 
