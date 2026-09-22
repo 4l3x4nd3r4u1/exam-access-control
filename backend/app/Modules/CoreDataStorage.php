@@ -1083,31 +1083,31 @@ class CoreDataStorage
     private function validateRowData(array $rowData, int $rowNumber): ?string
     {
         if (empty($rowData['codigo_sis'])) {
-            return "Row {$rowNumber}: Missing student SIS code (codigo_sis).";
+            return "Falta codigo sis del estudiante (codigo_sis).";
         }
 
         if (empty($rowData['ci'])) {
-            return "Row {$rowNumber}: Missing student CI (ci).";
+            return "Falta carnet CI del estudiante (ci).";
         }
 
         if (empty($rowData['nombre_completo'])) {
-            return "Row {$rowNumber}: Missing student full name (nombre_completo).";
+            return "Falta nombre del estudiante (nombre_completo).";
         }
 
         if (empty($rowData['sigla_materia'])) {
-            return "Row {$rowNumber}: Missing subject code (sigla_materia).";
+            return "Falta sigla de la materia (sigla_materia).";
         }
 
         if (empty($rowData['grupo'])) {
-            return "Row {$rowNumber}: Missing group/parallel (grupo).";
+            return "Falta grupo de la materia (grupo).";
         }
 
         if (empty($rowData['gestion'])) {
-            return "Row {$rowNumber}: Missing academic term (gestion).";
+            return "Falta gestion (gestion).";
         }
 
         if (empty($rowData['email_docente'])) {
-            return "Row {$rowNumber}: Missing teacher email (email_docente).";
+            return "Falta correo del docente (email_docente).";
         }
 
         return null;

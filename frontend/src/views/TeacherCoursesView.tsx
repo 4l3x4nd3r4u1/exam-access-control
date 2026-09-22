@@ -102,7 +102,7 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
             }}>
               <img src={index % 2 === 0 ? subjectIconOne : subjectIconTwo} alt="" />
               <div className="teacher-course-content">
-                <h2>{course.subject_name}</h2>
+                <h2>{course.subject_name.toUpperCase()}</h2>
                 <div className="teacher-course-meta">
                   <span>Grupo {course.group_code}</span>
                   <span><i style={{ background: enrollmentColor(course.total_enrolled) }} />{course.total_enrolled} inscritos</span>
