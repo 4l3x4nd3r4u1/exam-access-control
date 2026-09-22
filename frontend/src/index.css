@@ -76,7 +76,7 @@
 }
 
 html, body {
-  background-color: #ffffff;
+  background-color: #f2f2f2;
   color: #000000;
   min-height: 100vh;
   display: flex;
@@ -97,4 +97,17 @@ html, body {
 
 input, button, select, textarea {
   font-family: inherit;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 402px;
+  min-height: 100dvh;
+  background: #ffffff;
+}
+
+@media (max-width: 402px) {
+  html, body {
+    background-color: #ffffff;
+  }
 }

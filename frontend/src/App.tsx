@@ -1,16 +1,10 @@
-import React, { useState, useRef } from 'react';
-import logoSvg from './assets/Group 9.svg';
+import { useRef, useState } from 'react';
 import importDocSvg from './assets/image 23.svg';
+import { LoginView } from './views/LoginView';
+import { authService } from './services/authService';
+import { apiRequest } from './services/apiClient';
+import type { ApiResponse, UserSession } from './types/auth';
 import './App.css';
-
-interface UserSession {
-  user_id: number;
-  role: string;
-  full_name: string;
-  email: string;
-  token: string;
-  is_active: boolean;
-}
 
 interface ImportSummaryData {
   totalProcessed: number;
@@ -20,15 +14,8 @@ interface ImportSummaryData {
   isSuccessful: boolean;
 }
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
-
 export default function App() {
-  // Authentication State
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(false);
+  const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
 
   // Import State (Admin)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -37,42 +24,9 @@ export default function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle Login Submit
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-
-    setAuthLoading(true);
-    setAuthError(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const json = await response.json();
-
-      if (!response.ok) {
-        throw new Error(json.message || 'Credenciales incorrectas');
-      }
-
-      setSession(json.data);
-    } catch (err: any) {
-      setAuthError(err.message || 'Error de conexión con el servidor');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  // Handle Logout
   const handleLogout = () => {
+    authService.clearSession();
     setSession(null);
-    setAuthError(null);
     setSelectedFile(null);
     setImportResult(null);
     setImportError(null);
@@ -111,24 +65,14 @@ export default function App() {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch(`${API_BASE_URL}/students/import`, {
+      const response = await apiRequest<ApiResponse<ImportSummaryData>>('/students/import', {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          ...(session?.token ? { 'Authorization': `Bearer ${session.token}` } : {}),
-        },
         body: formData,
       });
 
-      const json = await response.json();
-
-      if (response.ok && json.data) {
-        setImportResult(json.data);
-      } else {
-        throw new Error(json.message || 'Error al procesar el padrón');
-      }
-    } catch (err: any) {
-      setImportError(err.message || 'No se pudo conectar con el servidor');
+      setImportResult(response.data);
+    } catch (err: unknown) {
+      setImportError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor');
     } finally {
       setIsUploading(false);
     }
@@ -143,105 +87,13 @@ export default function App() {
   };
 
   if (!session) {
-    return (
-      <main className="login-container">
-        {/* Logo */}
-        <div className="logo-wrapper">
-          <img src={logoSvg} alt="Logo" className="logo-img" />
-        </div>
-
-        {/* Título */}
-        <h1 className="login-title">
-          Sistema de Control de<br />
-          Ingreso a Exámenes
-        </h1>
-
-        {/* Formulario */}
-        <form className="login-form" onSubmit={handleLogin}>
-          {/* Input Correo */}
-          <div className="input-card">
-            <label htmlFor="email-input" className="input-label">
-              Correo
-            </label>
-            <div className="input-field-wrapper">
-              <input
-                id="email-input"
-                type="email"
-                className="text-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="doncente@umss.edu.bo"
-                autoComplete="email"
-                required
-              />
-              {email.length > 0 && (
-                <button
-                  type="button"
-                  className="clear-btn"
-                  onClick={() => setEmail('')}
-                  title="Limpiar"
-                  aria-label="Limpiar correo"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Input Contraseña */}
-          <div className="input-card">
-            <label htmlFor="password-input" className="input-label">
-              Contraseña
-            </label>
-            <div className="input-field-wrapper">
-              <input
-                id="password-input"
-                type="password"
-                className="text-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••••••"
-                autoComplete="current-password"
-                required
-              />
-              {password.length > 0 && (
-                <button
-                  type="button"
-                  className="clear-btn"
-                  onClick={() => setPassword('')}
-                  title="Limpiar"
-                  aria-label="Limpiar contraseña"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Botón Empezar */}
-          <button
-            type="submit"
-            className="submit-btn"
-            disabled={authLoading || !email || !password}
-          >
-            {authLoading ? 'Iniciando sesión...' : 'Empezar'}
-          </button>
-
-          {/* Mensaje de Error (Limpio en rojo, sin emojis) */}
-          {authError && (
-            <p className="auth-error-text" role="alert">
-              {authError}
-            </p>
-          )}
-        </form>
-      </main>
-    );
+    return <LoginView onLoginSuccess={setSession} />;
   }
 
   // teacher view
   if (session.role !== 'ADMIN') {
     return (
-      <main className="panel-container">
+      <main className="app-shell panel-container">
         <header className="panel-header">
           <div className="panel-top-row">
             <h1 className="panel-title">Panel</h1>
@@ -278,7 +130,7 @@ export default function App() {
 
   // admin view
   return (
-    <main className="panel-container">
+    <main className="app-shell panel-container">
       {/* Input nativo oculto para archivo */}
       <input
         type="file"

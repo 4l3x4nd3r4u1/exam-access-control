@@ -1,16 +1,16 @@
 /* LOGIN VIEW */
 .login-container {
   width: 100%;
-  max-width: 380px;
-  padding: 40px 20px;
-  margin: auto 0;
+  max-width: 402px;
+  min-height: 100dvh;
+  padding: 75px 30px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .logo-wrapper {
-  margin-bottom: 26px;
+  margin-bottom: 58px;
   display: flex;
   justify-content: center;
 }
@@ -28,7 +28,7 @@
   line-height: 1.18;
   text-align: center;
   color: #000000;
-  margin-bottom: 34px;
+  margin-bottom: 75px;
   letter-spacing: -0.6px;
 }
 
@@ -42,7 +42,8 @@
 .input-card {
   background-color: #dcdcdc;
   border-radius: 12px;
-  padding: 5px 14px 6px;
+  min-height: 57px;
+  padding: 7px 13px 8px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -75,7 +76,7 @@
   background: transparent;
   outline: none;
   font-family: 'SF Pro Text', sans-serif;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 400;
   color: #000000;
   padding-right: 24px;
@@ -110,15 +111,16 @@
 }
 
 .submit-btn {
-  margin-top: 30px;
+  min-height: 41px;
+  margin-top: 67px;
   width: 100%;
   background-color: #000000;
   color: #ffffff;
   border: none;
   border-radius: 12px;
-  padding: 13px 20px;
-  font-family: 'SF Pro Display', sans-serif;
-  font-size: 16px;
+  padding: 10px 20px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s, transform 0.1s, opacity 0.15s;
@@ -145,6 +147,24 @@
   font-weight: 500;
   text-align: center;
   width: 100%;
+}
+
+@media (max-height: 720px) {
+  .login-container {
+    padding-top: 40px;
+  }
+
+  .logo-wrapper {
+    margin-bottom: 30px;
+  }
+
+  .login-title {
+    margin-bottom: 38px;
+  }
+
+  .submit-btn {
+    margin-top: 38px;
+  }
 }
 
 /* Panel view */
