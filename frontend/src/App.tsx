@@ -1,5 +1,8 @@
 import { useRef, useState } from 'react';
 import importDocSvg from './assets/image 23.svg';
+import importRosterIcon from './assets/importar_planilla.svg';
+import processedRostersIcon from './assets/planillas_importadas.svg';
+import academicStaffIcon from './assets/personal_academico.svg';
 import { LoginView } from './views/LoginView';
 import { authService } from './services/authService';
 import { apiRequest } from './services/apiClient';
@@ -14,8 +17,11 @@ interface ImportSummaryData {
   isSuccessful: boolean;
 }
 
+type AdminScreen = 'DASHBOARD' | 'IMPORT_ROSTER';
+
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
+  const [adminScreen, setAdminScreen] = useState<AdminScreen>('DASHBOARD');
 
   // Import State (Admin)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -27,6 +33,7 @@ export default function App() {
   const handleLogout = () => {
     authService.clearSession();
     setSession(null);
+    setAdminScreen('DASHBOARD');
     setSelectedFile(null);
     setImportResult(null);
     setImportError(null);
@@ -129,6 +136,53 @@ export default function App() {
   }
 
   // admin view
+  if (adminScreen === 'DASHBOARD') {
+    return (
+      <main className="app-shell admin-dashboard">
+        <header className="admin-dashboard-header">
+          <div>
+            <h1 className="admin-dashboard-title">Panel</h1>
+            <p className="admin-dashboard-subtitle">
+              Administrador <span aria-hidden="true">•</span> {session.full_name}
+            </p>
+          </div>
+
+          <div className="admin-header-actions">
+            <button type="button" className="admin-icon-button" aria-label="Cambiar apariencia">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3.25" />
+                <path d="M12 2v2.25M12 19.75V22M4.93 4.93l1.59 1.59M17.48 17.48l1.59 1.59M2 12h2.25M19.75 12H22M4.93 19.07l1.59-1.59M17.48 6.52l1.59-1.59" />
+              </svg>
+            </button>
+            <button type="button" className="admin-icon-button" onClick={handleLogout} aria-label="Cerrar sesión">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="4.25" />
+                <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <nav className="admin-menu-grid" aria-label="Opciones administrativas">
+          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('IMPORT_ROSTER')}>
+            <img src={importRosterIcon} alt="" className="admin-menu-icon admin-import-icon" />
+            <span>Importar<br />planilla</span>
+          </button>
+
+          <button type="button" className="admin-menu-card" aria-label="Planillas importadas">
+            <img src={processedRostersIcon} alt="" className="admin-menu-icon admin-rosters-icon" />
+            <span>Planillas<br />importadas</span>
+          </button>
+
+          <button type="button" className="admin-menu-card" aria-label="Personal académico">
+            <img src={academicStaffIcon} alt="" className="admin-menu-icon admin-staff-icon" />
+            <span>Personal<br />Académico</span>
+          </button>
+        </nav>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell panel-container">
       {/* Input nativo oculto para archivo */}
@@ -143,7 +197,10 @@ export default function App() {
       {/* Header */}
       <header className="panel-header">
         <div className="panel-top-row">
-          <h1 className="panel-title">Panel</h1>
+          <button type="button" className="admin-back-button" onClick={() => setAdminScreen('DASHBOARD')}>
+            ←
+          </button>
+          <h1 className="panel-title">Importar planilla</h1>
           <button
             type="button"
             className="header-icon-btn"
