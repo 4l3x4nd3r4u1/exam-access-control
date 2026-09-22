@@ -70,6 +70,7 @@ class ProcessedRosterTest extends TestCase
                         'groupCode' => '1',
                         'academicTerm' => '2/2026',
                         'totalStudents' => 2,
+                        'teacherName' => 'Walter Sanchez',
                     ],
                 ],
                 'message' => 'Planillas procesadas obtenidas exitosamente.',

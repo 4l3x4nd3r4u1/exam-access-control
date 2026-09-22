@@ -29,6 +29,7 @@ class ProcessedRosterController extends Controller
                     'groupCode' => $roster->groupCode,
                     'academicTerm' => $roster->academicTerm,
                     'totalStudents' => $roster->totalStudents,
+                    'teacherName' => $roster->teacherName,
                 ],
                 $rosters
             ),

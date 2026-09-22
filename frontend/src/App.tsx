@@ -1,12 +1,15 @@
 import { useRef, useState } from 'react';
-import importDocSvg from './assets/image 23.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
 import { LoginView } from './views/LoginView';
+import { AcademicStaffView } from './views/AcademicStaffView';
+import { ProcessedRostersView } from './views/ProcessedRostersView';
+import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { authService } from './services/authService';
 import { apiRequest } from './services/apiClient';
 import type { ApiResponse, UserSession } from './types/auth';
+import type { ProcessedRoster } from './types/processedRoster';
 import './App.css';
 
 interface ImportSummaryData {
@@ -17,11 +20,12 @@ interface ImportSummaryData {
   isSuccessful: boolean;
 }
 
-type AdminScreen = 'DASHBOARD' | 'IMPORT_ROSTER';
+type AdminScreen = 'DASHBOARD' | 'IMPORT_ROSTER' | 'ACADEMIC_STAFF' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
 
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
   const [adminScreen, setAdminScreen] = useState<AdminScreen>('DASHBOARD');
+  const [selectedRoster, setSelectedRoster] = useState<ProcessedRoster | null>(null);
 
   // Import State (Admin)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -34,6 +38,7 @@ export default function App() {
     authService.clearSession();
     setSession(null);
     setAdminScreen('DASHBOARD');
+    setSelectedRoster(null);
     setSelectedFile(null);
     setImportResult(null);
     setImportError(null);
@@ -136,6 +141,21 @@ export default function App() {
   }
 
   // admin view
+  if (adminScreen === 'ACADEMIC_STAFF') {
+    return <AcademicStaffView onBack={() => setAdminScreen('DASHBOARD')} />;
+  }
+
+  if (adminScreen === 'PROCESSED_ROSTERS') {
+    return <ProcessedRostersView onBack={() => setAdminScreen('DASHBOARD')} onLogout={handleLogout} onSelectRoster={(roster) => {
+      setSelectedRoster(roster);
+      setAdminScreen('PROCESSED_ROSTER_DETAIL');
+    }} />;
+  }
+
+  if (adminScreen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
+    return <ProcessedRosterDetailView roster={selectedRoster} onBack={() => setAdminScreen('PROCESSED_ROSTERS')} onLogout={handleLogout} />;
+  }
+
   if (adminScreen === 'DASHBOARD') {
     return (
       <main className="app-shell admin-dashboard">
@@ -169,12 +189,12 @@ export default function App() {
             <span>Importar<br />planilla</span>
           </button>
 
-          <button type="button" className="admin-menu-card" aria-label="Planillas importadas">
+          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('PROCESSED_ROSTERS')}>
             <img src={processedRostersIcon} alt="" className="admin-menu-icon admin-rosters-icon" />
             <span>Planillas<br />importadas</span>
           </button>
 
-          <button type="button" className="admin-menu-card" aria-label="Personal académico">
+          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('ACADEMIC_STAFF')}>
             <img src={academicStaffIcon} alt="" className="admin-menu-icon admin-staff-icon" />
             <span>Personal<br />Académico</span>
           </button>
@@ -223,7 +243,7 @@ export default function App() {
       {/* Tarjeta Única: Importar Padrón */}
       <section className="import-box" aria-label="Subir padrón de estudiantes">
         <div className="import-doc-wrapper">
-          <img src={importDocSvg} alt="Padrón" className="import-doc-img" />
+          <img src={importRosterIcon} alt="Padrón" className="import-doc-img" />
         </div>
 
         <h2 className="import-title">

@@ -251,7 +251,7 @@ class CoreDataStorage
     */
     public function getProcessedRosters(): array
     {
-        $courses = CourseGroup::withCount('enrollments')
+        $courses = CourseGroup::with('teacher')->withCount('enrollments')
             ->orderBy('subject_code', 'asc')
             ->orderBy('group_code', 'asc')
             ->get();
@@ -263,6 +263,7 @@ class CoreDataStorage
             groupCode: (string) $course->group_code,
             academicTerm: (string) $course->academic_term,
             totalStudents: (int) ($course->enrollments_count ?? 0),
+            teacherName: $course->teacher?->name,
         ))->all();
     }
 

@@ -11,6 +11,7 @@ class ProcessedRosterSummary
         public readonly string $groupCode,
         public readonly string $academicTerm,
         public readonly int $totalStudents,
+        public readonly ?string $teacherName = null,
     ) {
     }
 }
