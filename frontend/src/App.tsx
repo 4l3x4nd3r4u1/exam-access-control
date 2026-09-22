@@ -6,6 +6,7 @@ import { LoginView } from './views/LoginView';
 import { AcademicStaffView } from './views/AcademicStaffView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
+import { TeacherCoursesView } from './views/TeacherCoursesView';
 import { authService } from './services/authService';
 import { apiRequest } from './services/apiClient';
 import type { ApiResponse, UserSession } from './types/auth';
@@ -104,40 +105,7 @@ export default function App() {
 
   // teacher view
   if (session.role !== 'ADMIN') {
-    return (
-      <main className="app-shell panel-container">
-        <header className="panel-header">
-          <div className="panel-top-row">
-            <h1 className="panel-title">Panel</h1>
-            <button
-              type="button"
-              className="header-icon-btn"
-              onClick={handleLogout}
-              title="Cerrar sesión"
-              aria-label="Cerrar sesión"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
-          </div>
-          <p className="panel-subtitle">
-            Docente &nbsp;•&nbsp; {session.full_name}
-          </p>
-        </header>
-
-        <div className="import-box" style={{ marginTop: '40px' }}>
-          <p style={{ fontSize: '15px', color: '#555', textAlign: 'center', marginBottom: '24px' }}>
-            Bienvenido. El módulo docente estará disponible próximamente.
-          </p>
-          <button type="button" className="submit-btn" onClick={handleLogout}>
-            Cerrar sesión
-          </button>
-        </div>
-      </main>
-    );
+    return <TeacherCoursesView teacherId={session.user_id} onLogout={handleLogout} />;
   }
 
   // admin view

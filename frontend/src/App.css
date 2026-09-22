@@ -696,7 +696,7 @@
 
 /* PROCESSED ROSTER DETAIL */
 .processed-roster-detail-screen {
-  padding: 42px 40px 28px 61px;
+  padding: 42px 20px 28px;
 }
 
 .processed-roster-detail-topbar {
@@ -744,7 +744,7 @@
 .roster-detail-table-header,
 .roster-detail-table-row {
   display: grid;
-  grid-template-columns: 100px 98px minmax(0, 1fr);
+  grid-template-columns: 117px 99px minmax(0, 1fr);
   align-items: center;
   min-width: 0;
   font-family: 'SF Pro Text', sans-serif;
@@ -775,6 +775,485 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* TEACHER COURSES */
+.teacher-courses-screen {
+  width: min(402px, 100dvw);
+  max-width: none;
+  padding: 70px 12px 32px;
+}
+
+.teacher-courses-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.teacher-courses-heading-row h1 {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: -2.6px;
+  line-height: .95;
+}
+
+.teacher-courses-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.teacher-courses-icon-button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: #000;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.teacher-courses-icon-button svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.7;
+}
+
+.teacher-courses-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.teacher-courses-summary b {
+  display: inline-grid;
+  width: 14px;
+  height: 14px;
+  place-items: center;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: #dcdcdc;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.teacher-courses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 116px;
+}
+
+.teacher-course-card {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) 25px;
+  align-items: center;
+  min-height: 101px;
+  padding: 10px 10px 9px 14px;
+  color: #000;
+  background: #ededed;
+  border: 0;
+  border-radius: 19px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.teacher-course-card > img {
+  width: 92px;
+  height: 82px;
+  object-fit: contain;
+}
+
+.teacher-course-content {
+  min-width: 0;
+  align-self: stretch;
+}
+
+.teacher-course-content h2 {
+  margin-top: 1px;
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 25px;
+  font-weight: 400;
+  letter-spacing: -1.3px;
+  line-height: .93;
+}
+
+.teacher-course-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 35px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.teacher-course-meta span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.teacher-course-meta i {
+  width: 5px;
+  height: 5px;
+  margin-right: 5px;
+  border-radius: 50%;
+}
+
+.teacher-course-term svg {
+  width: 11px;
+  height: 11px;
+  margin-right: 3px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.teacher-course-chevron {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #c5c5c5;
+  font-family: Arial, sans-serif;
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 15px;
+}
+
+.teacher-courses-feedback {
+  padding: 80px 0;
+  color: #555;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  text-align: center;
+}
+
+.teacher-courses-error {
+  color: #c72d2d;
+}
+
+/* TEACHER COURSE DETAIL */
+.teacher-course-detail-screen {
+  width: min(402px, 100dvw);
+  max-width: none;
+  padding: 33px 20px 32px;
+}
+
+.teacher-course-detail-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.teacher-course-detail-back {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  padding: 0;
+  color: #000;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.teacher-course-detail-back svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+}
+
+.teacher-course-detail-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 46px;
+  text-align: center;
+}
+
+.teacher-course-detail-hero > img {
+  width: 115px;
+  height: 100px;
+  object-fit: contain;
+}
+
+.teacher-course-detail-hero h1 {
+  max-width: 350px;
+  margin-top: 22px;
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 39px;
+  font-weight: 400;
+  letter-spacing: -2.3px;
+  line-height: .93;
+}
+
+.teacher-course-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 18px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.teacher-course-detail-meta span {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.teacher-course-detail-meta i {
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+}
+
+.teacher-course-actions-grid {
+  display: grid;
+  grid-template-columns: 136px;
+  justify-content: center;
+  margin-top: 214px;
+}
+
+.teacher-course-action-card {
+  position: relative;
+  display: flex;
+  min-height: 146px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 8px 12px;
+  color: #000;
+  background: #f0f0f0;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 23px;
+  font-weight: 400;
+  letter-spacing: -1.2px;
+  line-height: .88;
+  text-align: center;
+}
+
+.teacher-course-action-card > img {
+  width: 82px;
+  height: 58px;
+  margin-bottom: 13px;
+  object-fit: contain;
+}
+
+.teacher-course-action-chevron {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  width: 14px;
+  height: 14px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #c5c5c5;
+  font-family: Arial, sans-serif;
+  font-size: 20px;
+  line-height: 12px;
+}
+
+/* TEACHER ENROLLED STUDENTS */
+.teacher-students-screen {
+  width: min(402px, 100dvw);
+  max-width: none;
+  padding: 33px 22px 28px;
+}
+
+.teacher-students-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.teacher-students-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 39px;
+  text-align: center;
+}
+
+.teacher-students-hero img {
+  width: 118px;
+  height: 83px;
+  object-fit: contain;
+}
+
+.teacher-students-hero h1 {
+  margin-top: 19px;
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 38px;
+  font-weight: 400;
+  letter-spacing: -2px;
+  line-height: .88;
+}
+
+.teacher-students-table {
+  margin-top: 88px;
+}
+
+.teacher-students-table-header,
+.teacher-students-table-row {
+  display: grid;
+  grid-template-columns: 93px minmax(0, 1fr) 82px;
+  align-items: center;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 16px;
+}
+
+.teacher-students-table-header {
+  min-height: 34px;
+  font-weight: 600;
+}
+
+.teacher-students-table-header span + span {
+  padding-left: 13px;
+  border-left: 1px solid #d5d5d5;
+}
+
+.teacher-students-table-row {
+  min-height: 28px;
+  padding: 0 2px;
+  width: 100%;
+  color: #000;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.teacher-students-table-row:nth-of-type(odd) {
+  background: #e9e9e9;
+  border-radius: 3px;
+}
+
+.teacher-students-table-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* STUDENT STATUS DRAWER */
+.student-status-drawer-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-status-drawer-content h2 {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 31px;
+  font-weight: 400;
+  letter-spacing: -1.8px;
+  line-height: 1;
+}
+
+.student-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 30px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.student-status-info div {
+  display: flex;
+  align-items: center;
+}
+
+.student-status-info dt {
+  min-width: 108px;
+  font-weight: 700;
+}
+
+.student-status-info dd {
+  margin: 0;
+}
+
+.student-status-info select {
+  min-width: 138px;
+  height: 44px;
+  padding: 3px 28px 3px 6px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #c9c9c9;
+  border-radius: 6px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 16px;
+}
+
+.student-status-reason {
+  display: flex;
+  min-height: 124px;
+  flex-direction: column;
+  margin-top: 20px;
+  padding: 9px 13px;
+  background: #dedede;
+  border-radius: 14px;
+}
+
+.student-status-reason > span {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.student-status-reason textarea {
+  width: 100%;
+  height: 82px;
+  padding: 7px 0 0;
+  resize: none;
+  color: #000;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.student-status-reason textarea:disabled {
+  color: #777;
+}
+
+.student-status-error {
+  margin-top: 10px;
+  color: #c72d2d;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+}
+
+.student-status-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  margin-top: 46px;
 }
 
 @media (max-height: 720px) {
