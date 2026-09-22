@@ -318,7 +318,7 @@ CSV;
         $this->assertEquals(1, $result->successful);
         $this->assertEquals(1, $result->skipped);
         $this->assertCount(1, $result->observations);
-        $this->assertStringContainsString('Row 3: Missing student SIS code', $result->observations[0]);
+        $this->assertStringContainsString('Falta codigo sis del estudiante (codigo_sis).', $result->observations[0]);
     }
 
     public function test_detects_malformed_rows_with_column_count_mismatch(): void
