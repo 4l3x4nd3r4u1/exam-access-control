@@ -1,122 +1,104 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import importRosterIcon from './assets/importar_planilla.svg';
+import processedRostersIcon from './assets/planillas_importadas.svg';
+import academicStaffIcon from './assets/personal_academico.svg';
+import { LoginView } from './views/LoginView';
+import { AcademicStaffView } from './views/AcademicStaffView';
+import { ProcessedRostersView } from './views/ProcessedRostersView';
+import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
+import { TeacherCoursesView } from './views/TeacherCoursesView';
+import { ImportRosterDrawer } from './components/ImportRosterDrawer';
+import { authService } from './services/authService';
+import type { UserSession } from './types/auth';
+import type { ProcessedRoster } from './types/processedRoster';
+import './App.css';
 
-function App() {
-  const [count, setCount] = useState(0)
+type AdminScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+export default function App() {
+  const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
+  const [adminScreen, setAdminScreen] = useState<AdminScreen>('DASHBOARD');
+  const [selectedRoster, setSelectedRoster] = useState<ProcessedRoster | null>(null);
+  const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
 
-      <div className="ticks"></div>
+  const handleLogout = () => {
+    authService.clearSession();
+    setSession(null);
+    setAdminScreen('DASHBOARD');
+    setSelectedRoster(null);
+    setIsImportDrawerOpen(false);
+  };
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+  if (!session) {
+    return <LoginView onLoginSuccess={setSession} />;
+  }
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+  // teacher view
+  if (session.role !== 'ADMIN') {
+    return <TeacherCoursesView teacherId={session.user_id} onLogout={handleLogout} />;
+  }
+
+  // admin view
+  if (adminScreen === 'ACADEMIC_STAFF') {
+    return <AcademicStaffView onBack={() => setAdminScreen('DASHBOARD')} />;
+  }
+
+  if (adminScreen === 'PROCESSED_ROSTERS') {
+    return <ProcessedRostersView onBack={() => setAdminScreen('DASHBOARD')} onLogout={handleLogout} onSelectRoster={(roster) => {
+      setSelectedRoster(roster);
+      setAdminScreen('PROCESSED_ROSTER_DETAIL');
+    }} />;
+  }
+
+  if (adminScreen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
+    return <ProcessedRosterDetailView roster={selectedRoster} onBack={() => setAdminScreen('PROCESSED_ROSTERS')} onLogout={handleLogout} />;
+  }
+
+  if (adminScreen === 'DASHBOARD') {
+    return (
+      <main className="app-shell admin-dashboard">
+        <header className="admin-dashboard-header">
+          <div>
+            <h1 className="admin-dashboard-title">Panel</h1>
+            <p className="admin-dashboard-subtitle">Administrador</p>
+          </div>
+
+          <div className="admin-header-actions">
+            <button type="button" className="admin-icon-button" aria-label="Cambiar apariencia">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3.25" />
+                <path d="M12 2v2.25M12 19.75V22M4.93 4.93l1.59 1.59M17.48 17.48l1.59 1.59M2 12h2.25M19.75 12H22M4.93 19.07l1.59-1.59M17.48 6.52l1.59-1.59" />
+              </svg>
+            </button>
+            <button type="button" className="admin-icon-button" onClick={handleLogout} aria-label="Cerrar sesión">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="4.25" />
+                <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <nav className="admin-menu-grid" aria-label="Opciones administrativas">
+          <button type="button" className="admin-menu-card" onClick={() => setIsImportDrawerOpen(true)}>
+            <img src={importRosterIcon} alt="" className="admin-menu-icon admin-import-icon" />
+            <span>Importar<br />planilla</span>
+          </button>
+
+          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('PROCESSED_ROSTERS')}>
+            <img src={processedRostersIcon} alt="" className="admin-menu-icon admin-rosters-icon" />
+            <span>Planillas<br />importadas</span>
+          </button>
+
+          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('ACADEMIC_STAFF')}>
+            <img src={academicStaffIcon} alt="" className="admin-menu-icon admin-staff-icon" />
+            <span>Personal<br />Académico</span>
+          </button>
+        </nav>
+        <ImportRosterDrawer isOpen={isImportDrawerOpen} onClose={() => setIsImportDrawerOpen(false)} />
+      </main>
+    );
+  }
+
+  return null;
 }
-
-export default App
