@@ -490,6 +490,34 @@ class CoreDataStorage
             gestion: $metadata['academic_term']
         );
 
+        // Validate: if this course_group already exists with a different teacher
+        $teacherEmail = strtolower(trim($metadata['teacher_email']));
+        $existingCourse = CourseGroup::where('course_group_id', $courseGroupId)->with('teacher')->first();
+        if ($existingCourse && $existingCourse->teacher) {
+            $existingTeacherEmail = strtolower(trim($existingCourse->teacher->email));
+            if ($existingTeacherEmail !== $teacherEmail) {
+                $extractedMetadata = [
+                    'teacherName' => $metadata['teacher_name'] ?? null,
+                    'teacherEmail' => $metadata['teacher_email'] ?? null,
+                    'subjectCode' => $metadata['subject_code'] ?? null,
+                    'subjectName' => $metadata['subject_name'] ?? null,
+                    'groupCode' => $metadata['group_code'] ?? null,
+                    'academicTerm' => $metadata['academic_term'] ?? null,
+                ];
+                return new ImportSummary(
+                    totalProcessed: 0,
+                    successful: 0,
+                    skipped: 0,
+                    observations: [
+                        "La materia {$metadata['subject_code']} grupo {$metadata['group_code']} ({$metadata['academic_term']}) ya está asignada al docente {$existingCourse->teacher->name} ({$existingTeacherEmail}). No se puede registrar con otro docente."
+                    ],
+                    isSuccessful: false,
+                    failedRows: [],
+                    metadata: $extractedMetadata
+                );
+            }
+        }
+
         $totalProcessed = 0;
         $skipped = 0;
         $observations = [];
@@ -740,6 +768,47 @@ class CoreDataStorage
                 successful: 0,
                 skipped: $skipped,
                 observations: $observations,
+                isSuccessful: false,
+                failedRows: $failedRows
+            );
+        }
+
+        // Validate: check if any course_group is already assigned to a different teacher
+        $courseGroupsByFile = [];
+        foreach ($validRows as $item) {
+            $cgId = $item['courseGroupId'];
+            if (!isset($courseGroupsByFile[$cgId])) {
+                $courseGroupsByFile[$cgId] = [
+                    'email' => strtolower(trim($item['rowData']['email_docente'])),
+                    'sigla' => trim($item['rowData']['sigla_materia']),
+                    'grupo' => trim($item['rowData']['grupo']),
+                    'gestion' => trim($item['rowData']['gestion']),
+                ];
+            }
+        }
+
+        $existingCourseGroups = CourseGroup::whereIn('course_group_id', array_keys($courseGroupsByFile))
+            ->with('teacher')
+            ->get()
+            ->keyBy('course_group_id');
+
+        $conflictObservations = [];
+        foreach ($courseGroupsByFile as $cgId => $fileData) {
+            $existing = $existingCourseGroups->get($cgId);
+            if ($existing && $existing->teacher) {
+                $existingTeacherEmail = strtolower(trim($existing->teacher->email));
+                if ($existingTeacherEmail !== $fileData['email']) {
+                    $conflictObservations[] = "La materia {$fileData['sigla']} grupo {$fileData['grupo']} ({$fileData['gestion']}) ya está asignada al docente {$existing->teacher->name} ({$existingTeacherEmail}). No se puede registrar con otro docente.";
+                }
+            }
+        }
+
+        if (!empty($conflictObservations)) {
+            return new ImportSummary(
+                totalProcessed: $totalProcessed,
+                successful: 0,
+                skipped: $totalProcessed,
+                observations: $conflictObservations,
                 isSuccessful: false,
                 failedRows: $failedRows
             );

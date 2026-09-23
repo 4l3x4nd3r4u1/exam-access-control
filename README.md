@@ -56,6 +56,7 @@ cd backend
 composer install
 cp .env.example .env
 php artisan key:generate
+php artisan jwt:secret
 php artisan serve
 ```
 
@@ -77,11 +78,26 @@ DB_USERNAME=postgres
 DB_PASSWORD=tu_password
 ```
 
-Ejecutar migraciones cuando la base de datos este lista:
+Ejecutar migraciones y datos iniciales:
 
 ```bash
 cd backend
 php artisan migrate
+php artisan db:seed
 ```
 
+Esto crea todas las tablas y los usuarios de prueba:
 
+| Email | Rol | Password |
+|---|---|---|
+| `admin@umss.edu.bo` | ADMIN | `password123` |
+| `docente@umss.edu.bo` | TEACHER | `password123` |
+
+### Resetear la base de datos
+
+Para borrar todas las tablas y recrearlas desde cero con los datos iniciales:
+
+```bash
+cd backend
+php artisan migrate:fresh --seed
+```

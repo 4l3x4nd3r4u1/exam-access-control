@@ -122,17 +122,20 @@ function ImportResult({ summary, onDownloadCorrections, onDownloadTemplate, onRe
   const isCompleteSuccess = summary.isSuccessful && !hasFailedRows;
   const isMissingMetadata = summary.observations.some((observation) => /metadatos/i.test(observation));
   const isMissingColumns = summary.observations.some((observation) => /cabecera|columnas/i.test(observation));
+  const isCourseConflict = summary.observations.some((observation) => /ya está asignada/i.test(observation));
   const needsTemplate = !summary.isSuccessful && !hasFailedRows && (isMissingMetadata || isMissingColumns);
   const issueSummary = summarizeFailedRows(summary);
   const heading = isCompleteSuccess
     ? 'Planilla importada correctamente'
     : hasFailedRows
       ? 'Planilla procesada con observaciones'
-      : isMissingMetadata
-        ? 'Faltan metadatos requeridos'
-        : isMissingColumns
-          ? 'Faltan columnas obligatorias'
-          : 'No se pudo procesar la planilla';
+      : isCourseConflict
+        ? 'Materia ya asignada a otro docente'
+        : isMissingMetadata
+          ? 'Faltan metadatos requeridos'
+          : isMissingColumns
+            ? 'Faltan columnas obligatorias'
+            : 'No se pudo procesar la planilla';
   const description = isCompleteSuccess
       ? `${summary.successful} ${summary.successful === 1 ? 'estudiante fue registrado' : 'estudiantes fueron registrados'} correctamente.`
     : hasFailedRows

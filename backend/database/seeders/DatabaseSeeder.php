@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'admin@umss.edu.bo'],
             [
-                'name' => 'Administrador del Sistema',
+                'name' => 'Alexa',
                 'role' => 'ADMIN',
                 'password' => Hash::make('password123'),
                 'is_active' => true,
