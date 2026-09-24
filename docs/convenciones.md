@@ -128,3 +128,41 @@ Todas las respuestas de la API deben seguir una estructura consistente:
   # En backend
   vendor/bin/phpunit
   ```
+## 6. Convenciones Generales de Código
+
+### 6.1 Nomenclatura
+
+- **Funciones y Variables:** Utilizar `camelCase`.
+- Ejemplos: `registerStudent()`, `examId`, `studentData`.
+
+- **Elementos relacionados con la Base de Datos:** Utilizar `snake_case`.
+   - Ejemplos: `student_id`, `exam_id`, `created_at`.
+ 
+   ### 6.2. Idioma
+
+  - Los nombres relacionados con la **Base de Datos** deben escribirse en español.
+- Mantener una nomenclatura consistente en tablas, columnas y relaciones.
+
+  ### 6.3. Indentación
+
+- Utilizar **2 espacios** para la indentación del código.
+- No utilizar tabulaciones para indentar.
+
+Ejemplo:
+
+```ts
+function registerStudent() {
+  if (studentData) {
+    saveStudent();
+  }
+}
+```
+
+ ### 6.4. String y Comillas
+ 
+  - Utilizar **comillas dobles** (" ")para cadenas de texto
+
+```ts
+const message = "Registro realizado correctamente";
+const studentStatus = "habilitado";
+```
