@@ -10,7 +10,8 @@ use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
 use App\Exceptions\InvalidCredentialsException;
-use App\Models\User;
+use App\Models\Usuario;
+use App\Models\Rol;
 use App\Models\Student;
 use App\Models\CourseGroup;
 use App\Models\StudentCourseEnrollment;
@@ -35,30 +36,29 @@ class CoreDataStorage
      */
     public function authenticate(string $email, string $password): UserSession
     {
-        $user = User::where('email', strtolower(trim($email)))->first();
+        $usuario = Usuario::where('email', strtolower(trim($email)))->first();
 
-        if (!$user) {
+        if (!$usuario) {
             throw new InvalidCredentialsException('Credenciales incorrectas');
         }
 
-        if (!Hash::check($password, $user->password)) {
+        if (!Hash::check($password, $usuario->contrasena)) {
             throw new InvalidCredentialsException('Credenciales incorrectas');
         }
 
-        if (!$user->is_active) {
+        if (!$usuario->activo) {
             throw new InvalidCredentialsException('Usuario inactivo o deshabilitado');
         }
 
-        $token = JWTAuth::fromUser($user);
+        $token = JWTAuth::fromUser($usuario);
         $ttlMinutes = (int) config('jwt.ttl', 360);
 
         return new UserSession(
-            userId: (int) $user->id,
-            role: (string) $user->role,
-            fullName: (string) $user->name,
-            email: (string) $user->email,
-            token: $token,
-            isActive: (bool) $user->is_active,
+          userId: (int) $usuario->id,
+            role: (string) ($usuario->roles->first()?->nombre ?? ''),
+            fullName: (string) $usuario->nombre,
+            email: (string) $usuario->email,
+            isActive: (bool) $usuario->activo,
             tokenType: 'bearer',
             expiresIn: $ttlMinutes * 60,
         );
@@ -138,7 +138,7 @@ class CoreDataStorage
     {
         $user = User::find($userId);
 
-        if (!$user) {
+       if (!$usuario) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Usuario no encontrado'
@@ -212,11 +212,11 @@ class CoreDataStorage
             ->get();
 
         return $users->map(fn(User $user) => new UserSummary(
-            userId: (int) $user->id,
-            fullName: (string) $user->name,
-            email: (string) $user->email,
-            role: (string) $user->role,
-            isActive: (bool) $user->is_active,
+            userId: (int) $usuario->id,
+            role: (string) ($usuario->roles->first()?->nombre ?? ''),
+            fullName: (string) $usuario->nombre,
+            email: (string) $usuario->email,
+            isActive: (bool) $usuario->activo,
         ))->all();
     }
 
