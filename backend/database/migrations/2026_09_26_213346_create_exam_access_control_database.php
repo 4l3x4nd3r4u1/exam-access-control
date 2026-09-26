@@ -122,6 +122,86 @@ return new class extends Migration
             'ui_id'
         ]);
     });
+    Schema::create('estado_inscripcion', function (Blueprint $table) {
+    $table->id();
+    $table->string('nombre');
+    $table->string('descripcion');
+    $table->timestamps();
+    });
+
+
+Schema::create('materia', function (Blueprint $table) {
+    $table->id();
+    $table->string('sigla');
+    $table->string('nombre');
+    $table->boolean('activo')->default(true);
+    $table->timestamps();
+});
+
+
+Schema::create('materia_grupo', function (Blueprint $table) {
+    $table->id();
+
+    $table->foreignId('materia_id')
+          ->constrained('materia')
+          ->cascadeOnDelete();
+
+    $table->string('grupo');
+    $table->string('gestion');
+
+    $table->foreignId('docente_id')
+          ->constrained('usuario')
+          ->cascadeOnDelete();
+
+    $table->boolean('activo')->default(true);
+
+    $table->timestamps();
+
+    $table->unique([
+        'materia_id',
+        'grupo',
+        'gestion'
+    ]);
+});
+
+
+Schema::create('estudiante', function (Blueprint $table) {
+
+    $table->integer('codigo_sis')->primary();
+
+    $table->foreignId('usuario_id')
+      ->constrained('usuario')
+      ->cascadeOnDelete();
+
+      $table->timestamps();
+  });
+
+
+Schema::create('inscripcion', function (Blueprint $table) {
+
+    $table->foreignId('usuario_id')
+          ->constrained('usuario')
+          ->cascadeOnDelete();
+
+    $table->foreignId('materia_grupo_id')
+          ->constrained('materia_grupo')
+          ->cascadeOnDelete();
+
+    $table->foreignId('estado_inscripcion_id')
+          ->constrained('estado_inscripcion')
+          ->cascadeOnDelete();
+
+    $table->string('motivo_inhabilitacion')->nullable();
+
+    $table->dateTime('fecha_inscripcion');
+
+    $table->timestamps();
+
+    $table->primary([
+        'usuario_id',
+        'materia_grupo_id'
+    ]);
+});
     }
 
     /**
