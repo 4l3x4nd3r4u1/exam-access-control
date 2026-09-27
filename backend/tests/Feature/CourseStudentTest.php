@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\CourseGroup;
-use App\Models\Student;
-use App\Models\StudentCourseEnrollment;
-use App\Models\User;
+use App\Models\Usuario;
+use App\Models\Materia;
+use App\Models\MateriaGrupo;
+use App\Models\Estudiante;
+use App\Models\Inscripcion;
+use App\Models\EstadoInscripcion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,53 +15,91 @@ class CourseStudentTest extends TestCase
 {
     use RefreshDatabase;
 
+
     public function test_can_list_enrolled_students_of_a_course_via_api(): void
     {
-        $teacher = User::create([
-            'name' => 'Docente Titular',
+
+        $teacher = Usuario::create([
+            'nombre' => 'Docente Titular',
             'email' => 'docente@umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
+            'ci' => '123456',
+            'contrasena' => bcrypt('password123'),
+            'activo' => true,
         ]);
 
-        CourseGroup::create([
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'Introduccion a la Programacion',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-            'teacher_id' => $teacher->id,
+
+
+        $materia = Materia::create([
+            'sigla' => 'INF110',
+            'nombre' => 'Introduccion a la Programacion',
+            'activo' => true,
         ]);
 
-        Student::create([
-            'student_key' => '202001234',
+
+
+        $materiaGrupo = MateriaGrupo::create([
+            'materia_id' => $materia->id,
+            'grupo' => '1',
+            'gestion' => '2/2026',
+            'docente_id' => $teacher->id,
+            'activo' => true,
+        ]);
+
+
+
+        $usuarioEstudiante = Usuario::create([
+            'nombre' => 'ALVAREZ PEDRO',
+            'email' => 'alvarez.pedro@umss.edu.bo',
             'ci' => '7891234',
-            'full_name' => 'ALVAREZ PEDRO',
+            'contrasena' => bcrypt('password123'),
+            'activo' => true,
         ]);
 
-        StudentCourseEnrollment::create([
-            'student_key' => '202001234',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
-            'ineligibility_reason' => null,
+
+
+        $estudiante = Estudiante::create([
+            'codigo_sis' => '202001234',
+            'usuario_id' => $usuarioEstudiante->id,
         ]);
 
-        $response = $this->getJson('/api/courses/INF110-G1-2/2026/students');
+
+
+        $estado = EstadoInscripcion::create([
+            'nombre' => 'HABILITADO',
+            'descripcion' => 'Estudiante habilitado para rendir examen',
+        ]);
+
+
+
+        Inscripcion::create([
+            'usuario_id' => $usuarioEstudiante->id,
+            'materia_grupo_id' => $materiaGrupo->id,
+            'estado_inscripcion_id' => $estado->id,
+            'motivo_inhabilitacion' => null,
+            'fecha_inscripcion' => now(),
+        ]);
+
+
+
+        $response = $this->getJson(
+            "/api/courses/{$materiaGrupo->id}/students"
+        );
+
+
 
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'data' => [
-                    [
-                        'studentKey' => '202001234',
-                        'ci' => '7891234',
-                        'fullName' => 'ALVAREZ PEDRO',
-                        'status' => 'HABILITADO',
-                        'ineligibilityReason' => null,
-                    ]
-                ],
                 'message' => 'Estudiantes del curso obtenidos exitosamente.',
             ]);
+
+
+
+        $response->assertJsonFragment([
+            'ci' => '7891234',
+            'fullName' => 'ALVAREZ PEDRO',
+            'status' => 'HABILITADO',
+            'ineligibilityReason' => null,
+        ]);
     }
 }

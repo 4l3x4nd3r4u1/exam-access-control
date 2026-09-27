@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\CourseGroup;
-use App\Models\Student;
-use App\Models\StudentCourseEnrollment;
-use App\Models\User;
+use App\Models\EstadoInscripcion;
+use App\Models\Estudiante;
+use App\Models\Inscripcion;
+use App\Models\Materia;
+use App\Models\MateriaGrupo;
+use App\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,42 +15,72 @@ class StudentStatusTest extends TestCase
 {
     use RefreshDatabase;
 
+
     public function test_can_update_student_status_via_api(): void
     {
-        $teacher = User::create([
-            'name' => 'Docente Titular',
+        $teacher = Usuario::create([
+            'nombre' => 'Docente Titular',
             'email' => 'docente.titular@fcyt.umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
+            'ci' => '123456',
+            'contrasena' => bcrypt('password123'),
+            'activo' => true,
         ]);
 
-        CourseGroup::create([
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'Introduccion a la Programacion',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-            'teacher_id' => $teacher->id,
+
+        $materia = Materia::create([
+            'sigla' => 'INF110',
+            'nombre' => 'Introduccion a la Programacion',
+            'activo' => true,
         ]);
 
-        Student::create([
-            'student_key' => '202100482',
+
+        $materiaGrupo = MateriaGrupo::create([
+            'materia_id' => $materia->id,
+            'grupo' => '1',
+            'gestion' => '2/2026',
+            'docente_id' => $teacher->id,
+            'activo' => true,
+        ]);
+
+
+        $usuarioEstudiante = Usuario::create([
+            'nombre' => 'Perez Gomez Juan Carlos',
+            'email' => '8765432@estudiante.umss.edu.bo',
             'ci' => '8765432',
-            'full_name' => 'Perez Gomez Juan Carlos',
+            'contrasena' => bcrypt('password123'),
+            'activo' => true,
         ]);
 
-        StudentCourseEnrollment::create([
-            'student_key' => '202100482',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
-            'ineligibility_reason' => null,
+
+        Estudiante::create([
+            'codigo_sis' => '202100482',
+            'usuario_id' => $usuarioEstudiante->id,
         ]);
 
-        $response = $this->putJson('/api/courses/INF110-G1-2%2F2026/students/202100482/status', [
-            'status' => 'INHABILITADO',
-            'reason' => 'No entrego Proyecto 1',
+
+        $estadoHabilitado = EstadoInscripcion::create([
+            'nombre' => 'HABILITADO',
+            'descripcion' => 'Estudiante habilitado para rendir examen',
         ]);
+
+
+        Inscripcion::create([
+            'usuario_id' => $usuarioEstudiante->id,
+            'materia_grupo_id' => $materiaGrupo->id,
+            'estado_inscripcion_id' => $estadoHabilitado->id,
+            'motivo_inhabilitacion' => null,
+            'fecha_inscripcion' => now(),
+        ]);
+
+
+        $response = $this->putJson(
+            "/api/courses/{$materiaGrupo->id}/students/202100482/status",
+            [
+                'status' => 'INHABILITADO',
+                'reason' => 'No entrego Proyecto 1',
+            ]
+        );
+
 
         $response
             ->assertStatus(200)
@@ -57,23 +89,41 @@ class StudentStatusTest extends TestCase
                 'message' => 'Estado del estudiante actualizado correctamente.',
             ]);
 
-        $this->assertDatabaseHas('student_course_enrollments', [
-            'student_key' => '202100482',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'INHABILITADO',
-            'ineligibility_reason' => 'No entrego Proyecto 1',
+
+        $estadoInhabilitado = EstadoInscripcion::where(
+            'nombre',
+            'INHABILITADO'
+        )->first();
+
+
+        $this->assertNotNull($estadoInhabilitado);
+
+
+        $this->assertDatabaseHas('inscripcion', [
+            'usuario_id' => $usuarioEstudiante->id,
+            'materia_grupo_id' => $materiaGrupo->id,
+            'estado_inscripcion_id' => $estadoInhabilitado->id,
+            'motivo_inhabilitacion' => 'No entrego Proyecto 1',
         ]);
     }
 
+
+
     public function test_update_status_validates_inhabilitado_reason_via_api(): void
     {
-        $response = $this->putJson('/api/courses/INF110-G1-2%2F2026/students/202100482/status', [
-            'status' => 'INHABILITADO',
-            'reason' => '',
-        ]);
+        $response = $this->putJson(
+             "/api/courses/INF110-G1-2%2F2026/students/202100482/status",
+            [
+                'status' => 'INHABILITADO',
+                'reason' => '',
+            ]
+        );
+
 
         $response
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['reason']);
+            ->assertJsonValidationErrors([
+                'reason'
+            ]);
     }
 }
