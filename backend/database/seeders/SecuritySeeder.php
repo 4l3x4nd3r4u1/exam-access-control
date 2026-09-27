@@ -96,28 +96,10 @@ class SecuritySeeder extends Seeder
 
         $usuariosIniciales = [
             [
-                'email' => 'admin@umss.edu.bo',
-                'nombre' => 'Alexa',
-                'ci' => '10000001',
-                'roles' => ['ADMIN'],
-            ],
-            [
-                'email' => 'docente@umss.edu.bo',
-                'nombre' => 'Perez Gomez Juan',
-                'ci' => '20000002',
-                'roles' => ['DOCENTE'],
-            ],
-            [
                 'email' => 'juan.perez@umss.edu.bo',
-                'nombre' => 'Lic. Juan Carlos Perez Gomez',
+                'nombre' => 'Juan Carlos Perez Gomez',
                 'ci' => '30000003',
                 'roles' => ['DOCENTE'],
-            ],
-            [
-                'email' => 'auxiliar@umss.edu.bo',
-                'nombre' => 'Auxiliar Puerta 1',
-                'ci' => '40000004',
-                'roles' => ['AUXILIAR'],
             ],
             // Superusuario with ALL roles (ADMIN, DOCENTE, AUXILIAR, ESTUDIANTE)
             [
