@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1. Table: email (Institutional Whitelist / Catalog)
+        // 1. Table: email (Registered Institutional Email Domains)
         Schema::create('email', function (Blueprint $table) {
             $table->id();
-            $table->string('direccion', 150)->unique();
+            $table->string('dominio', 100)->unique(); // e.g. '@umss.edu.bo', '@fcyt.umss.edu.bo', '@est.umss.edu.bo'
+            $table->string('descripcion', 255)->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamps();
         });
@@ -31,8 +32,8 @@ return new class extends Migration
         // 3. Table: funcion (Fine-grained permissions/functions)
         Schema::create('funcion', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre', 100)->unique();
-            $table->string('numero', 20)->nullable();
+            $table->string('nombre', 150);
+            $table->string('numero', 50)->unique(); // e.g. 'F01', 'IMPORTAR_PADRON'
             $table->boolean('activo')->default(true);
             $table->timestamps();
         });
@@ -41,10 +42,11 @@ return new class extends Migration
         Schema::create('usuario', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 150);
+            $table->string('email', 150)->unique();
+            $table->foreignId('email_id')->constrained('email')->cascadeOnDelete();
             $table->string('contrasena', 255);
             $table->boolean('activo')->default(true);
             $table->string('ci', 30)->nullable()->unique();
-            $table->foreignId('email_id')->constrained('email')->cascadeOnDelete();
             $table->timestamps();
         });
 
