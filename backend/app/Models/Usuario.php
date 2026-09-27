@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class Usuario extends Model
+class Usuario extends Authenticatable implements JWTSubject
 {
     protected $table = "usuario";
+
 
     protected $fillable = [
         "nombre",
@@ -16,9 +18,33 @@ class Usuario extends Model
         "ci"
     ];
 
+
+    protected $hidden = [
+        "contrasena"
+    ];
+
+
     protected $casts = [
         "activo" => "boolean"
     ];
+
+
+    public function getAuthPassword()
+    {
+        return $this->contrasena;
+    }
+
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
 
 
     public function sesiones()
