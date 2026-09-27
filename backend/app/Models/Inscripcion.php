@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Inscripcion extends Model
 {
     protected $table = "inscripcion";
-
+    protected $primaryKey = null;
+    public $incrementing = false;
+    protected $keyType = null;
 
     protected $fillable = [
         "usuario_id",

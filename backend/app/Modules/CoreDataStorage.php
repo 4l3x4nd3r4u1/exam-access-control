@@ -302,7 +302,7 @@ class CoreDataStorage
      */
     public function getEnrolledStudents(string $courseGroupId): array
     {
-        $enrollments = Inscripcion::where('materia_grupo_id', trim($courseGroupId))
+        $enrollments = Inscripcion::where('materia_grupo_id', $courseGroupId)
             ->with('estudiante.usuario')
             ->get();
 
@@ -510,21 +510,23 @@ class CoreDataStorage
             );
         }
 
-        $courseGroupId = $this->buildCourseGroupId(
-            sigla: $metadata['materia.sigla'],
-            grupo: $metadata['grupo'],
-            gestion: $metadata['gestion']
-        );
+        $materiaGrupoId = MateriaGrupo::whereHas('materia', function ($query) use ($metadata) {
+            $query->where('sigla', $metadata['materia.sigla']);
+        })
+        ->where('grupo', $metadata['grupo'])
+        ->where('gestion', $metadata['gestion'])
+        ->value('id');
 
         // Validate: if this materia_grupo already exists with a different teacher
         $teacherEmail = strtolower(trim($metadata['teacher_email']));
 
-        $existingCourse = MateriaGrupo::where(
-            'materia_grupo_id',
-        $courseGroupId
-        )
-        ->with('docente')
-        ->first();
+       $existingCourse = MateriaGrupo::whereHas('materia', function ($query) use ($metadata) {
+           $query->where('sigla', $metadata['materia.sigla']);
+       })
+       ->where('grupo', $metadata['grupo'])
+       ->where('gestion', $metadata['gestion'])
+       ->with('docente')
+       ->first();
 
         if ($existingCourse && $existingCourse->docente) {
 
@@ -614,7 +616,6 @@ class CoreDataStorage
                 'studentKey' => $sis,
                 'ci' => $ci,
                 'fullName' => $name,
-                'courseGroupId' => $courseGroupId,
             ];
         }
 
@@ -641,17 +642,18 @@ class CoreDataStorage
 
         // 5. Bulk Persistence in Database Transaction
         try {
-            DB::transaction(function () use ($metadata, $validRows, $courseGroupId) {
+            DB::transaction(function () use ($metadata, $validRows) {
                 $now = now();
 
                 // Teacher
                 $email = strtolower(trim($metadata['teacher_email']));
+                $defaultPasswordHash = bcrypt('password123');
                 $teacher = Usuario::where('email', $email)->first();
                 if (!$teacher) {
                     $teacher = Usuario::create([
                         'nombre' => trim($metadata['teacher_name']),
                         'email' => $email,
-                        'contrasena' => bcrypt('password123'),
+                        'contrasena' => $defaultPasswordHash,
                         'activo' => true,
                         'ci' => ''
                     ]);
@@ -690,6 +692,7 @@ class CoreDataStorage
 
                 // Students
                 $studentsData = [];
+                $defaultPasswordHash = bcrypt('password123');
                 foreach ($validRows as $item) {
                     $sKey = $item['studentKey'];
                     $usuarioEstudiante = Usuario::firstOrCreate(
@@ -699,7 +702,7 @@ class CoreDataStorage
                     [
                         'nombre' => $item['fullName'],
                         'email' => $item['ci'] . '@estudiante.umss.edu.bo',
-                        'contrasena' => bcrypt('password123'),
+                        'contrasena' => $defaultPasswordHash,
                         'activo' => true
                     ]
                 );
@@ -718,10 +721,10 @@ class CoreDataStorage
                 // Enrollments
                 $enrollmentsData = [];
                 foreach ($validRows as $item) {
-                    $enrollmentKey = $item['studentKey'] . ':::' . $courseGroupId;
+                    $enrollmentKey = $item['studentKey'] . ':::' . $materiaGrupo->id;
                     $enrollmentsData[$enrollmentKey] = [
                         'student_key' => $item['studentKey'],
-                        'materia_grupo_id' => $courseGroupId,
+                        'materia_grupo_id' => $materiaGrupo->id,
                         'status' => 'HABILITADO',
                         'ineligibility_reason' => null,
                         'created_at' => $now,
@@ -857,7 +860,6 @@ class CoreDataStorage
                 'rowNumber' => $rowNumber,
                 'rowData' => $rowData,
                 'studentKey' => $studentKey,
-                'courseGroupId' => $courseGroupId,
             ];
         }
 
@@ -875,24 +877,41 @@ class CoreDataStorage
         // Validate: check if any course_group is already assigned to a different teacher
         $courseGroupsByFile = [];
         foreach ($validRows as $item) {
-            $cgId = $item['courseGroupId'];
-            if (!isset($courseGroupsByFile[$cgId])) {
-                $courseGroupsByFile[$cgId] = [
-                    'email' => strtolower(trim($item['rowData']['email_docente'])),
-                    'sigla' => trim($item['rowData']['sigla_materia']),
-                    'grupo' => trim($item['rowData']['grupo']),
-                    'gestion' => trim($item['rowData']['gestion']),
-                ];
+            $cgKey = strtoupper(trim($item['rowData']['sigla_materia']))
+                . '-'
+                . trim($item['rowData']['grupo'])
+                . '-'
+                . trim($item['rowData']['gestion']);
+            if (!isset($courseGroupsByFile[$cgKey])) {
+                $courseGroupsByFile[$cgKey] = [
+                'email' => strtolower(trim($item['rowData']['email_docente'])),
+                'sigla' => trim($item['rowData']['sigla_materia']),
+                'grupo' => trim($item['rowData']['grupo']),
+                'gestion' => trim($item['rowData']['gestion']),
+                 ];
             }
         }
 
-        $existingCourseGroups = MateriaGrupo::whereIn(
-            'id',
-            array_keys($courseGroupsByFile)
-        )
-        ->with('docente')
-        ->get()
-        ->keyBy('id');
+        $existingCourseGroups = collect();
+        foreach ($courseGroupsByFile as $cgData) {
+            $materia = Materia::where(
+                'sigla',
+                strtoupper($cgData['sigla'])
+            )->first();
+            if ($materia) {
+                $grupo = MateriaGrupo::where('materia_id', $materia->id)
+                    ->where('grupo', $cgData['grupo'])
+                    ->where('gestion', $cgData['gestion'])
+                    ->with('docente')
+                    ->first();
+            if ($grupo) {
+                $existingCourseGroups->put(
+                    $cgData['sigla'] . '-' . $cgData['grupo'] . '-' . $cgData['gestion'],
+                    $grupo
+                );
+            }
+        }
+    }
 
         $conflictObservations = [];
         foreach ($courseGroupsByFile as $cgId => $fileData) {
@@ -936,7 +955,7 @@ class CoreDataStorage
                             'nombre' => 'Docente ' . $email,
                             'email' => $email,
                             'ci' => 'DOC-' . md5($email),
-                            'contrasena' => $defaultPasswordHash ?? bcrypt('password123'),
+                            'contrasena' => $defaultPasswordHash,
                             'activo' => true,
                         ]);
                         $existingTeachers->put($email, $newTeacher);
@@ -986,7 +1005,7 @@ class CoreDataStorage
                         [
                             'nombre' => trim($r['nombre_completo']),
                             'email' => trim($r['ci']) . '@estudiante.umss.edu.bo',
-                            'contrasena' => bcrypt('password123'),
+                            'contrasena' => $defaultPasswordHash,
                             'activo' => true
                         ]
                     );
