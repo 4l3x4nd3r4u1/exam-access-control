@@ -10,9 +10,11 @@ use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
 use App\Exceptions\InvalidCredentialsException;
+use App\Models\EstadoInscripcion;
 use App\Models\Usuario;
 use App\Models\Rol;
 use App\Models\Estudiante;
+use App\Models\Materia;
 use App\Models\MateriaGrupo;
 use App\Models\Inscripcion;
 use Illuminate\Support\Facades\DB;
@@ -59,6 +61,7 @@ class CoreDataStorage
             fullName: (string) $usuario->nombre,
             email: (string) $usuario->email,
             isActive: (bool) $usuario->activo,
+            token: $token,
             tokenType: 'bearer',
             expiresIn: $ttlMinutes * 60,
         );
@@ -192,7 +195,7 @@ class CoreDataStorage
             $usuario->email = $email;
 
             if (!empty($data->newPassword)) {
-                $usuario->contrasena = $data->newPassword;
+                $usuario->contrasena = bcrypt($data->newPassword);
             }
 
             $usuario->save();
@@ -249,18 +252,18 @@ class CoreDataStorage
     public function getTeacherCourses(int $teacherId): array
     {
         $courses = MateriaGrupo::where('docente_id', $teacherId)
-            ->withCount('enrollments')
-            ->orderBy('materia.sigla', 'asc')
+            ->with('materia')
+            ->withCount('inscripciones')
             ->orderBy('grupo', 'asc')
             ->get();
 
         return $courses->map(fn(MateriaGrupo $c) => new CourseGroupSummary(
-            courseGroupId: (string) $c->course_group_id,
-            subjectCode: (string) $c->materia.sigla,
-            subjectName: (string) $c->materia.nombre,
+            courseGroupId: (string) $c->id,
+            subjectCode: (string) $c->materia->sigla,
+            subjectName: (string) $c->materia->nombre,
             groupCode: (string) $c->grupo,
             academicTerm: (string) $c->gestion,
-            totalEnrolled: (int) ($c->enrollments_count ?? 0),
+            totalEnrolled: (int) ($c->inscripciones_count ?? 0),
             teacherId: (int) $c->docente_id,
         ))->all();
     }
@@ -272,19 +275,22 @@ class CoreDataStorage
     */
     public function getProcessedRosters(): array
     {
-        MateriaGrupo::with('docente')->withCount('enrollments')
-            ->orderBy('materia.sigla', 'asc')
-            ->orderBy('grupo', 'asc')
-            ->get();
+        $courses = MateriaGrupo::with([
+            'docente',
+            'materia'
+        ])
+        ->withCount('inscripciones')
+        ->orderBy('grupo')
+        ->get();
 
-        return $courses->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
-            courseGroupId: (string) $course->course_group_id,
-            subjectCode: (string) $course->materia.sigla,
-            subjectName: (string) $course->materia.nombre,
-            groupCode: (string) $course->grupo,
-            academicTerm: (string) $course->gestion,
-            totalStudents: (int) ($course->enrollments_count ?? 0),
-            teacherName: $course->docente?->nombre,
+        return $courses->map(fn(MateriaGrupo $course) => new ProcessedRosterSummary(
+            courseGroupId: (string) $course->id, 
+            subjectCode: (string) $course->materia->sigla, 
+            subjectName: (string) $course->materia->nombre, 
+            groupCode: (string) $course->grupo, 
+            academicTerm: (string) $course->gestion, 
+            totalStudents: (int) ($course->inscripciones_count ?? 0), 
+            teacherName: $course->docente?->nombre, 
         ))->all();
     }
 
@@ -297,16 +303,16 @@ class CoreDataStorage
     public function getEnrolledStudents(string $courseGroupId): array
     {
         $enrollments = Inscripcion::where('materia_grupo_id', trim($courseGroupId))
-            ->with('student')
+            ->with('estudiante.usuario')
             ->get();
 
-        return $enrollments->map(function (StudentCourseEnrollment $enrollment) {
+        return $enrollments->map(function (Inscripcion $enrollment) {
             return new EnrolledStudentSummary(
-                studentKey: (string) $enrollment->student_key,
-                ci: (string) ($enrollment->student?->ci ?? ''),
-                fullName: (string) ($enrollment->student?->full_name ?? ''),
-                status: (string) $enrollment->status,
-                ineligibilityReason: $enrollment->ineligibility_reason,
+                    studentKey: (string) $enrollment->estudiante->codigo_sis,
+                    ci: (string) ($enrollment->estudiante?->usuario?->ci ?? ''),
+                    fullName: (string) ($enrollment->estudiante?->usuario?->nombre ?? ''),
+                    status: (string) ($enrollment->estado?->nombre ?? ''),
+                    ineligibilityReason: $enrollment->motivo_inhabilitacion,
             );
         })->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
     }
@@ -510,12 +516,22 @@ class CoreDataStorage
             gestion: $metadata['gestion']
         );
 
-        // Validate: if this course_group already exists with a different teacher
+        // Validate: if this materia_grupo already exists with a different teacher
         $teacherEmail = strtolower(trim($metadata['teacher_email']));
-        $existingCourse = CourseGroup::where('course_group_id', $courseGroupId)->with('teacher')->first();
-        if ($existingCourse && $existingCourse->teacher) {
-            $existingTeacherEmail = strtolower(trim($existingCourse->teacher->email));
+
+        $existingCourse = MateriaGrupo::where(
+            'materia_grupo_id',
+        $courseGroupId
+        )
+        ->with('docente')
+        ->first();
+
+        if ($existingCourse && $existingCourse->docente) {
+
+            $existingTeacherEmail = strtolower(trim($existingCourse->docente->email));
+
             if ($existingTeacherEmail !== $teacherEmail) {
+
                 $extractedMetadata = [
                     'teacherName' => $metadata['teacher_name'] ?? null,
                     'teacherEmail' => $metadata['teacher_email'] ?? null,
@@ -524,19 +540,20 @@ class CoreDataStorage
                     'groupCode' => $metadata['grupo'] ?? null,
                     'academicTerm' => $metadata['gestion'] ?? null,
                 ];
-                return new ImportSummary(
-                    totalProcessed: 0,
-                    successful: 0,
-                    skipped: 0,
-                    observations: [
-                        "La materia {$metadata['materia.sigla']} grupo {$metadata['grupo']} ({$metadata['gestion']}) ya está asignada al docente {$existingCourse->teacher->name} ({$existingTeacherEmail}). No se puede registrar con otro docente."
-                    ],
-                    isSuccessful: false,
-                    failedRows: [],
-                    metadata: $extractedMetadata
-                );
-            }
-        }
+
+        return new ImportSummary(
+            totalProcessed: 0,
+            successful: 0,
+            skipped: $totalProcessed,
+            observations: [
+                "La materia ya está asignada a otro docente."
+            ],
+            isSuccessful: false,
+            failedRows: $failedRows,
+            metadata: $extractedMetadata
+        );
+    }
+}
 
         $totalProcessed = 0;
         $skipped = 0;
@@ -631,42 +648,72 @@ class CoreDataStorage
                 $email = strtolower(trim($metadata['teacher_email']));
                 $teacher = Usuario::where('email', $email)->first();
                 if (!$teacher) {
-                    $teacher = User::create([
+                    $teacher = Usuario::create([
+                        'nombre' => trim($metadata['teacher_name']),
                         'email' => $email,
-                        'name' => trim($metadata['teacher_name']),
-                        'role' => 'TEACHER',
-                        'password' => bcrypt('password123'),
-                        'is_active' => true,
+                        'contrasena' => bcrypt('password123'),
+                        'activo' => true,
+                        'ci' => ''
                     ]);
+
+                    $rolDocente = Rol::where('nombre', 'TEACHER')->first();
+
+                    if ($rolDocente) {
+                        $teacher->roles()->attach($rolDocente->id, [
+                        'activo' => true,
+                        'fecha_asignacion' => now()
+                        ]);
+                    }
                 }
+                $materia = Materia::firstOrCreate(
+                    [
+                        'sigla' => trim($metadata['materia.sigla'])
+                    ],
+                    [
+                        'nombre' => trim($metadata['materia.nombre']),
+                        'activo' => true
+                    ]
+                );
 
                 // CourseGroup
-                MateriaGrupo::updateOrCreate([
-                    [
-                        'course_group_id' => $courseGroupId,
-                        'materia.sigla' => strtoupper(trim($metadata['materia.sigla'])),
-                        'materia.nombre' => trim($metadata['materia.nombre']),
-                        'grupo' => strtoupper(trim($metadata['grupo'])),
-                        'gestion' => trim($metadata['gestion']),
-                        'teacher_id' => $teacher->id,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]
-                ], ['course_group_id'], ['materia.sigla', 'materia.nombre', 'grupo', 'gestion', 'teacher_id', 'updated_at']);
+               $materiaGrupo = MateriaGrupo::updateOrCreate(
+                   [
+                       'materia_id' => $materia->id,
+                        'grupo' => trim($metadata['grupo']),
+                        'gestion' => trim($metadata['gestion'])
+                   ],
+                   [
+                       'docente_id' => $teacher->id,
+                       'activo' => true
+                   ]
+                );
 
                 // Students
                 $studentsData = [];
                 foreach ($validRows as $item) {
                     $sKey = $item['studentKey'];
-                    $studentsData[$sKey] = [
-                        'student_key' => $sKey,
-                        'ci' => $item['ci'],
-                        'full_name' => $item['fullName'],
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
+                    $usuarioEstudiante = Usuario::firstOrCreate(
+                    [
+                        'ci' => $item['ci']
+                    ],
+                    [
+                        'nombre' => $item['fullName'],
+                        'email' => $item['ci'] . '@estudiante.umss.edu.bo',
+                        'contrasena' => bcrypt('password123'),
+                        'activo' => true
+                    ]
+                );
+
+
+                    Estudiante::updateOrCreate(
+                        [
+                        'codigo_sis' => $sKey
+                        ],
+                    [
+                        'usuario_id' => $usuarioEstudiante->id
+                    ]
+                );
                 }
-                Estudiante::updateOrCreate(array_values($studentsData), ['student_key'], ['ci', 'full_name', 'updated_at']);
 
                 // Enrollments
                 $enrollmentsData = [];
@@ -674,14 +721,46 @@ class CoreDataStorage
                     $enrollmentKey = $item['studentKey'] . ':::' . $courseGroupId;
                     $enrollmentsData[$enrollmentKey] = [
                         'student_key' => $item['studentKey'],
-                        'course_group_id' => $courseGroupId,
+                        'materia_grupo_id' => $courseGroupId,
                         'status' => 'HABILITADO',
                         'ineligibility_reason' => null,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];
                 }
-                Inscripcion::updateOrCreate(array_values($enrollmentsData), ['student_key', 'course_group_id'], ['status', 'updated_at']);
+
+                $estadoHabilitado = EstadoInscripcion::firstOrCreate(
+                    [
+                        'nombre' => 'HABILITADO'
+                    ],
+                    [
+                        'descripcion' => 'Estudiante habilitado para rendir examen'
+                    ]
+                );
+
+                foreach ($validRows as $item) {
+
+                    $usuarioEstudiante = Usuario::where(
+                        'ci',
+                         $item['ci']
+                    )->first();
+
+                    if (!$usuarioEstudiante) {
+                        continue;
+                    }
+
+                    Inscripcion::updateOrCreate(
+                        [
+                            'usuario_id' => $usuarioEstudiante->id,
+                            'materia_grupo_id' => $materiaGrupo->id
+                        ],
+                        [
+                            'estado_inscripcion_id' => $estadoHabilitado->id,
+                            'motivo_inhabilitacion' => null,
+                            'fecha_inscripcion' => now()
+                        ]
+                    );
+                }
             });
 
             $successful = count($validRows);
@@ -807,10 +886,13 @@ class CoreDataStorage
             }
         }
 
-        $existingCourseGroups = CourseGroup::whereIn('course_group_id', array_keys($courseGroupsByFile))
-            ->with('teacher')
-            ->get()
-            ->keyBy('course_group_id');
+        $existingCourseGroups = MateriaGrupo::whereIn(
+            'id',
+            array_keys($courseGroupsByFile)
+        )
+        ->with('docente')
+        ->get()
+        ->keyBy('id');
 
         $conflictObservations = [];
         foreach ($courseGroupsByFile as $cgId => $fileData) {
@@ -843,83 +925,148 @@ class CoreDataStorage
                     $validRows
                 )));
 
-                $existingTeachers = User::whereIn('email', $teacherEmails)->get()->keyBy('email');
-                $defaultPasswordHash = null;
+                $existingTeachers = Usuario::whereIn('email', $teacherEmails)
+                ->get()
+                ->keyBy('email');
 
                 foreach ($teacherEmails as $email) {
                     if (!$existingTeachers->has($email)) {
                         $defaultPasswordHash ??= bcrypt('password123');
-                        $newTeacher = User::create([
+                        $newTeacher = Usuario::create([
+                            'nombre' => 'Docente ' . $email,
                             'email' => $email,
-                            'name' => 'Docente ' . $email,
-                            'role' => 'TEACHER',
-                            'password' => $defaultPasswordHash,
-                            'is_active' => true,
+                            'ci' => 'DOC-' . md5($email),
+                            'contrasena' => $defaultPasswordHash ?? bcrypt('password123'),
+                            'activo' => true,
                         ]);
                         $existingTeachers->put($email, $newTeacher);
                     }
                 }
-
-                $courseGroupsData = [];
+                
                 foreach ($validRows as $item) {
-                    $cgId = $item['courseGroupId'];
-                    if (!isset($courseGroupsData[$cgId])) {
-                        $r = $item['rowData'];
-                        $teacher = $existingTeachers->get(strtolower(trim($r['email_docente'])));
-                        $courseGroupsData[$cgId] = [
-                            'course_group_id' => $cgId,
-                            'materia.sigla' => strtoupper(trim($r['sigla_materia'])),
-                            'materia.nombre' => trim($r['nombre_materia']),
+
+                    $r = $item['rowData'];
+
+                    $materia = Materia::firstOrCreate(
+                        [
+                            'sigla' => strtoupper(trim($r['sigla_materia']))
+                        ],
+                        [
+                            'nombre' => trim($r['nombre_materia']),
+                            'activo' => true
+                        ]
+                        );
+
+                    $teacher = $existingTeachers->get(
+                        strtolower(trim($r['email_docente']))
+                    );
+
+                    MateriaGrupo::updateOrCreate(
+                        [
+                            'materia_id' => $materia->id,
                             'grupo' => strtoupper(trim($r['grupo'])),
-                            'gestion' => trim($r['gestion']),
-                            'teacher_id' => $teacher?->id,
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                        ];
-                    }
+                            'gestion' => trim($r['gestion'])
+                        ],
+                        [
+                            'docente_id' => $teacher?->id,
+                            'activo' => true
+                        ]
+                    );
                 }
-                MateriaGrupo::updateOrCreate(
-                    array_values($courseGroupsData),
-                    ['course_group_id'],
-                    ['materia.sigla', 'materia.nombre', 'grupo', 'gestion', 'teacher_id', 'updated_at']
-                );
 
-                $studentsData = [];
                 foreach ($validRows as $item) {
+
                     $sKey = $item['studentKey'];
                     $r = $item['rowData'];
-                    $studentsData[$sKey] = [
-                        'student_key' => $sKey,
-                        'ci' => trim($r['ci']),
-                        'full_name' => trim($r['nombre_completo']),
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                }
-                Estudiante::updateOrCreate
-                    array_values($studentsData),
-                    ['student_key'],
-                    ['ci', 'full_name', 'updated_at']
-                );
 
-                $enrollmentsData = [];
-                foreach ($validRows as $item) {
-                    $enrollmentKey = $item['studentKey'] . ':::' . $item['courseGroupId'];
-                    $enrollmentsData[$enrollmentKey] = [
-                        'student_key' => $item['studentKey'],
-                        'course_group_id' => $item['courseGroupId'],
-                        'status' => 'HABILITADO',
-                        'ineligibility_reason' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
+                    $usuarioEstudiante = Usuario::updateOrCreate(
+                        [
+                            'ci' => trim($r['ci'])
+                        ],
+                        [
+                            'nombre' => trim($r['nombre_completo']),
+                            'email' => trim($r['ci']) . '@estudiante.umss.edu.bo',
+                            'contrasena' => bcrypt('password123'),
+                            'activo' => true
+                        ]
+                    );
+
+
+                    Estudiante::updateOrCreate(
+                        [
+                            'codigo_sis' => $sKey
+                        ],
+                        [
+                            'usuario_id' => $usuarioEstudiante->id
+                        ]
+                    );
                 }
-                StudentCourseEnrollment::upsert(
-                    array_values($enrollmentsData),
-                    ['student_key', 'course_group_id'],
-                    ['status', 'updated_at']
+
+
+                $estadoHabilitado = EstadoInscripcion::firstOrCreate(
+                [
+                    'nombre' => 'HABILITADO'
+                ],
+                [
+                    'descripcion' => 'Estudiante habilitado para rendir examen'
+                ]
+            );
+
+
+                foreach ($validRows as $item) {
+
+                    $r = $item['rowData'];
+                    $usuarioEstudiante = Usuario::whereHas(
+                        'estudiante',
+                function ($query) use ($item) {
+                    $query->where(
+                        'codigo_sis',
+                    $item['studentKey']
                 );
-            });
+            }
+        )->first();
+
+
+    $materia = Materia::where(
+        'sigla',
+        strtoupper(trim($r['sigla_materia']))
+    )->first();
+
+
+    $materiaGrupo = MateriaGrupo::where(
+        'materia_id',
+        $materia?->id
+    )
+    ->where(
+        'grupo',
+        strtoupper(trim($r['grupo']))
+    )
+    ->where(
+        'gestion',
+        trim($r['gestion'])
+    )
+    ->first();
+
+
+    if (!$usuarioEstudiante || !$materiaGrupo) {
+        continue;
+    }
+
+
+    Inscripcion::updateOrCreate(
+            [
+                'usuario_id' => $usuarioEstudiante->id,
+                'materia_grupo_id' => $materiaGrupo->id
+            ],
+            [
+                'estado_inscripcion_id' => $estadoHabilitado->id,
+                'motivo_inhabilitacion' => null,
+                'fecha_inscripcion' => now()
+           ]
+       );
+
+    }
+});
 
             $successful = count($validRows);
         } catch (\Throwable $e) {

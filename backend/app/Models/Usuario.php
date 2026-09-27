@@ -74,4 +74,12 @@ class Usuario extends Authenticatable implements JWTSubject
             "docente_id"
         );
     }
+
+    public function estudiante()
+   {
+        return $this->hasOne(
+            Estudiante::class,
+            'usuario_id'
+        );
+    }
 }
