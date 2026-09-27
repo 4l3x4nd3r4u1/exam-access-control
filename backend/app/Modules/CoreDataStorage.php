@@ -83,7 +83,7 @@ class CoreDataStorage
         }
 
         // Check if email already exists
-        if (User::where('email', $email)->exists()) {
+        if (Usuario::where('email', $email)->exists()) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'El correo ya está registrado'
@@ -106,13 +106,22 @@ class CoreDataStorage
         }
 
         try {
-            User::create([
-                'name' => $data->fullName,
-                'email' => $email,
-                'password' => $data->password,
-                'role' => $role,
-                'is_active' => true,
+            $usuario = Usuario::create([
+            'nombre' => $data->fullName,
+            'email' => $email,
+            'contrasena' => $data->password,
+            'activo' => true,
+            'ci' => ''
             ]);
+            
+            $rolModelo = Rol::where('nombre', $role)->first();
+
+            if ($rolModelo) {
+            $usuario->roles()->attach($rolModelo->id, [
+            'activo' => true,
+            'fecha_asignacion' => now()
+            ]);
+            }
 
             return new OperationResult(
                 isSuccessful: true,
@@ -136,7 +145,7 @@ class CoreDataStorage
      */
     public function updateAcademicUser(int $userId, UserUpdateData $data): OperationResult
     {
-        $user = User::find($userId);
+        $usuario = Usuario::find($userId);
 
        if (!$usuario) {
             return new OperationResult(
@@ -156,7 +165,7 @@ class CoreDataStorage
         }
 
         // Check if email already belongs to another user
-        if (User::where('email', $email)->where('id', '!=', $userId)->exists()) {
+        if (Usuario::where('email', $email)->where('id', '!=', $userId)->exists()) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'El correo ya está registrado por otro usuario'
@@ -179,15 +188,25 @@ class CoreDataStorage
         }
 
         try {
-            $user->name = $data->fullName;
-            $user->email = $email;
-            $user->role = $role;
+            $usuario->nombre = $data->fullName;
+            $usuario->email = $email;
 
             if (!empty($data->newPassword)) {
-                $user->password = $data->newPassword;
+                $usuario->contrasena = $data->newPassword;
             }
 
-            $user->save();
+            $usuario->save();
+            
+            $rolModelo = Rol::where('nombre', $role)->first();
+
+            if ($rolModelo) {
+            $usuario->roles()->sync([
+            $rolModelo->id => [
+            'activo' => true,
+            'fecha_asignacion' => now()
+            ]
+            ]);
+    }
 
             return new OperationResult(
                 isSuccessful: true,
@@ -207,11 +226,12 @@ class CoreDataStorage
      */
     public function getAcademicStaff(): array
     {
-        $users = User::where('is_active', true)
-            ->orderBy('name', 'asc')
-            ->get();
+        $usuarios = Usuario::where('activo', true)
+        ->with('roles')
+        ->orderBy('nombre', 'asc')
+        ->get();
 
-        return $users->map(fn(User $user) => new UserSummary(
+        return $usuarios->map(fn(Usuario $usuario) => new UserSummary(
             userId: (int) $usuario->id,
             role: (string) ($usuario->roles->first()?->nombre ?? ''),
             fullName: (string) $usuario->nombre,
@@ -609,7 +629,7 @@ class CoreDataStorage
 
                 // Teacher
                 $email = strtolower(trim($metadata['teacher_email']));
-                $teacher = User::where('email', $email)->first();
+                $teacher = Usuario::where('email', $email)->first();
                 if (!$teacher) {
                     $teacher = User::create([
                         'email' => $email,
