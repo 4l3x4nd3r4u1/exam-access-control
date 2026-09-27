@@ -12,9 +12,9 @@ use App\DTOs\EnrolledStudentSummary;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\Usuario;
 use App\Models\Rol;
-use App\Models\Student;
-use App\Models\CourseGroup;
-use App\Models\StudentCourseEnrollment;
+use App\Models\Estudiante;
+use App\Models\MateriaGrupo;
+use App\Models\Inscripcion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -106,21 +106,21 @@ class CoreDataStorage
         }
 
         try {
-            $usuario = Usuario::create([
-            'nombre' => $data->fullName,
-            'email' => $email,
-            'contrasena' => $data->password,
-            'activo' => true,
-            'ci' => ''
+                $usuario = Usuario::create([
+                'nombre' => $data->fullName,
+                'email' => $email,
+                'contrasena' => $data->password,
+                'activo' => true,
+                'ci' => ''
             ]);
             
             $rolModelo = Rol::where('nombre', $role)->first();
 
             if ($rolModelo) {
-            $usuario->roles()->attach($rolModelo->id, [
-            'activo' => true,
-            'fecha_asignacion' => now()
-            ]);
+                $usuario->roles()->attach($rolModelo->id, [
+                'activo' => true,
+                'fecha_asignacion' => now()
+                ]);
             }
 
             return new OperationResult(
@@ -200,12 +200,12 @@ class CoreDataStorage
             $rolModelo = Rol::where('nombre', $role)->first();
 
             if ($rolModelo) {
-            $usuario->roles()->sync([
-            $rolModelo->id => [
-            'activo' => true,
-            'fecha_asignacion' => now()
-            ]
-            ]);
+                $usuario->roles()->sync([
+                $rolModelo->id => [
+                'activo' => true,
+                'fecha_asignacion' => now()
+                    ]
+                ]);
     }
 
             return new OperationResult(
@@ -248,20 +248,20 @@ class CoreDataStorage
      */
     public function getTeacherCourses(int $teacherId): array
     {
-        $courses = CourseGroup::where('teacher_id', $teacherId)
+        $courses = MateriaGrupo::where('docente_id', $teacherId)
             ->withCount('enrollments')
-            ->orderBy('subject_code', 'asc')
-            ->orderBy('group_code', 'asc')
+            ->orderBy('materia.sigla', 'asc')
+            ->orderBy('grupo', 'asc')
             ->get();
 
-        return $courses->map(fn(CourseGroup $c) => new CourseGroupSummary(
+        return $courses->map(fn(MateriaGrupo $c) => new CourseGroupSummary(
             courseGroupId: (string) $c->course_group_id,
-            subjectCode: (string) $c->subject_code,
-            subjectName: (string) $c->subject_name,
-            groupCode: (string) $c->group_code,
-            academicTerm: (string) $c->academic_term,
+            subjectCode: (string) $c->materia.sigla,
+            subjectName: (string) $c->materia.nombre,
+            groupCode: (string) $c->grupo,
+            academicTerm: (string) $c->gestion,
             totalEnrolled: (int) ($c->enrollments_count ?? 0),
-            teacherId: (int) $c->teacher_id,
+            teacherId: (int) $c->docente_id,
         ))->all();
     }
     
@@ -272,19 +272,19 @@ class CoreDataStorage
     */
     public function getProcessedRosters(): array
     {
-        $courses = CourseGroup::with('teacher')->withCount('enrollments')
-            ->orderBy('subject_code', 'asc')
-            ->orderBy('group_code', 'asc')
+        MateriaGrupo::with('docente')->withCount('enrollments')
+            ->orderBy('materia.sigla', 'asc')
+            ->orderBy('grupo', 'asc')
             ->get();
 
         return $courses->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
             courseGroupId: (string) $course->course_group_id,
-            subjectCode: (string) $course->subject_code,
-            subjectName: (string) $course->subject_name,
-            groupCode: (string) $course->group_code,
-            academicTerm: (string) $course->academic_term,
+            subjectCode: (string) $course->materia.sigla,
+            subjectName: (string) $course->materia.nombre,
+            groupCode: (string) $course->grupo,
+            academicTerm: (string) $course->gestion,
             totalStudents: (int) ($course->enrollments_count ?? 0),
-            teacherName: $course->teacher?->name,
+            teacherName: $course->docente?->nombre,
         ))->all();
     }
 
@@ -296,7 +296,7 @@ class CoreDataStorage
      */
     public function getEnrolledStudents(string $courseGroupId): array
     {
-        $enrollments = StudentCourseEnrollment::where('course_group_id', trim($courseGroupId))
+        $enrollments = Inscripcion::where('materia_grupo_id', trim($courseGroupId))
             ->with('student')
             ->get();
 
@@ -505,9 +505,9 @@ class CoreDataStorage
         }
 
         $courseGroupId = $this->buildCourseGroupId(
-            sigla: $metadata['subject_code'],
-            grupo: $metadata['group_code'],
-            gestion: $metadata['academic_term']
+            sigla: $metadata['materia.sigla'],
+            grupo: $metadata['grupo'],
+            gestion: $metadata['gestion']
         );
 
         // Validate: if this course_group already exists with a different teacher
@@ -519,17 +519,17 @@ class CoreDataStorage
                 $extractedMetadata = [
                     'teacherName' => $metadata['teacher_name'] ?? null,
                     'teacherEmail' => $metadata['teacher_email'] ?? null,
-                    'subjectCode' => $metadata['subject_code'] ?? null,
-                    'subjectName' => $metadata['subject_name'] ?? null,
-                    'groupCode' => $metadata['group_code'] ?? null,
-                    'academicTerm' => $metadata['academic_term'] ?? null,
+                    'subjectCode' => $metadata['materia.sigla'] ?? null,
+                    'subjectName' => $metadata['materia.nombre'] ?? null,
+                    'groupCode' => $metadata['grupo'] ?? null,
+                    'academicTerm' => $metadata['gestion'] ?? null,
                 ];
                 return new ImportSummary(
                     totalProcessed: 0,
                     successful: 0,
                     skipped: 0,
                     observations: [
-                        "La materia {$metadata['subject_code']} grupo {$metadata['group_code']} ({$metadata['academic_term']}) ya está asignada al docente {$existingCourse->teacher->name} ({$existingTeacherEmail}). No se puede registrar con otro docente."
+                        "La materia {$metadata['materia.sigla']} grupo {$metadata['grupo']} ({$metadata['gestion']}) ya está asignada al docente {$existingCourse->teacher->name} ({$existingTeacherEmail}). No se puede registrar con otro docente."
                     ],
                     isSuccessful: false,
                     failedRows: [],
@@ -604,10 +604,10 @@ class CoreDataStorage
         $extractedMetadata = [
             'teacherName' => $metadata['teacher_name'] ?? null,
             'teacherEmail' => $metadata['teacher_email'] ?? null,
-            'subjectCode' => $metadata['subject_code'] ?? null,
-            'subjectName' => $metadata['subject_name'] ?? null,
-            'groupCode' => $metadata['group_code'] ?? null,
-            'academicTerm' => $metadata['academic_term'] ?? null,
+            'subjectCode' => $metadata['materia.sigla'] ?? null,
+            'subjectName' => $metadata['materia.nombre'] ?? null,
+            'groupCode' => $metadata['grupo'] ?? null,
+            'academicTerm' => $metadata['gestion'] ?? null,
         ];
 
         if (empty($validRows)) {
@@ -641,18 +641,18 @@ class CoreDataStorage
                 }
 
                 // CourseGroup
-                CourseGroup::upsert([
+                MateriaGrupo::updateOrCreate([
                     [
                         'course_group_id' => $courseGroupId,
-                        'subject_code' => strtoupper(trim($metadata['subject_code'])),
-                        'subject_name' => trim($metadata['subject_name']),
-                        'group_code' => strtoupper(trim($metadata['group_code'])),
-                        'academic_term' => trim($metadata['academic_term']),
+                        'materia.sigla' => strtoupper(trim($metadata['materia.sigla'])),
+                        'materia.nombre' => trim($metadata['materia.nombre']),
+                        'grupo' => strtoupper(trim($metadata['grupo'])),
+                        'gestion' => trim($metadata['gestion']),
                         'teacher_id' => $teacher->id,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]
-                ], ['course_group_id'], ['subject_code', 'subject_name', 'group_code', 'academic_term', 'teacher_id', 'updated_at']);
+                ], ['course_group_id'], ['materia.sigla', 'materia.nombre', 'grupo', 'gestion', 'teacher_id', 'updated_at']);
 
                 // Students
                 $studentsData = [];
@@ -666,7 +666,7 @@ class CoreDataStorage
                         'updated_at' => $now,
                     ];
                 }
-                Student::upsert(array_values($studentsData), ['student_key'], ['ci', 'full_name', 'updated_at']);
+                Estudiante::updateOrCreate(array_values($studentsData), ['student_key'], ['ci', 'full_name', 'updated_at']);
 
                 // Enrollments
                 $enrollmentsData = [];
@@ -681,7 +681,7 @@ class CoreDataStorage
                         'updated_at' => $now,
                     ];
                 }
-                StudentCourseEnrollment::upsert(array_values($enrollmentsData), ['student_key', 'course_group_id'], ['status', 'updated_at']);
+                Inscripcion::updateOrCreate(array_values($enrollmentsData), ['student_key', 'course_group_id'], ['status', 'updated_at']);
             });
 
             $successful = count($validRows);
@@ -868,20 +868,20 @@ class CoreDataStorage
                         $teacher = $existingTeachers->get(strtolower(trim($r['email_docente'])));
                         $courseGroupsData[$cgId] = [
                             'course_group_id' => $cgId,
-                            'subject_code' => strtoupper(trim($r['sigla_materia'])),
-                            'subject_name' => trim($r['nombre_materia']),
-                            'group_code' => strtoupper(trim($r['grupo'])),
-                            'academic_term' => trim($r['gestion']),
+                            'materia.sigla' => strtoupper(trim($r['sigla_materia'])),
+                            'materia.nombre' => trim($r['nombre_materia']),
+                            'grupo' => strtoupper(trim($r['grupo'])),
+                            'gestion' => trim($r['gestion']),
                             'teacher_id' => $teacher?->id,
                             'created_at' => $now,
                             'updated_at' => $now,
                         ];
                     }
                 }
-                CourseGroup::upsert(
+                MateriaGrupo::updateOrCreate(
                     array_values($courseGroupsData),
                     ['course_group_id'],
-                    ['subject_code', 'subject_name', 'group_code', 'academic_term', 'teacher_id', 'updated_at']
+                    ['materia.sigla', 'materia.nombre', 'grupo', 'gestion', 'teacher_id', 'updated_at']
                 );
 
                 $studentsData = [];
@@ -896,7 +896,7 @@ class CoreDataStorage
                         'updated_at' => $now,
                     ];
                 }
-                Student::upsert(
+                Estudiante::updateOrCreate
                     array_values($studentsData),
                     ['student_key'],
                     ['ci', 'full_name', 'updated_at']
@@ -977,20 +977,20 @@ class CoreDataStorage
         } elseif (in_array($normalizedKey, ['materia', 'asignatura', 'siglamateria'])) {
             if (str_contains($val, '-')) {
                 $parts = explode('-', $val, 2);
-                $metadata['subject_code'] = strtoupper(trim($parts[0]));
-                $metadata['subject_name'] = trim($parts[1]);
+                $metadata['materia.sigla'] = strtoupper(trim($parts[0]));
+                $metadata['materia.nombre'] = trim($parts[1]);
             } else {
-                $metadata['subject_code'] = strtoupper(trim($val));
-                $metadata['subject_name'] ??= trim($val);
+                $metadata['materia.sigla'] = strtoupper(trim($val));
+                $metadata['materia.nombre'] ??= trim($val);
             }
         } elseif ($normalizedKey === 'sigla') {
-            $metadata['subject_code'] = strtoupper(trim($val));
+            $metadata['materia.sigla'] = strtoupper(trim($val));
         } elseif ($normalizedKey === 'nombremateria') {
-            $metadata['subject_name'] = trim($val);
+            $metadata['materia.nombre'] = trim($val);
         } elseif (in_array($normalizedKey, ['grupo', 'paralelo'])) {
-            $metadata['group_code'] = strtoupper(trim($val));
+            $metadata['grupo'] = strtoupper(trim($val));
         } elseif (in_array($normalizedKey, ['gestion', 'periodo'])) {
-            $metadata['academic_term'] = trim($val);
+            $metadata['gestion'] = trim($val);
         }
     }
 
@@ -1009,13 +1009,13 @@ class CoreDataStorage
         if (empty($metadata['teacher_email'])) {
             $missing[] = 'Email Docente';
         }
-        if (empty($metadata['subject_code'])) {
+        if (empty($metadata['materia.sigla'])) {
             $missing[] = 'Materia';
         }
-        if (empty($metadata['group_code'])) {
+        if (empty($metadata['grupo'])) {
             $missing[] = 'Grupo';
         }
-        if (empty($metadata['academic_term'])) {
+        if (empty($metadata['gestion'])) {
             $missing[] = 'Gestion';
         }
 
