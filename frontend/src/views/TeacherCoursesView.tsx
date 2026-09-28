@@ -5,6 +5,7 @@ import { courseService } from '../services/courseService';
 import type { TeacherCourse } from '../types/course';
 import { TeacherCourseDetailView } from './TeacherCourseDetailView';
 import { TeacherStudentsView } from './TeacherStudentsView';
+import { TeacherExamsView } from './TeacherExamsView';
 
 interface TeacherCoursesViewProps {
   teacherId: number;
@@ -22,6 +23,7 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
   const [error, setError] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<{ course: TeacherCourse; icon: string } | null>(null);
   const [isStudentsViewOpen, setIsStudentsViewOpen] = useState(false);
+  const [isExamsViewOpen, setIsExamsViewOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,13 +54,28 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
       return <TeacherStudentsView course={selectedCourse.course} onBack={() => setIsStudentsViewOpen(false)} onLogout={onLogout} />;
     }
 
+    if (isExamsViewOpen) {
+      return <TeacherExamsView course={selectedCourse.course} onBack={() => setIsExamsViewOpen(false)} onLogout={onLogout} />;
+    }
+
     return (
       <TeacherCourseDetailView
         course={selectedCourse.course}
         subjectIcon={selectedCourse.icon}
-        onBack={() => setSelectedCourse(null)}
+        onBack={() => {
+          setSelectedCourse(null);
+          setIsStudentsViewOpen(false);
+          setIsExamsViewOpen(false);
+        }}
         onLogout={onLogout}
-        onOpenStudents={() => setIsStudentsViewOpen(true)}
+        onOpenStudents={() => {
+          setIsExamsViewOpen(false);
+          setIsStudentsViewOpen(true);
+        }}
+        onOpenExams={() => {
+          setIsStudentsViewOpen(false);
+          setIsExamsViewOpen(true);
+        }}
       />
     );
   }
@@ -95,13 +112,18 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
       {error && <p className="teacher-courses-feedback teacher-courses-error" role="alert">{error}</p>}
       {!isLoading && !error && (
         <section className="teacher-courses-list" aria-label="Materias asignadas">
-          {courses.map((course, index) => (
-            <button type="button" className="teacher-course-card" key={course.course_group_id} onClick={() => {
-              setIsStudentsViewOpen(false);
-              setSelectedCourse({ course, icon: index % 2 === 0 ? subjectIconOne : subjectIconTwo });
-            }}>
-              <img src={index % 2 === 0 ? subjectIconOne : subjectIconTwo} alt="" />
-              <div className="teacher-course-content">
+          {courses.map((course, index) => {
+            const courseIcon = course.subject_name.toLowerCase().includes('program')
+              ? subjectIconTwo
+              : (index % 2 === 0 ? subjectIconTwo : subjectIconOne);
+
+            return (
+              <button type="button" className="teacher-course-card" key={course.course_group_id} onClick={() => {
+                setIsStudentsViewOpen(false);
+                setSelectedCourse({ course, icon: courseIcon });
+              }}>
+                <img src={courseIcon} alt="" />
+                <div className="teacher-course-content">
                 <h2>{course.subject_name.toUpperCase()}</h2>
                 <div className="teacher-course-meta">
                   <span>Grupo {course.group_code}</span>
@@ -111,7 +133,8 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
               </div>
               <span className="teacher-course-chevron" aria-hidden="true">›</span>
             </button>
-          ))}
+          );
+        })}
         </section>
       )}
     </main>

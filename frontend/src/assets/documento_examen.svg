@@ -1,0 +1,157 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Shadow under whole document stack -->
+    <filter id="bottomShadow" x="30" y="86" width="68" height="24" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="3" />
+    </filter>
+
+    <!-- Shadow under front paper -->
+    <filter id="pageShadow" x="22" y="16" width="80" height="92" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="2" dy="5" stdDeviation="4" flood-color="#000000" flood-opacity="0.32" />
+    </filter>
+
+    <!-- Shadow cast by the curled page corner onto the paper below -->
+    <radialGradient id="curlUnderShadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(68 38) rotate(135) scale(26 22)">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.65" />
+      <stop offset="45%" stop-color="#1F2937" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#374151" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Front sheet gradient -->
+    <linearGradient id="frontPaperGrad" x1="36" y1="20" x2="36" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FAFAFA" />
+      <stop offset="60%" stop-color="#EDEDED" />
+      <stop offset="100%" stop-color="#D8D9DC" />
+    </linearGradient>
+
+    <!-- Back sheet gradient -->
+    <linearGradient id="backPaperGrad" x1="52" y1="28" x2="52" y2="98" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E8E9EC" />
+      <stop offset="100%" stop-color="#C5C7CC" />
+    </linearGradient>
+
+    <!-- Curled flap exterior 3D cylinder lighting -->
+    <linearGradient id="curlFlapGrad" x1="54" y1="20" x2="84" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D1D5DB" />
+      <stop offset="25%" stop-color="#FFFFFF" />
+      <stop offset="55%" stop-color="#E5E7EB" />
+      <stop offset="85%" stop-color="#9CA3AF" />
+      <stop offset="100%" stop-color="#4B5563" />
+    </linearGradient>
+
+    <!-- Dark shadow inside the curl cavity -->
+    <linearGradient id="curlCavity" x1="54" y1="20" x2="68" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#111827" stop-opacity="0.8" />
+      <stop offset="60%" stop-color="#374151" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#4B5563" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Top tab (white/blue split) -->
+    <linearGradient id="topTabGrad" x1="88" y1="42" x2="98" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="30%" stop-color="#FFFFFF" />
+      <stop offset="31%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+
+    <!-- Bottom tab (solid vibrant blue) -->
+    <linearGradient id="bottomTabGrad" x1="80" y1="68" x2="90" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="20%" stop-color="#FFFFFF" />
+      <stop offset="21%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Deep ground shadow at the bottom -->
+  <g filter="url(#bottomShadow)">
+    <ellipse cx="66" cy="98" rx="26" ry="5" fill="#000000" fill-opacity="0.45" />
+  </g>
+
+  <!-- BACK SHEET (slightly offset to right and behind) -->
+  <g>
+    <rect x="52" y="28" width="42" height="66" rx="2" fill="url(#backPaperGrad)" />
+    <!-- Text lines on back sheet visible on the right -->
+    <rect x="74" y="38" width="14" height="1.4" rx="0.7" fill="#8E939D" opacity="0.6" />
+    <rect x="74" y="42" width="12" height="1.4" rx="0.7" fill="#8E939D" opacity="0.6" />
+    <rect x="74" y="46" width="13" height="1.4" rx="0.7" fill="#8E939D" opacity="0.6" />
+    <rect x="74" y="50" width="10" height="1.4" rx="0.7" fill="#8E939D" opacity="0.6" />
+    <rect x="74" y="54" width="14" height="1.4" rx="0.7" fill="#8E939D" opacity="0.6" />
+  </g>
+
+  <!-- BLUE BOOKMARK TABS -->
+  <!-- Top bookmark tab -->
+  <rect x="88" y="42" width="10" height="14" rx="3.5" fill="url(#topTabGrad)" />
+  <rect x="88" y="42" width="10" height="14" rx="3.5" stroke="#D1D5DB" stroke-width="0.4" fill="none" opacity="0.5" />
+
+  <!-- Bottom bookmark tab -->
+  <rect x="80" y="66" width="10" height="14" rx="3.5" fill="url(#bottomTabGrad)" />
+  <rect x="80" y="66" width="10" height="14" rx="3.5" stroke="#D1D5DB" stroke-width="0.4" fill="none" opacity="0.5" />
+
+  <!-- FRONT SHEET WITH CUT CORNER & PAGE DROP SHADOW -->
+  <g filter="url(#pageShadow)">
+    <!-- Main page body with top-right corner curving inward where the page is folded -->
+    <path d="M 37 20 
+             H 54 
+             C 54 20 62 26 69 36 
+             C 74 44 79 49 84 51 
+             V 90 
+             C 84 91.1 83.1 92 82 92 
+             H 37 
+             C 35.9 92 35 91.1 35 90 
+             V 22 
+             C 35 20.9 35.9 20 37 20 
+             Z" 
+          fill="url(#frontPaperGrad)" />
+  </g>
+
+  <!-- Deep shadow under the curl directly on top of front paper -->
+  <path d="M 54 20 C 54 20 62 26 69 36 C 74 44 79 49 84 51 L 68 51 C 60 40 56 30 54 20 Z" 
+        fill="url(#curlUnderShadow)" />
+
+  <!-- Cavity dark gradient right along the fold line -->
+  <path d="M 54 20 C 58 26 64 36 72 45 C 76 49 80 50 84 51 L 80 51 C 74 47 64 36 54 20 Z" 
+        fill="url(#curlCavity)" />
+
+  <!-- 3D CURLED CORNER FLAP -->
+  <g>
+    <!-- Curled flap body (smooth cylindrical curl curving over) -->
+    <path d="M 54 20 
+             C 54 20 57 32 66 43 
+             C 72 50 78 51 84 51 
+             C 81 44 74 31 66 24 
+             C 61 20 54 20 54 20 
+             Z" 
+          fill="url(#curlFlapGrad)" />
+
+    <!-- Edge sheen line on the outer fold of the curl -->
+    <path d="M 54 20 C 57 28 64 38 74 47 C 78 50 82 51 84 51" 
+          stroke="#FFFFFF" stroke-width="0.75" stroke-linecap="round" opacity="0.8" />
+
+    <!-- Dark shadow along bottom-left edge of the curl flap -->
+    <path d="M 54 20 C 54 23 58 35 66 43 C 72 49 78 51 84 51" 
+          stroke="#262626" stroke-width="0.5" stroke-linecap="round" opacity="0.4" />
+  </g>
+
+  <!-- FRONT SHEET SIMULATED TEXT LINES (clean matching mockup) -->
+  <!-- Header / Salutation line (e.g. 'Dear user,') -->
+  <rect x="40" y="26" width="10" height="1.6" rx="0.8" fill="#525866" opacity="0.8" />
+
+  <!-- Paragraph 1 -->
+  <rect x="40" y="33" width="20" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="37" width="22" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="41" width="21" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="45" width="24" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="49" width="23" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="53" width="21" height="1.3" rx="0.65" fill="#6B7280" opacity="0.65" />
+
+  <!-- Paragraph 2 -->
+  <rect x="40" y="60" width="37" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="64" width="35" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="68" width="36" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+  <rect x="40" y="72" width="34" height="1.3" rx="0.65" fill="#6B7280" opacity="0.7" />
+
+  <!-- Signoff / signature lines -->
+  <rect x="40" y="79" width="8" height="1.3" rx="0.65" fill="#525866" opacity="0.75" />
+  <rect x="40" y="83" width="13" height="1.3" rx="0.65" fill="#525866" opacity="0.75" />
+</svg>
