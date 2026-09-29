@@ -2126,3 +2126,215 @@
   border-radius: 12px;
 }
 
+/* SCHEDULE EXAM DRAWER (Figma Frame 115) */
+.schedule-exam-drawer-content {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 10px;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #000000;
+}
+
+.schedule-exam-title {
+  margin: 0 0 20px;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.schedule-exam-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 23px;
+  margin-bottom: 16px;
+}
+
+.schedule-exam-section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.schedule-exam-label {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.schedule-exam-value {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.schedule-exam-date-box {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #ededed;
+  border-radius: 4px;
+}
+
+.schedule-exam-date-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-exam-calendar-icon {
+  width: 20px;
+  height: 20px;
+  stroke: #000000;
+  fill: none;
+  stroke-width: 1.7;
+}
+
+.schedule-exam-date-text {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.schedule-exam-chevron-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #c1c1c1;
+  border-radius: 50%;
+}
+
+.schedule-exam-chevron-icon {
+  width: 10px;
+  height: 10px;
+  stroke: #ffffff;
+  fill: none;
+  stroke-width: 3;
+}
+
+.schedule-exam-times-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.schedule-exam-spread-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.schedule-exam-subtext {
+  margin: 4px 0 0;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.schedule-exam-rules-section {
+  margin-bottom: 22px;
+}
+
+.schedule-exam-add-rule-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.schedule-exam-add-rule-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: #000000;
+  stroke-width: 2;
+}
+
+.schedule-exam-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.schedule-exam-rule-item {
+  padding: 4px 2px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #000000;
+}
+
+.schedule-exam-rule-pill {
+  padding: 7px 10px;
+  background: #ededed;
+  border-radius: 4px;
+}
+
+.schedule-exam-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.schedule-exam-cancel-btn,
+.schedule-exam-submit-btn {
+  flex: 1;
+  min-height: 41px;
+  border: 0;
+  border-radius: 11px;
+  cursor: pointer;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-align: center;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.schedule-exam-cancel-btn {
+  color: #ffffff;
+  background: #000000;
+}
+
+.schedule-exam-submit-btn {
+  color: #ffffff;
+  background: #2873ed;
+}
+
+.schedule-exam-cancel-btn:hover,
+.schedule-exam-submit-btn:hover {
+  opacity: 0.9;
+}
+
+.schedule-exam-cancel-btn:active,
+.schedule-exam-submit-btn:active {
+  transform: scale(0.98);
+}
+
