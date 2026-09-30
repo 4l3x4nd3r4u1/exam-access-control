@@ -257,6 +257,62 @@ class CoreDataStorage
     }
 
     /**
+     * Updates personal data (name, CI, password) of the authenticated user.
+     *
+     * @param UserPersonalData $data
+     * @return OperationResult
+     */
+    public function updatePersonalData(UserPersonalData $data): OperationResult
+    {
+        $user = auth()->user();
+
+        try {
+            DB::transaction(function () use ($user, $data) {
+                $user->nombre = trim($data->fullName);
+
+                if (!empty($data->ci)) {
+                    $user->ci = trim($data->ci);
+                }
+
+                if (!empty($data->newPassword)) {
+                    $user->contrasena = Hash::make($data->newPassword);
+                }
+
+                $user->save();
+
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => $user->id,
+                    'accion' => 'MODIFICAR_DATOS_PERSONALES',
+                    'entidad_tipo' => 'usuario',
+                    'entidad_id' => $user->id,
+                    'detalles' => json_encode([
+                        'nombre' => $data->fullName,
+                        'ci' => $data->ci,
+                        'cambio_password' => !empty($data->newPassword),
+                    ]),
+                    'fecha' => now(),
+                ]);
+            });
+
+            return new OperationResult(
+                isSuccessful: true,
+                message: 'Datos actualizados correctamente'
+            );
+
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El CI ya está registrado'
+            );
+        } catch (\Throwable $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Error al actualizar datos: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
      * Retrieves all active academic staff members ordered alphabetically by name.
      *
      * @return array<UserSummary>

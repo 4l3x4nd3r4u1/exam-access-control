@@ -16,7 +16,7 @@ class AcademicUserTest extends TestCase
             'fullName' => 'Mariana Rios',
             'email' => 'mariana.rios@umss.edu.bo',
             'password' => 'Password123!',
-            'role' => 'DOCENTE',
+            'roles' => ['DOCENTE'],
         ];
 
         $response = $this->postJson('/api/academic-users', $payload);
@@ -28,27 +28,25 @@ class AcademicUserTest extends TestCase
                 'message' => 'Usuario registrado correctamente',
             ]);
 
-        $this->assertDatabaseHas('users', [
-            'name' => 'Mariana Rios',
+        $this->assertDatabaseHas('usuario', [
+            'nombre' => 'Mariana Rios',
             'email' => 'mariana.rios@umss.edu.bo',
-            'role' => 'TEACHER',
         ]);
     }
 
     public function test_can_update_academic_user(): void
     {
         $user = User::create([
-            'name' => 'Carlos Morales',
+            'nombre' => 'Carlos Morales',
             'email' => 'carlos.morales@umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
+            'contrasena' => bcrypt('password123'),
+            'activo' => true,
         ]);
 
         $payload = [
             'fullName' => 'Carlos Morales Modificado',
             'email' => 'carlos.m@umss.edu.bo',
-            'role' => 'DOCENTE',
+            'roles' => ['DOCENTE'],
         ];
 
         $response = $this->putJson("/api/academic-users/{$user->id}", $payload);
@@ -60,28 +58,26 @@ class AcademicUserTest extends TestCase
                 'message' => 'Usuario actualizado correctamente',
             ]);
 
-        $this->assertDatabaseHas('users', [
+        $this->assertDatabaseHas('usuario', [
             'id' => $user->id,
-            'name' => 'Carlos Morales Modificado',
+            'nombre' => 'Carlos Morales Modificado',
             'email' => 'carlos.m@umss.edu.bo',
-            'role' => 'TEACHER',
         ]);
     }
 
     public function test_can_update_academic_user_with_new_password(): void
     {
         $user = User::create([
-            'name' => 'Ana Torrico',
+            'nombre' => 'Ana Torrico',
             'email' => 'ana.torrico@umss.edu.bo',
-            'password' => bcrypt('oldpassword123'),
-            'role' => 'ASSISTANT',
-            'is_active' => true,
+            'contrasena' => bcrypt('oldpassword123'),
+            'activo' => true,
         ]);
 
         $payload = [
             'fullName' => 'Ana Patricia Torrico',
             'email' => 'ana.torrico@umss.edu.bo',
-            'role' => 'DOCENTE',
+            'roles' => ['DOCENTE'],
             'newPassword' => 'NewPassword123!',
         ];
 
@@ -95,7 +91,7 @@ class AcademicUserTest extends TestCase
             ]);
 
         $user->refresh();
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewPassword123!', $user->password));
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewPassword123!', $user->contrasena));
     }
 
     public function test_update_returns_404_when_user_not_found(): void
@@ -103,7 +99,7 @@ class AcademicUserTest extends TestCase
         $payload = [
             'fullName' => 'No Existe',
             'email' => 'no.existe@umss.edu.bo',
-            'role' => 'DOCENTE',
+            'roles' => ['DOCENTE'],
         ];
 
         $response = $this->putJson('/api/academic-users/99999', $payload);
@@ -121,7 +117,7 @@ class AcademicUserTest extends TestCase
         $payload = [
             'fullName' => '',
             'email' => 'invalido',
-            'role' => 'ROL_INVALIDO',
+            'roles' => ['ROL_INVALIDO'],
             'newPassword' => '123',
         ];
 
@@ -129,6 +125,6 @@ class AcademicUserTest extends TestCase
 
         $response
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['fullName', 'email', 'role', 'newPassword']);
+            ->assertJsonValidationErrors(['fullName', 'email', 'roles.0', 'newPassword']);
     }
 }

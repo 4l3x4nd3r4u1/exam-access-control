@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\DTOs\UserPersonalData;
 use App\DTOs\UserRegistrationData;
 use App\DTOs\UserUpdateData;
 use App\Http\Requests\RegisterAcademicUserRequest;
 use App\Http\Requests\UpdateAcademicUserRequest;
+use App\Http\Requests\UpdatePersonalDataRequest;
 use App\Modules\CoreDataStorage;
 use Illuminate\Http\JsonResponse;
 
@@ -61,5 +63,25 @@ class AcademicUserController extends Controller
             'message' => $result->message,
             'timestamp' => $result->timestamp,
         ], $statusCode);
+    }
+
+    /**
+     * Updates personal data of the authenticated user.
+     */
+    public function updatePersonalData(UpdatePersonalDataRequest $request): JsonResponse
+    {
+        $data = new UserPersonalData(
+            fullName: $request->input('fullName'),
+            ci: $request->input('ci'),
+            newPassword: $request->input('newPassword')
+        );
+
+        $result = $this->coreDataStorage->updatePersonalData($data);
+
+        return response()->json([
+            'success' => $result->isSuccessful,
+            'message' => $result->message,
+            'timestamp' => $result->timestamp,
+        ], $result->isSuccessful ? 200 : 400);
     }
 }

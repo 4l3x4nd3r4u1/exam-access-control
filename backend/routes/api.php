@@ -20,6 +20,12 @@ Route::get('/health', function () {
 });
 
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+Route::middleware('auth.jwt')->group(function () {
+    Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::put('/academic-users/me', [AcademicUserController::class, 'updatePersonalData']);
+});
 Route::post('/students/import', [StudentRosterController::class, 'import']);
 Route::post('/courses/import-roster', [StudentRosterController::class, 'import']);
 Route::get('/courses/roster-template', [StudentRosterController::class, 'template']);
