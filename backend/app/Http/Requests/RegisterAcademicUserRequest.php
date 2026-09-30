@@ -32,8 +32,12 @@ class RegisterAcademicUserRequest extends FormRequest
                 'min:8',
             ],
 
-            'role' => [
+            'roles' => [
                 'required',
+                'array',
+                'min:1',
+            ],
+            'roles.*' => [
                 'string',
                 'in:DOCENTE,AUXILIAR,ADMIN',
             ],
@@ -59,8 +63,8 @@ class RegisterAcademicUserRequest extends FormRequest
             'password.required' => 'La contraseña provisional es obligatoria.',
             'password.min' => 'La contraseña debe tener mínimo 8 caracteres.',
 
-            'role.required' => 'El rol es obligatorio.',
-            'role.in' => 'El rol seleccionado no es válido.',
+            'roles.required' => 'Debe seleccionar al menos un rol.',
+            'roles.*.in' => 'Uno o más roles seleccionados no son válidos.',
 
             'ci.unique' => 'El CI ya está registrado.',
         ];

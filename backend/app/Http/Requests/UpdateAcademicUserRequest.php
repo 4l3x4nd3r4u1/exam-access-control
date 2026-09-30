@@ -25,8 +25,12 @@ class UpdateAcademicUserRequest extends FormRequest
                 'email',
             ],
 
-            'role' => [
+            'roles' => [
                 'required',
+                'array',
+                'min:1',
+            ],
+            'roles.*' => [
                 'string',
                 'in:DOCENTE,AUXILIAR,ADMIN',
             ],
@@ -35,6 +39,13 @@ class UpdateAcademicUserRequest extends FormRequest
                 'nullable',
                 'string',
                 'min:8',
+            ],
+
+            'ci' => [
+                'nullable',
+                'string',
+                'max:30',
+                'unique:usuario,ci',
             ],
         ];
     }
@@ -49,8 +60,8 @@ class UpdateAcademicUserRequest extends FormRequest
             'email.required' => 'El correo es obligatorio.',
             'email.email' => 'El correo no tiene un formato válido.',
 
-            'role.required' => 'El rol es obligatorio.',
-            'role.in' => 'El rol seleccionado no es válido.',
+            'roles.required' => 'Debe seleccionar al menos un rol.',
+            'roles.*.in' => 'Uno o más roles seleccionados no son válidos.',
 
             'newPassword.min' => 'La nueva contraseña debe tener mínimo 8 caracteres.',
         ];

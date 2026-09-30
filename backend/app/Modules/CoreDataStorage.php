@@ -100,9 +100,10 @@ class CoreDataStorage
             );
         }
 
-        $roleName = strtoupper(trim($data->role));
-        $role = Role::where('nombre', $roleName)->first();
-        if (!$role) {
+        $roleNames = array_map(fn($r) => strtoupper(trim($r)), $data->roles);
+        $roles = Role::whereIn('nombre', $roleNames)->get();
+
+        if ($roles->isEmpty()) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Rol no válido'
@@ -110,7 +111,7 @@ class CoreDataStorage
         }
 
         try {
-            DB::transaction(function () use ($data, $email, $emailDomain, $role) {
+            DB::transaction(function () use ($data, $email, $emailDomain, $roles) {
                 $user = User::create([
                     'nombre' => trim($data->fullName),
                     'email' => $email,
@@ -120,7 +121,8 @@ class CoreDataStorage
                     'activo' => true,
                 ]);
 
-                $user->roles()->attach($role->id, [
+                $roleIds = $roles->pluck('id')->toArray();
+                $user->roles()->attach($roleIds, [
                     'activo' => true,
                     'fecha_asignacion' => now(),
                 ]);
@@ -134,7 +136,7 @@ class CoreDataStorage
                         'nombre' => $data->fullName,
                         'email' => $email,
                         'ci' => $data->ci,
-                        'rol_asignado' => $role->nombre,
+                        'roles_asignados' => $roles->pluck('nombre')->toArray(),
                     ]),
                     'fecha' => now(),
                 ]);
@@ -196,12 +198,10 @@ class CoreDataStorage
             );
         }
 
-        $roleName = strtoupper(trim($data->role));
-        if ($roleName === 'TEACHER') $roleName = 'DOCENTE';
-        if ($roleName === 'ASSISTANT') $roleName = 'AUXILIAR';
+        $roleNames = array_map(fn($r) => strtoupper(trim($r)), $data->roles);
+        $roles = Role::whereIn('nombre', $roleNames)->get();
 
-        $role = Role::where('nombre', $roleName)->first();
-        if (!$role) {
+        if ($roles->isEmpty()) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Rol no válido'
@@ -209,7 +209,7 @@ class CoreDataStorage
         }
 
         try {
-            DB::transaction(function () use ($user, $data, $email, $emailDomain, $role) {
+            DB::transaction(function () use ($user, $data, $email, $emailDomain, $roles) {
                 $user->nombre = trim($data->fullName);
                 $user->email = $email;
                 $user->email_id = $emailDomain->id;
@@ -223,9 +223,24 @@ class CoreDataStorage
 
                 $user->save();
 
-                $user->roles()->syncWithPivotValues([$role->id], [
+                $roleIds = $roles->pluck('id')->toArray();
+                $user->roles()->syncWithPivotValues($roleIds, [
                     'activo' => true,
                     'fecha_asignacion' => now(),
+                ]);
+
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => $user->id,
+                    'accion' => 'MODIFICAR_USUARIO',
+                    'entidad_tipo' => 'usuario',
+                    'entidad_id' => $user->id,
+                    'detalles' => json_encode([
+                        'nombre' => $data->fullName,
+                        'email' => $email,
+                        'ci' => $data->ci,
+                        'roles_asignados' => $roles->pluck('nombre')->toArray(),
+                    ]),
+                    'fecha' => now(),
                 ]);
             });
 

@@ -24,7 +24,8 @@ class AcademicUserController extends Controller
             fullName: $request->input('fullName'),
             email: $request->input('email'),
             password: $request->input('password'),
-            role: $request->input('role')
+            roles: $request->input('roles', []),
+            ci: $request->input('ci')
         );
 
         $result = $this->coreDataStorage->registerAcademicUser($data);
@@ -44,8 +45,9 @@ class AcademicUserController extends Controller
         $data = new UserUpdateData(
             fullName: $request->input('fullName'),
             email: $request->input('email'),
-            role: $request->input('role'),
-            newPassword: $request->input('newPassword')
+            roles: $request->input('roles', []),
+            newPassword: $request->input('newPassword'),
+            ci: $request->input('ci')
         );
 
         $result = $this->coreDataStorage->updateAcademicUser($userId, $data);
