@@ -10,10 +10,14 @@ use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
 use App\Exceptions\InvalidCredentialsException;
-use App\Models\User;
-use App\Models\Student;
+use App\Models\Course;
 use App\Models\CourseGroup;
+use App\Models\EmailDomain;
+use App\Models\EnrollmentStatus;
+use App\Models\Role;
+use App\Models\Student;
 use App\Models\StudentCourseEnrollment;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -41,24 +45,28 @@ class CoreDataStorage
             throw new InvalidCredentialsException('Credenciales incorrectas');
         }
 
-        if (!Hash::check($password, $user->password)) {
+        if (!Hash::check($password, $user->contrasena)) {
             throw new InvalidCredentialsException('Credenciales incorrectas');
         }
 
-        if (!$user->is_active) {
+        if (!$user->activo) {
             throw new InvalidCredentialsException('Usuario inactivo o deshabilitado');
         }
 
         $token = JWTAuth::fromUser($user);
         $ttlMinutes = (int) config('jwt.ttl', 360);
 
+        // Record session in 'sesion' table
+        \App\Models\UserSession::create([
+            'usuario_id' => $user->id,
+            'pid' => (string) getmypid(),
+            'fecha' => now(),
+            'activo' => true,
+        ]);
+
         return new UserSession(
-            userId: (int) $user->id,
-            role: (string) $user->role,
-            fullName: (string) $user->name,
-            email: (string) $user->email,
             token: $token,
-            isActive: (bool) $user->is_active,
+            isActive: (bool) $user->activo,
             tokenType: 'bearer',
             expiresIn: $ttlMinutes * 60,
         );
@@ -74,15 +82,17 @@ class CoreDataStorage
     {
         $email = strtolower(trim($data->email));
 
-        // Validate institutional email domain
-        if (!str_ends_with($email, '@umss.edu.bo')) {
+        $emailDomain = EmailDomain::where('activo', true)
+            ->get()
+            ->first(fn($d) => str_ends_with($email, $d->dominio));
+
+        if (!$emailDomain) {
             return new OperationResult(
                 isSuccessful: false,
-                message: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
+                message: 'El correo debe pertenecer a un dominio institucional válido (@umss.edu.bo)'
             );
         }
 
-        // Check if email already exists
         if (User::where('email', $email)->exists()) {
             return new OperationResult(
                 isSuccessful: false,
@@ -90,15 +100,12 @@ class CoreDataStorage
             );
         }
 
-        // Convert functional roles to database roles
-        $role = match ($data->role) {
-            'DOCENTE' => 'TEACHER',
-            'AUXILIAR' => 'ASSISTANT',
-            'ADMIN' => 'ADMIN',
-            default => null
-        };
+        $roleName = strtoupper(trim($data->role));
+        if ($roleName === 'TEACHER') $roleName = 'DOCENTE';
+        if ($roleName === 'ASSISTANT') $roleName = 'AUXILIAR';
 
-        if ($role === null) {
+        $role = Role::where('nombre', $roleName)->first();
+        if (!$role) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Rol no válido'
@@ -106,13 +113,21 @@ class CoreDataStorage
         }
 
         try {
-            User::create([
-                'name' => $data->fullName,
-                'email' => $email,
-                'password' => $data->password,
-                'role' => $role,
-                'is_active' => true,
-            ]);
+            DB::transaction(function () use ($data, $email, $emailDomain, $role) {
+                $user = User::create([
+                    'nombre' => trim($data->fullName),
+                    'email' => $email,
+                    'email_id' => $emailDomain->id,
+                    'contrasena' => Hash::make($data->password),
+                    'ci' => $data->ci ?? null,
+                    'activo' => true,
+                ]);
+
+                $user->roles()->attach($role->id, [
+                    'activo' => true,
+                    'fecha_asignacion' => now(),
+                ]);
+            });
 
             return new OperationResult(
                 isSuccessful: true,
@@ -147,15 +162,17 @@ class CoreDataStorage
 
         $email = strtolower(trim($data->email));
 
-        // Validate institutional email domain
-        if (!str_ends_with($email, '@umss.edu.bo')) {
+        $emailDomain = EmailDomain::where('activo', true)
+            ->get()
+            ->first(fn($d) => str_ends_with($email, $d->dominio));
+
+        if (!$emailDomain) {
             return new OperationResult(
                 isSuccessful: false,
-                message: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
+                message: 'El correo debe pertenecer a un dominio institucional válido (@umss.edu.bo)'
             );
         }
 
-        // Check if email already belongs to another user
         if (User::where('email', $email)->where('id', '!=', $userId)->exists()) {
             return new OperationResult(
                 isSuccessful: false,
@@ -163,15 +180,12 @@ class CoreDataStorage
             );
         }
 
-        // Convert functional roles to database roles
-        $role = match ($data->role) {
-            'DOCENTE' => 'TEACHER',
-            'AUXILIAR' => 'ASSISTANT',
-            'ADMIN' => 'ADMIN',
-            default => null
-        };
+        $roleName = strtoupper(trim($data->role));
+        if ($roleName === 'TEACHER') $roleName = 'DOCENTE';
+        if ($roleName === 'ASSISTANT') $roleName = 'AUXILIAR';
 
-        if ($role === null) {
+        $role = Role::where('nombre', $roleName)->first();
+        if (!$role) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Rol no válido'
@@ -179,15 +193,25 @@ class CoreDataStorage
         }
 
         try {
-            $user->name = $data->fullName;
-            $user->email = $email;
-            $user->role = $role;
+            DB::transaction(function () use ($user, $data, $email, $emailDomain, $role) {
+                $user->nombre = trim($data->fullName);
+                $user->email = $email;
+                $user->email_id = $emailDomain->id;
+                if (!empty($data->ci)) {
+                    $user->ci = trim($data->ci);
+                }
 
-            if (!empty($data->newPassword)) {
-                $user->password = $data->newPassword;
-            }
+                if (!empty($data->newPassword)) {
+                    $user->contrasena = Hash::make($data->newPassword);
+                }
 
-            $user->save();
+                $user->save();
+
+                $user->roles()->syncWithPivotValues([$role->id], [
+                    'activo' => true,
+                    'fecha_asignacion' => now(),
+                ]);
+            });
 
             return new OperationResult(
                 isSuccessful: true,
@@ -200,6 +224,7 @@ class CoreDataStorage
             );
         }
     }
+
     /**
      * Retrieves all active academic staff members ordered alphabetically by name.
      *
@@ -207,16 +232,19 @@ class CoreDataStorage
      */
     public function getAcademicStaff(): array
     {
-        $users = User::where('is_active', true)
-            ->orderBy('name', 'asc')
-            ->get();
+        $users = User::whereHas('roles', function ($query) {
+            $query->whereIn('rol.nombre', ['DOCENTE', 'AUXILIAR', 'ADMIN']);
+        })
+        ->where('activo', true)
+        ->orderBy('nombre', 'asc')
+        ->get();
 
         return $users->map(fn(User $user) => new UserSummary(
             userId: (int) $user->id,
-            fullName: (string) $user->name,
+            fullName: (string) $user->nombre,
             email: (string) $user->email,
-            role: (string) $user->role,
-            isActive: (bool) $user->is_active,
+            role: (string) ($user->role ?? 'TEACHER'),
+            isActive: (bool) $user->activo,
         ))->all();
     }
 
@@ -228,20 +256,21 @@ class CoreDataStorage
      */
     public function getTeacherCourses(int $teacherId): array
     {
-        $courses = CourseGroup::where('teacher_id', $teacherId)
+        $courses = CourseGroup::where('docente_id', $teacherId)
+            ->with(['course', 'enrollments'])
             ->withCount('enrollments')
-            ->orderBy('subject_code', 'asc')
-            ->orderBy('group_code', 'asc')
-            ->get();
+            ->get()
+            ->sortBy(fn($c) => ($c->course?->sigla ?? '') . '-' . $c->grupo)
+            ->values();
 
         return $courses->map(fn(CourseGroup $c) => new CourseGroupSummary(
             courseGroupId: (string) $c->course_group_id,
-            subjectCode: (string) $c->subject_code,
-            subjectName: (string) $c->subject_name,
-            groupCode: (string) $c->group_code,
-            academicTerm: (string) $c->academic_term,
+            subjectCode: (string) ($c->course?->sigla ?? ''),
+            subjectName: (string) ($c->course?->nombre ?? ''),
+            groupCode: (string) $c->grupo,
+            academicTerm: (string) $c->gestion,
             totalEnrolled: (int) ($c->enrollments_count ?? 0),
-            teacherId: (int) $c->teacher_id,
+            teacherId: (int) $c->docente_id,
         ))->all();
     }
     
@@ -252,41 +281,60 @@ class CoreDataStorage
     */
     public function getProcessedRosters(): array
     {
-        $courses = CourseGroup::with('teacher')->withCount('enrollments')
-            ->orderBy('subject_code', 'asc')
-            ->orderBy('group_code', 'asc')
-            ->get();
+        $courses = CourseGroup::with(['course', 'teacher'])
+            ->withCount('enrollments')
+            ->get()
+            ->sortBy(fn($c) => ($c->course?->sigla ?? '') . '-' . $c->grupo)
+            ->values();
 
         return $courses->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
             courseGroupId: (string) $course->course_group_id,
-            subjectCode: (string) $course->subject_code,
-            subjectName: (string) $course->subject_name,
-            groupCode: (string) $course->group_code,
-            academicTerm: (string) $course->academic_term,
+            subjectCode: (string) ($course->course?->sigla ?? ''),
+            subjectName: (string) ($course->course?->nombre ?? ''),
+            groupCode: (string) $course->grupo,
+            academicTerm: (string) $course->gestion,
             totalStudents: (int) ($course->enrollments_count ?? 0),
-            teacherName: $course->teacher?->name,
+            teacherName: $course->teacher?->nombre,
         ))->all();
     }
 
     /**
      * Retrieves the list of enrolled students for a specific course group with their eligibility status.
      *
-     * @param string $courseGroupId
+     * @param int|string $courseGroupId Course group numeric ID (materia_grupo.id) or composite key
      * @return array<EnrolledStudentSummary>
      */
-    public function getEnrolledStudents(string $courseGroupId): array
+    public function getEnrolledStudents(int|string $courseGroupId): array
     {
-        $enrollments = StudentCourseEnrollment::where('course_group_id', trim($courseGroupId))
-            ->with('student')
+        $cleanCourseGroupId = trim((string) $courseGroupId);
+        $courseGroup = null;
+
+        if (is_numeric($cleanCourseGroupId)) {
+            $courseGroup = CourseGroup::find((int) $cleanCourseGroupId);
+        } elseif (preg_match('/^([A-Z0-9]+)-G?([A-Z0-9]+)-(.*)$/i', $cleanCourseGroupId, $m)) {
+            $courseGroup = CourseGroup::whereHas('course', fn($q) => $q->where('sigla', strtoupper($m[1])))
+                ->where('grupo', strtoupper($m[2]))
+                ->where('gestion', $m[3])
+                ->first();
+        }
+
+        if (!$courseGroup) {
+            return [];
+        }
+
+        $enrollments = StudentCourseEnrollment::where('materia_grupo_id', $courseGroup->id)
+            ->with(['user.student', 'enrollmentStatus'])
             ->get();
 
         return $enrollments->map(function (StudentCourseEnrollment $enrollment) {
+            $student = $enrollment->user?->student;
+            $user = $enrollment->user;
             return new EnrolledStudentSummary(
-                studentKey: (string) $enrollment->student_key,
-                ci: (string) ($enrollment->student?->ci ?? ''),
-                fullName: (string) ($enrollment->student?->full_name ?? ''),
-                status: (string) $enrollment->status,
-                ineligibilityReason: $enrollment->ineligibility_reason,
+                studentKey: (string) ($student?->codigo_sis ?? ''),
+                ci: (string) ($user?->ci ?? ''),
+                fullName: (string) ($user?->nombre ?? ''),
+                status: (string) ($enrollment->enrollmentStatus?->nombre ?? 'HABILITADO'),
+                ineligibilityReason: $enrollment->motivo_inhabilitacion,
             );
         })->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
     }
@@ -484,32 +532,68 @@ class CoreDataStorage
             );
         }
 
-        $courseGroupId = $this->buildCourseGroupId(
-            sigla: $metadata['subject_code'],
-            grupo: $metadata['group_code'],
-            gestion: $metadata['academic_term']
-        );
+        $extractedMetadata = [
+            'teacherName' => $metadata['teacher_name'] ?? null,
+            'teacherEmail' => $metadata['teacher_email'] ?? null,
+            'subjectCode' => $metadata['subject_code'] ?? null,
+            'subjectName' => $metadata['subject_name'] ?? null,
+            'groupCode' => $metadata['group_code'] ?? null,
+            'academicTerm' => $metadata['academic_term'] ?? null,
+        ];
 
-        // Validate: if this course_group already exists with a different teacher
+        // 4. Validate Teacher exists with DOCENTE role (pre-seeded, no auto-create)
         $teacherEmail = strtolower(trim($metadata['teacher_email']));
-        $existingCourse = CourseGroup::where('course_group_id', $courseGroupId)->with('teacher')->first();
+        $teacher = User::where('email', $teacherEmail)
+            ->whereHas('roles', fn($q) => $q->where('rol.nombre', 'DOCENTE'))
+            ->first();
+
+        if (!$teacher) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ["El docente con correo '{$teacherEmail}' no está registrado en el sistema."],
+                isSuccessful: false,
+                failedRows: [],
+                metadata: $extractedMetadata
+            );
+        }
+
+        // 5. Validate Course exists (pre-seeded, no auto-create)
+        $sigla = strtoupper(trim($metadata['subject_code']));
+        $materia = Course::where('sigla', $sigla)->first();
+
+        if (!$materia) {
+            return new ImportSummary(
+                totalProcessed: 0,
+                successful: 0,
+                skipped: 0,
+                observations: ["La materia con sigla '{$sigla}' no está registrada en el sistema."],
+                isSuccessful: false,
+                failedRows: [],
+                metadata: $extractedMetadata
+            );
+        }
+
+        // 6. Validate CourseGroup assignment conflict
+        $grupo = strtoupper(trim($metadata['group_code']));
+        $gestion = trim($metadata['academic_term']);
+
+        $existingCourse = CourseGroup::where('materia_id', $materia->id)
+            ->where('grupo', $grupo)
+            ->where('gestion', $gestion)
+            ->with('teacher')
+            ->first();
+
         if ($existingCourse && $existingCourse->teacher) {
-            $existingTeacherEmail = strtolower(trim($existingCourse->teacher->email));
-            if ($existingTeacherEmail !== $teacherEmail) {
-                $extractedMetadata = [
-                    'teacherName' => $metadata['teacher_name'] ?? null,
-                    'teacherEmail' => $metadata['teacher_email'] ?? null,
-                    'subjectCode' => $metadata['subject_code'] ?? null,
-                    'subjectName' => $metadata['subject_name'] ?? null,
-                    'groupCode' => $metadata['group_code'] ?? null,
-                    'academicTerm' => $metadata['academic_term'] ?? null,
-                ];
+            if ((int) $existingCourse->docente_id !== (int) $teacher->id) {
+                $existingTeacherEmail = strtolower(trim($existingCourse->teacher->email));
                 return new ImportSummary(
                     totalProcessed: 0,
                     successful: 0,
                     skipped: 0,
                     observations: [
-                        "La materia {$metadata['subject_code']} grupo {$metadata['group_code']} ({$metadata['academic_term']}) ya está asignada al docente {$existingCourse->teacher->name} ({$existingTeacherEmail}). No se puede registrar con otro docente."
+                        "La materia {$sigla} grupo {$grupo} ({$gestion}) ya está asignada al docente {$existingCourse->teacher->nombre} ({$existingTeacherEmail}). No se puede registrar con otro docente."
                     ],
                     isSuccessful: false,
                     failedRows: [],
@@ -524,7 +608,7 @@ class CoreDataStorage
         $failedRows = [];
         $validRows = [];
 
-        // 4. Iterate student rows
+        // 7. Iterate student rows
         for ($i = $tableHeaderIndex + 1; $i < count($rows); $i++) {
             $row = $rows[$i];
             $rowNumber = $i + 1;
@@ -577,18 +661,8 @@ class CoreDataStorage
                 'studentKey' => $sis,
                 'ci' => $ci,
                 'fullName' => $name,
-                'courseGroupId' => $courseGroupId,
             ];
         }
-
-        $extractedMetadata = [
-            'teacherName' => $metadata['teacher_name'] ?? null,
-            'teacherEmail' => $metadata['teacher_email'] ?? null,
-            'subjectCode' => $metadata['subject_code'] ?? null,
-            'subjectName' => $metadata['subject_name'] ?? null,
-            'groupCode' => $metadata['group_code'] ?? null,
-            'academicTerm' => $metadata['academic_term'] ?? null,
-        ];
 
         if (empty($validRows)) {
             return new ImportSummary(
@@ -602,66 +676,96 @@ class CoreDataStorage
             );
         }
 
-        // 5. Bulk Persistence in Database Transaction
+        // 8. Bulk Persistence in Database Transaction
         try {
-            DB::transaction(function () use ($metadata, $validRows, $courseGroupId) {
+            DB::transaction(function () use ($teacher, $materia, $grupo, $gestion, $validRows) {
                 $now = now();
 
-                // Teacher
-                $email = strtolower(trim($metadata['teacher_email']));
-                $teacher = User::where('email', $email)->first();
-                if (!$teacher) {
-                    $teacher = User::create([
-                        'email' => $email,
-                        'name' => trim($metadata['teacher_name']),
-                        'role' => 'TEACHER',
-                        'password' => bcrypt('password123'),
-                        'is_active' => true,
-                    ]);
-                }
-
-                // CourseGroup
-                CourseGroup::upsert([
+                // Find or create CourseGroup
+                $materiaGrupo = CourseGroup::firstOrCreate(
                     [
-                        'course_group_id' => $courseGroupId,
-                        'subject_code' => strtoupper(trim($metadata['subject_code'])),
-                        'subject_name' => trim($metadata['subject_name']),
-                        'group_code' => strtoupper(trim($metadata['group_code'])),
-                        'academic_term' => trim($metadata['academic_term']),
-                        'teacher_id' => $teacher->id,
-                        'created_at' => $now,
-                        'updated_at' => $now,
+                        'materia_id' => $materia->id,
+                        'grupo' => $grupo,
+                        'gestion' => $gestion,
+                    ],
+                    [
+                        'docente_id' => $teacher->id,
+                        'activo' => true,
                     ]
-                ], ['course_group_id'], ['subject_code', 'subject_name', 'group_code', 'academic_term', 'teacher_id', 'updated_at']);
+                );
 
-                // Students
-                $studentsData = [];
-                foreach ($validRows as $item) {
-                    $sKey = $item['studentKey'];
-                    $studentsData[$sKey] = [
-                        'student_key' => $sKey,
-                        'ci' => $item['ci'],
-                        'full_name' => $item['fullName'],
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
+                // Catalog lookups
+                $estadoHabilitado = EnrollmentStatus::where('nombre', 'HABILITADO')->firstOrFail();
+                $emailDomainEst = EmailDomain::where('dominio', '@est.umss.edu.bo')->first();
+                if (!$emailDomainEst) {
+                    $emailDomainEst = EmailDomain::firstOrCreate(
+                        ['dominio' => '@est.umss.edu.bo'],
+                        ['descripcion' => 'Estudiantes regulares UMSS', 'activo' => true]
+                    );
                 }
-                Student::upsert(array_values($studentsData), ['student_key'], ['ci', 'full_name', 'updated_at']);
+                $rolEstudiante = Role::where('nombre', 'ESTUDIANTE')->first();
 
-                // Enrollments
-                $enrollmentsData = [];
+                // Process each student (passive role: activo = false)
                 foreach ($validRows as $item) {
-                    $enrollmentKey = $item['studentKey'] . ':::' . $courseGroupId;
-                    $enrollmentsData[$enrollmentKey] = [
-                        'student_key' => $item['studentKey'],
-                        'course_group_id' => $courseGroupId,
-                        'status' => 'HABILITADO',
-                        'ineligibility_reason' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
+                    $sis = is_numeric($item['studentKey']) ? (int)$item['studentKey'] : 0;
+                    $ci = trim($item['ci']);
+                    $fullName = trim($item['fullName']);
+
+                    $estudiante = Student::where('codigo_sis', $sis)->first();
+                    if ($estudiante) {
+                        $user = $estudiante->user;
+                        if ($user) {
+                            $user->nombre = $fullName;
+                            if (!empty($ci)) {
+                                $user->ci = $ci;
+                            }
+                            $user->save();
+                        }
+                    } else {
+                        $emailEst = "{$sis}@est.umss.edu.bo";
+                        $user = User::where('email', $emailEst)
+                            ->orWhere(function ($q) use ($ci) {
+                                if (!empty($ci)) {
+                                    $q->where('ci', $ci);
+                                }
+                            })->first();
+
+                        if (!$user) {
+                            $user = User::create([
+                                'nombre' => $fullName,
+                                'email' => $emailEst,
+                                'email_id' => $emailDomainEst->id,
+                                'contrasena' => Hash::make((string)$ci),
+                                'activo' => false, // Rol pasivo
+                                'ci' => $ci ?: null,
+                            ]);
+
+                            if ($rolEstudiante) {
+                                $user->roles()->attach($rolEstudiante->id, [
+                                    'activo' => true,
+                                    'fecha_asignacion' => $now,
+                                ]);
+                            }
+                        }
+
+                        $estudiante = Student::create([
+                            'codigo_sis' => $sis,
+                            'usuario_id' => $user->id,
+                        ]);
+                    }
+
+                    StudentCourseEnrollment::updateOrCreate(
+                        [
+                            'usuario_id' => $estudiante->usuario_id,
+                            'materia_grupo_id' => $materiaGrupo->id,
+                        ],
+                        [
+                            'estado_inscripcion_id' => $estadoHabilitado->id,
+                            'motivo_inhabilitacion' => null,
+                            'fecha_inscripcion' => $now,
+                        ]
+                    );
                 }
-                StudentCourseEnrollment::upsert(array_values($enrollmentsData), ['student_key', 'course_group_id'], ['status', 'updated_at']);
             });
 
             $successful = count($validRows);
@@ -748,17 +852,19 @@ class CoreDataStorage
             }
 
             $studentKey = $rowData['codigo_sis'];
-            $courseGroupId = $this->buildCourseGroupId(
-                sigla: $rowData['sigla_materia'],
-                grupo: $rowData['grupo'],
-                gestion: $rowData['gestion']
-            );
+            $siglaClean = strtoupper(trim($rowData['sigla_materia']));
+            $grupoClean = strtoupper(trim($rowData['grupo']));
+            $gestionClean = trim($rowData['gestion']);
+            $emailDocenteClean = strtolower(trim($rowData['email_docente']));
 
             $validRows[] = [
                 'rowNumber' => $rowNumber,
                 'rowData' => $rowData,
                 'studentKey' => $studentKey,
-                'courseGroupId' => $courseGroupId,
+                'sigla' => $siglaClean,
+                'grupo' => $grupoClean,
+                'gestion' => $gestionClean,
+                'emailDocente' => $emailDocenteClean,
             ];
         }
 
@@ -773,32 +879,69 @@ class CoreDataStorage
             );
         }
 
-        // Validate: check if any course_group is already assigned to a different teacher
-        $courseGroupsByFile = [];
+        // 1. Validate distinct subjects exist in 'materia' (no auto-create)
+        $distinctSiglas = array_values(array_unique(array_column($validRows, 'sigla')));
+        $coursesBySigla = Course::whereIn('sigla', $distinctSiglas)->get()->keyBy('sigla');
+
+        $missingCourses = [];
+        foreach ($distinctSiglas as $sigla) {
+            if (!$coursesBySigla->has($sigla)) {
+                $missingCourses[] = "La materia con sigla '{$sigla}' no está registrada en el sistema.";
+            }
+        }
+
+        // 2. Validate distinct teachers exist with DOCENTE role (no auto-create)
+        $distinctEmails = array_values(array_unique(array_column($validRows, 'emailDocente')));
+        $teachersByEmail = User::whereIn('email', $distinctEmails)
+            ->whereHas('roles', fn($q) => $q->where('rol.nombre', 'DOCENTE'))
+            ->get()
+            ->keyBy('email');
+
+        $missingTeachers = [];
+        foreach ($distinctEmails as $email) {
+            if (!$teachersByEmail->has($email)) {
+                $missingTeachers[] = "El docente con correo '{$email}' no está registrado en el sistema.";
+            }
+        }
+
+        $precheckErrors = array_merge($missingCourses, $missingTeachers);
+        if (!empty($precheckErrors)) {
+            return new ImportSummary(
+                totalProcessed: $totalProcessed,
+                successful: 0,
+                skipped: $totalProcessed,
+                observations: $precheckErrors,
+                isSuccessful: false,
+                failedRows: $failedRows
+            );
+        }
+
+        // 3. Validate course group conflicts
+        $groupCombos = [];
         foreach ($validRows as $item) {
-            $cgId = $item['courseGroupId'];
-            if (!isset($courseGroupsByFile[$cgId])) {
-                $courseGroupsByFile[$cgId] = [
-                    'email' => strtolower(trim($item['rowData']['email_docente'])),
-                    'sigla' => trim($item['rowData']['sigla_materia']),
-                    'grupo' => trim($item['rowData']['grupo']),
-                    'gestion' => trim($item['rowData']['gestion']),
+            $key = $item['sigla'] . ':::' . $item['grupo'] . ':::' . $item['gestion'];
+            if (!isset($groupCombos[$key])) {
+                $groupCombos[$key] = [
+                    'materia' => $coursesBySigla->get($item['sigla']),
+                    'grupo' => $item['grupo'],
+                    'gestion' => $item['gestion'],
+                    'docente' => $teachersByEmail->get($item['emailDocente']),
                 ];
             }
         }
 
-        $existingCourseGroups = CourseGroup::whereIn('course_group_id', array_keys($courseGroupsByFile))
-            ->with('teacher')
-            ->get()
-            ->keyBy('course_group_id');
-
         $conflictObservations = [];
-        foreach ($courseGroupsByFile as $cgId => $fileData) {
-            $existing = $existingCourseGroups->get($cgId);
+        foreach ($groupCombos as $combo) {
+            $existing = CourseGroup::where('materia_id', $combo['materia']->id)
+                ->where('grupo', $combo['grupo'])
+                ->where('gestion', $combo['gestion'])
+                ->with('teacher')
+                ->first();
+
             if ($existing && $existing->teacher) {
-                $existingTeacherEmail = strtolower(trim($existing->teacher->email));
-                if ($existingTeacherEmail !== $fileData['email']) {
-                    $conflictObservations[] = "La materia {$fileData['sigla']} grupo {$fileData['grupo']} ({$fileData['gestion']}) ya está asignada al docente {$existing->teacher->name} ({$existingTeacherEmail}). No se puede registrar con otro docente.";
+                if ((int) $existing->docente_id !== (int) $combo['docente']->id) {
+                    $existingTeacherEmail = strtolower(trim($existing->teacher->email));
+                    $conflictObservations[] = "La materia {$combo['materia']->sigla} grupo {$combo['grupo']} ({$combo['gestion']}) ya está asignada al docente {$existing->teacher->nombre} ({$existingTeacherEmail}). No se puede registrar con otro docente.";
                 }
             }
         }
@@ -814,91 +957,102 @@ class CoreDataStorage
             );
         }
 
+        // 4. Persistence
         try {
-            DB::transaction(function () use ($validRows) {
+            DB::transaction(function () use ($validRows, $groupCombos) {
                 $now = now();
 
-                $teacherEmails = array_values(array_unique(array_map(
-                    fn($item) => strtolower(trim($item['rowData']['email_docente'])),
-                    $validRows
-                )));
-
-                $existingTeachers = User::whereIn('email', $teacherEmails)->get()->keyBy('email');
-                $defaultPasswordHash = null;
-
-                foreach ($teacherEmails as $email) {
-                    if (!$existingTeachers->has($email)) {
-                        $defaultPasswordHash ??= bcrypt('password123');
-                        $newTeacher = User::create([
-                            'email' => $email,
-                            'name' => 'Docente ' . $email,
-                            'role' => 'TEACHER',
-                            'password' => $defaultPasswordHash,
-                            'is_active' => true,
-                        ]);
-                        $existingTeachers->put($email, $newTeacher);
-                    }
+                // Create or find course groups
+                $courseGroups = [];
+                foreach ($groupCombos as $key => $combo) {
+                    $cg = CourseGroup::firstOrCreate(
+                        [
+                            'materia_id' => $combo['materia']->id,
+                            'grupo' => $combo['grupo'],
+                            'gestion' => $combo['gestion'],
+                        ],
+                        [
+                            'docente_id' => $combo['docente']->id,
+                            'activo' => true,
+                        ]
+                    );
+                    $courseGroups[$key] = $cg;
                 }
 
-                $courseGroupsData = [];
-                foreach ($validRows as $item) {
-                    $cgId = $item['courseGroupId'];
-                    if (!isset($courseGroupsData[$cgId])) {
-                        $r = $item['rowData'];
-                        $teacher = $existingTeachers->get(strtolower(trim($r['email_docente'])));
-                        $courseGroupsData[$cgId] = [
-                            'course_group_id' => $cgId,
-                            'subject_code' => strtoupper(trim($r['sigla_materia'])),
-                            'subject_name' => trim($r['nombre_materia']),
-                            'group_code' => strtoupper(trim($r['grupo'])),
-                            'academic_term' => trim($r['gestion']),
-                            'teacher_id' => $teacher?->id,
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                        ];
-                    }
+                $estadoHabilitado = EnrollmentStatus::where('nombre', 'HABILITADO')->firstOrFail();
+                $emailDomainEst = EmailDomain::where('dominio', '@est.umss.edu.bo')->first();
+                if (!$emailDomainEst) {
+                    $emailDomainEst = EmailDomain::firstOrCreate(
+                        ['dominio' => '@est.umss.edu.bo'],
+                        ['descripcion' => 'Estudiantes regulares UMSS', 'activo' => true]
+                    );
                 }
-                CourseGroup::upsert(
-                    array_values($courseGroupsData),
-                    ['course_group_id'],
-                    ['subject_code', 'subject_name', 'group_code', 'academic_term', 'teacher_id', 'updated_at']
-                );
+                $rolEstudiante = Role::where('nombre', 'ESTUDIANTE')->first();
 
-                $studentsData = [];
+                // Process each student (passive role)
                 foreach ($validRows as $item) {
-                    $sKey = $item['studentKey'];
+                    $sis = is_numeric($item['studentKey']) ? (int)$item['studentKey'] : 0;
                     $r = $item['rowData'];
-                    $studentsData[$sKey] = [
-                        'student_key' => $sKey,
-                        'ci' => trim($r['ci']),
-                        'full_name' => trim($r['nombre_completo']),
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                }
-                Student::upsert(
-                    array_values($studentsData),
-                    ['student_key'],
-                    ['ci', 'full_name', 'updated_at']
-                );
+                    $ci = trim($r['ci']);
+                    $fullName = trim($r['nombre_completo']);
+                    $groupKey = $item['sigla'] . ':::' . $item['grupo'] . ':::' . $item['gestion'];
+                    $courseGroup = $courseGroups[$groupKey];
 
-                $enrollmentsData = [];
-                foreach ($validRows as $item) {
-                    $enrollmentKey = $item['studentKey'] . ':::' . $item['courseGroupId'];
-                    $enrollmentsData[$enrollmentKey] = [
-                        'student_key' => $item['studentKey'],
-                        'course_group_id' => $item['courseGroupId'],
-                        'status' => 'HABILITADO',
-                        'ineligibility_reason' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
+                    $estudiante = Student::where('codigo_sis', $sis)->first();
+                    if ($estudiante) {
+                        $user = $estudiante->user;
+                        if ($user) {
+                            $user->nombre = $fullName;
+                            if (!empty($ci)) {
+                                $user->ci = $ci;
+                            }
+                            $user->save();
+                        }
+                    } else {
+                        $emailEst = "{$sis}@est.umss.edu.bo";
+                        $user = User::where('email', $emailEst)
+                            ->orWhere(function ($q) use ($ci) {
+                                if (!empty($ci)) {
+                                    $q->where('ci', $ci);
+                                }
+                            })->first();
+
+                        if (!$user) {
+                            $user = User::create([
+                                'nombre' => $fullName,
+                                'email' => $emailEst,
+                                'email_id' => $emailDomainEst->id,
+                                'contrasena' => Hash::make((string)$ci),
+                                'activo' => false,
+                                'ci' => $ci ?: null,
+                            ]);
+
+                            if ($rolEstudiante) {
+                                $user->roles()->attach($rolEstudiante->id, [
+                                    'activo' => true,
+                                    'fecha_asignacion' => $now,
+                                ]);
+                            }
+                        }
+
+                        $estudiante = Student::create([
+                            'codigo_sis' => $sis,
+                            'usuario_id' => $user->id,
+                        ]);
+                    }
+
+                    StudentCourseEnrollment::updateOrCreate(
+                        [
+                            'usuario_id' => $estudiante->usuario_id,
+                            'materia_grupo_id' => $courseGroup->id,
+                        ],
+                        [
+                            'estado_inscripcion_id' => $estadoHabilitado->id,
+                            'motivo_inhabilitacion' => null,
+                            'fecha_inscripcion' => $now,
+                        ]
+                    );
                 }
-                StudentCourseEnrollment::upsert(
-                    array_values($enrollmentsData),
-                    ['student_key', 'course_group_id'],
-                    ['status', 'updated_at']
-                );
             });
 
             $successful = count($validRows);
@@ -1182,17 +1336,6 @@ class CoreDataStorage
         return null;
     }
 
-    /**
-     * Constructs canonical CourseGroupId (e.g. 'INF110-G1-2/2026').
-     */
-    private function buildCourseGroupId(string $sigla, string $grupo, string $gestion): string
-    {
-        $siglaClean = strtoupper(trim($sigla));
-        $grupoClean = strtoupper(trim($grupo));
-        $gestionClean = trim($gestion);
-
-        return "{$siglaClean}-G{$grupoClean}-{$gestionClean}";
-    }
 
     /**
      * Checks if a row is completely empty or contains only whitespace.
