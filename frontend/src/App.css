@@ -2511,6 +2511,14 @@
   margin-top: 10px;
 }
 
+.schedule-exam-empty-rules {
+  margin: 6px 0;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  color: #737373;
+  font-style: italic;
+}
+
 .schedule-exam-rule-item {
   display: flex;
   align-items: center;

@@ -17,6 +17,7 @@ const TIME_SLOTS: TimeSlot[] = [
   { start: '03:45 pm', end: '05:15 pm' },
   { start: '05:15 pm', end: '06:45 pm' },
   { start: '06:45 pm', end: '08:15 pm' },
+  { start: '08:15 pm', end: '09:45 pm' },
 ];
 
 interface ClassroomOption {
@@ -71,12 +72,9 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
   const [examType, setExamType] = useState('Primer Parcial');
   const [rawDate, setRawDate] = useState('2026-09-24');
   const [startTimeIndex, setStartTimeIndex] = useState(0);
-  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>(['691B', 'Auditorio']);
+  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
   const [isRoomsOpen, setIsRoomsOpen] = useState(false);
-  const [rules, setRules] = useState<string[]>([
-    'No se permiten celulares',
-    'Formulario permitido',
-  ]);
+  const [rules, setRules] = useState<string[]>([]);
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [newRuleText, setNewRuleText] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -203,7 +201,7 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
           </div>
         </div>
 
-        {/* 3. Horarios y Duración (Automático: +1h 30min) */}
+        {/* 3. Horarios y Duración (Automático: +1h 30min, hasta 08:15 pm -> 09:45 pm) */}
         <div className="schedule-exam-times-block">
           <div className="schedule-exam-spread-row">
             <label htmlFor="schedule-exam-start-time" className="schedule-exam-label">
@@ -238,7 +236,7 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
           </div>
         </div>
 
-        {/* 4. Aulas con pestaña desplegable hacia abajo */}
+        {/* 4. Aulas con pestaña desplegable hacia abajo (sin capacidad entre paréntesis y ninguna seleccionada por defecto) */}
         <div className="schedule-exam-section">
           <button
             type="button"
@@ -281,7 +279,6 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
                     >
                       <span className="schedule-exam-room-check">{isChecked ? '✓' : '+'}</span>
                       <span className="schedule-exam-room-name">{room.nombre}</span>
-                      <span className="schedule-exam-room-cap">({room.capacidad} pl.)</span>
                     </button>
                   );
                 })}
@@ -290,7 +287,7 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
           )}
         </div>
 
-        {/* 5. Normas con botón (+) para insertar nuevas normas */}
+        {/* 5. Normas con botón (+) para insertar nuevas normas (ninguna por defecto) */}
         <div className="schedule-exam-section schedule-exam-rules-section">
           <div className="schedule-exam-spread-row">
             <span className="schedule-exam-label">Normas</span>
@@ -347,22 +344,26 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
           )}
 
           <div className="schedule-exam-rules-list">
-            {rules.map((rule, idx) => (
-              <div
-                key={idx}
-                className={`schedule-exam-rule-item ${idx % 2 === 1 ? 'schedule-exam-rule-pill' : ''}`}
-              >
-                <span>{rule}</span>
-                <button
-                  type="button"
-                  className="schedule-exam-rule-delete"
-                  onClick={() => handleDeleteRule(idx)}
-                  aria-label={`Eliminar norma ${rule}`}
+            {rules.length === 0 ? (
+              <p className="schedule-exam-empty-rules">No hay normas registradas. Presiona (+) para agregar una.</p>
+            ) : (
+              rules.map((rule, idx) => (
+                <div
+                  key={idx}
+                  className={`schedule-exam-rule-item ${idx % 2 === 1 ? 'schedule-exam-rule-pill' : ''}`}
                 >
-                  ×
-                </button>
-              </div>
-            ))}
+                  <span>{rule}</span>
+                  <button
+                    type="button"
+                    className="schedule-exam-rule-delete"
+                    onClick={() => handleDeleteRule(idx)}
+                    aria-label={`Eliminar norma ${rule}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
