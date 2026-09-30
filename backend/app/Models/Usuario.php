@@ -62,8 +62,8 @@ class Usuario extends Authenticatable implements JWTSubject
             Rol::class,
             "usuario_rol",
             "usuario_id",
-            "rol_id"
-        );
+            "rol_id",
+        )->withPivot('activo', 'fecha_asignacion');
     }
 
 
