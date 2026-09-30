@@ -37,6 +37,13 @@ class RegisterAcademicUserRequest extends FormRequest
                 'string',
                 'in:DOCENTE,AUXILIAR,ADMIN',
             ],
+
+            'ci' => [
+                'nullable',
+                'string',
+                'max:30',
+                'unique:usuario,ci',
+            ],
         ];
     }
 
@@ -54,6 +61,8 @@ class RegisterAcademicUserRequest extends FormRequest
 
             'role.required' => 'El rol es obligatorio.',
             'role.in' => 'El rol seleccionado no es válido.',
+
+            'ci.unique' => 'El CI ya está registrado.',
         ];
     }
 }

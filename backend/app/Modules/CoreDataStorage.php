@@ -101,9 +101,6 @@ class CoreDataStorage
         }
 
         $roleName = strtoupper(trim($data->role));
-        if ($roleName === 'TEACHER') $roleName = 'DOCENTE';
-        if ($roleName === 'ASSISTANT') $roleName = 'AUXILIAR';
-
         $role = Role::where('nombre', $roleName)->first();
         if (!$role) {
             return new OperationResult(
@@ -119,13 +116,27 @@ class CoreDataStorage
                     'email' => $email,
                     'email_id' => $emailDomain->id,
                     'contrasena' => Hash::make($data->password),
-                    'ci' => $data->ci ?? null,
+                    'ci' => $data->ci,
                     'activo' => true,
                 ]);
 
                 $user->roles()->attach($role->id, [
                     'activo' => true,
                     'fecha_asignacion' => now(),
+                ]);
+
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => $user->id,
+                    'accion' => 'REGISTRAR_USUARIO',
+                    'entidad_tipo' => 'usuario',
+                    'entidad_id' => $user->id,
+                    'detalles' => json_encode([
+                        'nombre' => $data->fullName,
+                        'email' => $email,
+                        'ci' => $data->ci,
+                        'rol_asignado' => $role->nombre,
+                    ]),
+                    'fecha' => now(),
                 ]);
             });
 
@@ -134,6 +145,11 @@ class CoreDataStorage
                 message: 'Usuario registrado correctamente'
             );
 
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo o CI ya está registrado'
+            );
         } catch (\Throwable $e) {
             return new OperationResult(
                 isSuccessful: false,
