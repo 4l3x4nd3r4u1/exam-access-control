@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { BottomDrawer } from './BottomDrawer';
+import { examService } from '../services/examService';
 import type { TeacherCourse } from '../types/course';
 
 interface TimeSlot {
@@ -78,6 +79,8 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [newRuleText, setNewRuleText] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -113,7 +116,10 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
     setRules((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
     const examData: ScheduledExamData = {
       tipoExamen: examType,
       fecha: rawDate,
@@ -124,16 +130,32 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
       normas: rules,
     };
 
-    setSaveSuccess(true);
-    if (onSaved) {
-      onSaved(examData);
-    }
+    try {
+      await examService.scheduleExam(course.course_group_id, {
+        tipo_examen: examType,
+        fecha: rawDate,
+        hora_inicio: currentSlot.start,
+        hora_fin: currentSlot.end,
+        aulas: selectedRoomIds,
+        normas: rules,
+      });
 
-    setTimeout(() => {
-      setSaveSuccess(false);
-      onClose();
-    }, 500);
+      setSaveSuccess(true);
+      if (onSaved) {
+        onSaved(examData);
+      }
+
+      setTimeout(() => {
+        setSaveSuccess(false);
+        onClose();
+      }, 700);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Error al guardar el examen.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   return (
     <BottomDrawer isOpen={isOpen} onClose={onClose} ariaLabel="Programar Examen">
@@ -367,12 +389,19 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
           </div>
         </div>
 
+        {errorMessage && (
+          <p className="schedule-exam-error" style={{ color: '#d93025', fontSize: '13px', margin: '8px 0', textAlign: 'center' }}>
+            {errorMessage}
+          </p>
+        )}
+
         {/* Botones de acción */}
         <div className="schedule-exam-actions">
           <button
             type="button"
             className="schedule-exam-cancel-btn"
             onClick={onClose}
+            disabled={isSubmitting}
           >
             Cancelar
           </button>
@@ -380,8 +409,9 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
             type="button"
             className="schedule-exam-submit-btn"
             onClick={handleSave}
+            disabled={isSubmitting}
           >
-            {saveSuccess ? '¡Guardado!' : 'Guardar cambios'}
+            {isSubmitting ? 'Guardando...' : saveSuccess ? '¡Guardado!' : 'Guardar cambios'}
           </button>
         </div>
       </div>
