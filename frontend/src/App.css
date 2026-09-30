@@ -2149,7 +2149,8 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 23px;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 16px;
 }
 
@@ -2177,7 +2178,40 @@
   color: #000000;
 }
 
+/* Custom styled dropdown select with downward arrow (like student status) */
+.schedule-exam-select-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.schedule-exam-select {
+  min-width: 148px;
+  height: 38px;
+  padding: 4px 30px 4px 10px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  color: #000000;
+  background-color: #ffffff;
+  border: 1px solid #c9c9c9;
+  border-radius: 6px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 15px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.schedule-exam-select:focus {
+  outline: none;
+  border-color: #2873ed;
+  box-shadow: 0 0 0 2px rgba(40, 115, 237, 0.15);
+}
+
+/* Interactive Date box with calendar */
 .schedule-exam-date-box {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -2186,6 +2220,12 @@
   padding: 8px 12px;
   background: #ededed;
   border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.schedule-exam-date-box:hover {
+  background: #e4e4e4;
 }
 
 .schedule-exam-date-left {
@@ -2228,6 +2268,17 @@
   stroke-width: 3;
 }
 
+.schedule-exam-hidden-date-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Times block */
 .schedule-exam-times-block {
   display: flex;
   flex-direction: column;
@@ -2242,6 +2293,46 @@
   justify-content: space-between;
 }
 
+.schedule-exam-calculated-time {
+  font-weight: 500;
+  color: #111;
+}
+
+/* Accordion Aulas */
+.schedule-exam-accordion-header {
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.schedule-exam-label-with-arrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-exam-arrow-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.schedule-exam-arrow-indicator.open {
+  transform: rotate(180deg);
+}
+
+.schedule-exam-aulas-summary {
+  text-align: right;
+  max-width: 210px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .schedule-exam-subtext {
   margin: 4px 0 0;
   font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -2251,6 +2342,82 @@
   color: #000000;
 }
 
+.schedule-exam-capacity-warning {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.schedule-exam-dropdown-panel {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f7f7f8;
+  border: 1px solid #e5e5ea;
+  border-radius: 8px;
+  animation: fadeInDown 0.18s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.schedule-exam-panel-tip {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.schedule-exam-classrooms-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.schedule-exam-room-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  color: #374151;
+  transition: all 0.12s ease;
+}
+
+.schedule-exam-room-pill:hover {
+  border-color: #2873ed;
+  background: #f0f7ff;
+}
+
+.schedule-exam-room-pill.selected {
+  background: #eaf1fd;
+  border-color: #2873ed;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.schedule-exam-room-check {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schedule-exam-room-cap {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* Rules Section */
 .schedule-exam-rules-section {
   margin-bottom: 22px;
 }
@@ -2265,15 +2432,78 @@
   background: none;
   border: 0;
   cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.schedule-exam-add-rule-btn:hover {
+  background-color: #e5e5ea;
 }
 
 .schedule-exam-add-rule-btn svg {
   width: 18px;
   height: 18px;
   stroke: #000000;
-  stroke-width: 2;
+  stroke-width: 2.2;
 }
 
+/* Inline new rule creation */
+.schedule-exam-new-rule-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  background: #f4f4f6;
+  border: 1px solid #dedee3;
+  border-radius: 6px;
+}
+
+.schedule-exam-new-rule-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  border: 1px solid #c9c9c9;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.schedule-exam-new-rule-input:focus {
+  outline: none;
+  border-color: #2873ed;
+}
+
+.schedule-exam-new-rule-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.schedule-exam-new-rule-cancel,
+.schedule-exam-new-rule-submit {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.schedule-exam-new-rule-cancel {
+  background: none;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.schedule-exam-new-rule-submit {
+  background: #2873ed;
+  border: none;
+  color: #ffffff;
+}
+
+/* Rules list */
 .schedule-exam-rules-list {
   display: flex;
   flex-direction: column;
@@ -2282,6 +2512,9 @@
 }
 
 .schedule-exam-rule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 4px 2px;
   font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 16px;
@@ -2296,6 +2529,25 @@
   border-radius: 4px;
 }
 
+.schedule-exam-rule-delete {
+  padding: 0 6px;
+  background: none;
+  border: none;
+  color: #888888;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.schedule-exam-rule-delete:hover {
+  opacity: 1;
+  color: #dc2626;
+}
+
+/* Actions */
 .schedule-exam-actions {
   display: flex;
   flex-direction: row;
