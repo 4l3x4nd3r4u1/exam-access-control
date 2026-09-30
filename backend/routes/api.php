@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AcademicUserController;
 use App\Http\Controllers\CourseStudentController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ProcessedRosterController;
 use App\Http\Controllers\StudentStatusController;
 
@@ -33,5 +34,10 @@ Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class,
     ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
 Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
     ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
+Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
+    ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
+Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])
+    ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
+
 
 

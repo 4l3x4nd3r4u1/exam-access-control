@@ -2,12 +2,14 @@
 
 namespace Tests\Unit;
 
-use App\DTOs\RawFileData;
-use App\Models\CourseGroup;
-use App\Models\Student;
-use App\Models\StudentCourseEnrollment;
-use App\Models\User;
 use App\Modules\CoreDataStorage;
+use App\DTOs\RawFileData;
+use App\Models\Usuario;
+use App\Models\Estudiante;
+use App\Models\Materia;
+use App\Models\MateriaGrupo;
+use App\Models\EstadoInscripcion;
+use App\Models\Inscripcion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\DTOs\UserRegistrationData;
@@ -30,10 +32,10 @@ class CoreDataStorageTest extends TestCase
     public function test_imports_valid_csv_roster_successfully(): void
     {
         $csvContent = <<<CSV
-codigo_sis,ci,nombre_completo,sigla_materia,nombre_materia,grupo,gestion,email_docente
-202100482,8765432,Perez Gomez Juan Carlos,INF110,Introduccion a la Programacion,1,2/2026,docente@umss.edu.bo
-202201934,7654321,Rodriguez Lopez Maria Elena,INF110,Introduccion a la Programacion,1,2/2026,docente@umss.edu.bo
-CSV;
+            codigo_sis,ci,nombre_completo,sigla_materia,nombre_materia,grupo,gestion,email_docente
+            202100482,8765432,Perez Gomez Juan Carlos,INF110,Introduccion a la Programacion,1,2/2026,docente@umss.edu.bo
+            202201934,7654321,Rodriguez Lopez Maria Elena,INF110,Introduccion a la Programacion,1,2/2026,docente@umss.edu.bo
+            CSV;
 
         $fileData = new RawFileData(
             content: $csvContent,
@@ -49,60 +51,80 @@ CSV;
         $this->assertEquals(0, $result->skipped);
         $this->assertEmpty($result->observations);
 
-        // Verify Student persistence
-        $this->assertDatabaseHas('students', [
-            'student_key' => '202100482',
-            'ci' => '8765432',
-            'full_name' => 'Perez Gomez Juan Carlos',
-        ]);
-        $this->assertDatabaseHas('students', [
-            'student_key' => '202201934',
-            'ci' => '7654321',
-            'full_name' => 'Rodriguez Lopez Maria Elena',
-        ]);
-
-        // Verify CourseGroup persistence
-        $this->assertDatabaseHas('course_groups', [
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'Introduccion a la Programacion',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-        ]);
-
-        // Verify Teacher User persistence
-        $this->assertDatabaseHas('users', [
+    /*
+     * Usuario docente creado por la importación
+     */
+        $this->assertDatabaseHas('usuario', [
             'email' => 'docente@umss.edu.bo',
-            'role' => 'TEACHER',
         ]);
 
-        // Verify Enrollment persistence
-        $this->assertDatabaseHas('student_course_enrollments', [
-            'student_key' => '202100482',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
+    /*
+     * Estudiantes importados
+     */
+        $this->assertDatabaseHas('estudiante', [
+            'codigo_sis' => '202100482',
+        ]);
+
+        $this->assertDatabaseHas('estudiante', [
+            'codigo_sis' => '202201934',
+        ]);
+
+    /*
+     * Materia creada
+     */
+        $this->assertDatabaseHas('materia', [
+            'sigla' => 'INF110',
+            'nombre' => 'Introduccion a la Programacion',
+        ]);
+
+    /*
+     * Grupo de materia creado
+     */
+        $this->assertDatabaseHas('materia_grupo', [
+            'grupo' => '1',
+            'gestion' => '2/2026',
+        ]);
+
+    /*
+     * Estado de inscripción
+     */
+        $estado = \App\Models\EstadoInscripcion::where(
+            'nombre',
+            'HABILITADO'
+        )->first();
+
+        $this->assertNotNull($estado);
+
+    /*
+     * Inscripciones creadas
+     */
+        $this->assertDatabaseHas('inscripcion', [
+            'estado_inscripcion_id' => $estado->id,
+            'motivo_inhabilitacion' => null,
         ]);
     }
 
     public function test_imports_official_template_csv_roster_successfully(): void
     {
         $csvContent = <<<CSV
-Docente: Lic. Juan Carlos Perez Gomez
-Email Docente: juan.perez@umss.edu.bo
-Materia: INF110 - INTRODUCCION A LA PROGRAMACION
-Grupo: 1
-Gestion: 2/2026
+            Docente: Lic. Juan Carlos Perez Gomez
+            Email Docente: juan.perez@umss.edu.bo
+            Materia: INF110 - INTRODUCCION A LA PROGRAMACION
+            Grupo: 1
+            Gestion: 2/2026
 
-Codigo SIS,CI,Nombre Completo
-202001234,7891234,ALVAREZ CLAROS PEDRO
-202005678,6543210,BENITEZ LOPEZ CARMEN
-CSV;
+            Codigo SIS,CI,Nombre Completo
+            202001234,7891234,ALVAREZ CLAROS PEDRO
+            202005678,6543210,BENITEZ LOPEZ CARMEN
+            CSV;
+
 
         $fileData = new RawFileData(
             content: $csvContent,
             fileName: 'nomina_oficial.csv',
             extension: 'csv'
         );
+
 
         $result = $this->storage->importStudentRoster($fileData);
 
@@ -112,105 +134,216 @@ CSV;
         $this->assertEquals(0, $result->skipped);
         $this->assertEmpty($result->observations);
         $this->assertEmpty($result->failedRows);
+
         $this->assertNotNull($result->metadata);
-        $this->assertEquals('Lic. Juan Carlos Perez Gomez', $result->metadata['teacherName']);
-        $this->assertEquals('juan.perez@umss.edu.bo', $result->metadata['teacherEmail']);
-        $this->assertEquals('INF110', $result->metadata['subjectCode']);
-        $this->assertEquals('INTRODUCCION A LA PROGRAMACION', $result->metadata['subjectName']);
-        $this->assertEquals('1', $result->metadata['groupCode']);
-        $this->assertEquals('2/2026', $result->metadata['academicTerm']);
 
-        // Verify Student persistence
-        $this->assertDatabaseHas('students', [
-            'student_key' => '202001234',
-            'ci' => '7891234',
-            'full_name' => 'ALVAREZ CLAROS PEDRO',
-        ]);
+        $this->assertEquals(
+            'Lic. Juan Carlos Perez Gomez',
+            $result->metadata['teacherName']
+        );
 
-        // Verify CourseGroup persistence
-        $this->assertDatabaseHas('course_groups', [
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'INTRODUCCION A LA PROGRAMACION',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-        ]);
+        $this->assertEquals(
+            'juan.perez@umss.edu.bo',
+            $result->metadata['teacherEmail']
+        );
 
-        // Verify Teacher User persistence with full name
-        $this->assertDatabaseHas('users', [
+        $this->assertEquals(
+            'INF110',
+            $result->metadata['subjectCode']
+        );
+
+        $this->assertEquals(
+            'INTRODUCCION A LA PROGRAMACION',
+            $result->metadata['subjectName']
+        );
+
+        $this->assertEquals(
+            '1',
+            $result->metadata['groupCode']
+        );
+
+        $this->assertEquals(
+            '2/2026',
+            $result->metadata['academicTerm']
+        );
+
+
+
+    /*
+     * Docente importado
+     */
+        $this->assertDatabaseHas('usuario', [
             'email' => 'juan.perez@umss.edu.bo',
-            'name' => 'Lic. Juan Carlos Perez Gomez',
-            'role' => 'TEACHER',
+            'nombre' => 'Lic. Juan Carlos Perez Gomez',
         ]);
 
-        // Verify Enrollment persistence
-        $this->assertDatabaseHas('student_course_enrollments', [
-            'student_key' => '202001234',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
+
+
+    /*
+     * Estudiantes importados
+     */
+        $this->assertDatabaseHas('estudiante', [
+            'codigo_sis' => '202001234',
+        ]);
+
+        $this->assertDatabaseHas('estudiante', [
+            'codigo_sis' => '202005678',
+        ]);
+
+
+
+    /*
+     * Materia creada
+     */
+        $this->assertDatabaseHas('materia', [
+            'sigla' => 'INF110',
+            'nombre' => 'INTRODUCCION A LA PROGRAMACION',
+        ]);
+
+
+
+    /*
+     * Grupo creado
+     */
+        $this->assertDatabaseHas('materia_grupo', [
+            'grupo' => '1',
+            'gestion' => '2/2026',
+        ]);
+
+
+
+    /*
+     * Estado de inscripción
+     */
+        $estado = \App\Models\EstadoInscripcion::where(
+            'nombre',
+            'HABILITADO'
+        )->first();
+
+
+        $this->assertNotNull($estado);
+
+
+
+    /*
+     * Inscripciones creadas
+     */
+        $this->assertDatabaseHas('inscripcion', [
+            'estado_inscripcion_id' => $estado->id,
+            'motivo_inhabilitacion' => null,
         ]);
     }
 
     public function test_rejects_template_csv_with_missing_metadata(): void
     {
         $csvContent = <<<CSV
-Docente: Lic. Juan Carlos Perez Gomez
-Materia: INF110 - INTRODUCCION A LA PROGRAMACION
-Grupo: 1
+            Docente: Lic. Juan Carlos Perez Gomez
+            Materia: INF110 - INTRODUCCION A LA PROGRAMACION
+        Grupo: 1
 
-Codigo SIS,CI,Nombre Completo
-202001234,7891234,ALVAREZ CLAROS PEDRO
-CSV;
+        Codigo SIS,CI,Nombre Completo
+        202001234,7891234,ALVAREZ CLAROS PEDRO
+        CSV;
 
-        $fileData = new RawFileData(
+
+            $fileData = new RawFileData(
             content: $csvContent,
             fileName: 'incompleto.csv',
             extension: 'csv'
         );
 
-        $result = $this->storage->importStudentRoster($fileData);
 
-        $this->assertFalse($result->isSuccessful);
-        $this->assertStringContainsString('Faltan metadatos requeridos', $result->observations[0]);
-        $this->assertStringContainsString('Email Docente', $result->observations[0]);
-        $this->assertStringContainsString('Gestion', $result->observations[0]);
-    }
+            $result = $this->storage->importStudentRoster($fileData);
+
+
+
+            $this->assertFalse($result->isSuccessful);
+
+            $this->assertNotEmpty($result->observations);
+
+
+            $observation = $result->observations[0];
+
+
+            $this->assertStringContainsString(
+               'Faltan metadatos requeridos',
+                $observation
+            );
+
+            $this->assertStringContainsString(
+               'Email Docente',
+                $observation
+            );
+
+            $this->assertStringContainsString(
+               'Gestion',
+                $observation
+            );
+        }
 
     public function test_imports_official_xlsx_roster_with_the_same_result_as_csv(): void
-    {
-        $content = $this->makeXlsxContent([
-            ['Docente: Lic. Ana Morales'],
-            ['Email Docente: ana.morales@umss.edu.bo'],
-            ['Materia: INF110 - INTRODUCCION A LA PROGRAMACION'],
-            ['Grupo: 2'],
-            ['Gestion: 2/2026'],
-            [],
-            ['Codigo SIS', 'CI', 'Nombre Completo'],
-            ['202600001', '7891234', 'ALVAREZ CLAROS PEDRO'],
-            ['', '6543210', 'BENITEZ SIN SIS'],
-            ['202600003', '', 'CASTRO SIN CI'],
-        ]);
+{
+    $content = $this->makeXlsxContent([
+        ['Docente: Lic. Ana Morales'],
+        ['Email Docente: ana.morales@umss.edu.bo'],
+        ['Materia: INF110 - INTRODUCCION A LA PROGRAMACION'],
+        ['Grupo: 2'],
+        ['Gestion: 2/2026'],
+        [],
+        ['Codigo SIS', 'CI', 'Nombre Completo'],
+        ['202600001', '7891234', 'ALVAREZ CLAROS PEDRO'],
+        ['', '6543210', 'BENITEZ SIN SIS'],
+        ['202600003', '', 'CASTRO SIN CI'],
+    ]);
 
-        $result = $this->storage->importStudentRoster(new RawFileData(
-            content: $content,
-            fileName: 'nomina.xlsx',
-            extension: 'xlsx'
-        ));
 
-        $this->assertTrue($result->isSuccessful);
-        $this->assertEquals(3, $result->totalProcessed);
-        $this->assertEquals(1, $result->successful);
-        $this->assertEquals(2, $result->skipped);
-        $this->assertCount(2, $result->failedRows);
-        $this->assertEquals(9, $result->failedRows[0]['rowNumber']);
-        $this->assertEquals('BENITEZ SIN SIS', $result->failedRows[0]['data']['nombre_completo']);
-        $this->assertEquals('Lic. Ana Morales', $result->metadata['teacherName']);
-        $this->assertDatabaseHas('students', ['student_key' => '202600001']);
-    }
+    $result = $this->storage->importStudentRoster(new RawFileData(
+        content: $content,
+        fileName: 'nomina.xlsx',
+        extension: 'xlsx'
+    ));
+
+
+
+    $this->assertTrue($result->isSuccessful);
+    $this->assertEquals(3, $result->totalProcessed);
+    $this->assertEquals(1, $result->successful);
+    $this->assertEquals(2, $result->skipped);
+
+    $this->assertCount(
+        2,
+        $result->failedRows
+    );
+
+
+    $this->assertEquals(
+        9,
+        $result->failedRows[0]['rowNumber']
+    );
+
+
+    $this->assertEquals(
+        'BENITEZ SIN SIS',
+        $result->failedRows[0]['data']['nombre_completo']
+    );
+
+
+    $this->assertEquals(
+        'Lic. Ana Morales',
+        $result->metadata['teacherName']
+    );
+
+
+
+    // Verificar estudiante importado
+    $this->assertDatabaseHas('estudiante', [
+        'codigo_sis' => '202600001',
+    ]);
+}
 
     public function test_template_csv_handles_invalid_rows_and_returns_failed_rows(): void
-    {
-        $csvContent = <<<CSV
+{
+    $csvContent = <<<CSV
 Docente: Lic. Juan Carlos Perez Gomez
 Email Docente: juan.perez@umss.edu.bo
 Materia: INF110 - INTRODUCCION A LA PROGRAMACION
@@ -223,34 +356,78 @@ Codigo SIS,CI,Nombre Completo
 202109876,,CASTRO SIN CI
 CSV;
 
-        $fileData = new RawFileData(
-            content: $csvContent,
-            fileName: 'nomina_con_errores.csv',
-            extension: 'csv'
-        );
 
-        $result = $this->storage->importStudentRoster($fileData);
+    $fileData = new RawFileData(
+        content: $csvContent,
+        fileName: 'nomina_con_errores.csv',
+        extension: 'csv'
+    );
 
-        $this->assertTrue($result->isSuccessful);
-        $this->assertEquals(3, $result->totalProcessed);
-        $this->assertEquals(1, $result->successful);
-        $this->assertEquals(2, $result->skipped);
-        $this->assertCount(2, $result->failedRows);
 
-        // Check failed rows detail
-        $this->assertEquals(9, $result->failedRows[0]['rowNumber']);
-        $this->assertStringContainsString('Falta Código SIS', $result->failedRows[0]['reason']);
-        $this->assertEquals('BENITEZ SIN SIS', $result->failedRows[0]['data']['nombre_completo']);
+    $result = $this->storage->importStudentRoster($fileData);
 
-        $this->assertEquals(10, $result->failedRows[1]['rowNumber']);
-        $this->assertStringContainsString('Falta CI', $result->failedRows[1]['reason']);
 
-        // Check valid student is saved
-        $this->assertDatabaseHas('students', [
-            'student_key' => '202001234',
-            'ci' => '7891234',
-        ]);
-    }
+
+    $this->assertTrue($result->isSuccessful);
+
+    $this->assertEquals(
+        3,
+        $result->totalProcessed
+    );
+
+    $this->assertEquals(
+        1,
+        $result->successful
+    );
+
+    $this->assertEquals(
+        2,
+        $result->skipped
+    );
+
+    $this->assertCount(
+        2,
+        $result->failedRows
+    );
+
+
+
+    // Fila sin Código SIS
+    $this->assertEquals(
+        9,
+        $result->failedRows[0]['rowNumber']
+    );
+
+    $this->assertStringContainsString(
+        'Falta Código SIS',
+        $result->failedRows[0]['reason']
+    );
+
+    $this->assertEquals(
+        'BENITEZ SIN SIS',
+        $result->failedRows[0]['data']['nombre_completo']
+    );
+
+
+
+    // Fila sin CI
+    $this->assertEquals(
+        10,
+        $result->failedRows[1]['rowNumber']
+    );
+
+    $this->assertStringContainsString(
+        'Falta CI',
+        $result->failedRows[1]['reason']
+    );
+
+
+
+    // Verificar estudiante válido guardado
+    $this->assertDatabaseHas('estudiante', [
+        'codigo_sis' => '202001234',
+    ]);
+}
 
     public function test_generates_csv_template_content(): void
     {
@@ -298,28 +475,52 @@ CSV;
     }
 
     public function test_handles_rows_with_missing_mandatory_fields(): void
-    {
-        $csvContent = <<<CSV
+{
+    $csvContent = <<<CSV
 codigo_sis,ci,nombre_completo,sigla_materia,nombre_materia,grupo,gestion,email_docente
 202100482,8765432,Perez Gomez Juan Carlos,INF110,Introduccion a la Programacion,1,2/2026,docente@umss.edu.bo
 ,7654321,Sin SIS,INF110,Introduccion a la Programacion,1,2/2026,docente@umss.edu.bo
 CSV;
 
-        $fileData = new RawFileData(
-            content: $csvContent,
-            fileName: 'partial_error.csv',
-            extension: 'csv'
-        );
 
-        $result = $this->storage->importStudentRoster($fileData);
+    $fileData = new RawFileData(
+        content: $csvContent,
+        fileName: 'partial_error.csv',
+        extension: 'csv'
+    );
 
-        $this->assertTrue($result->isSuccessful);
-        $this->assertEquals(2, $result->totalProcessed);
-        $this->assertEquals(1, $result->successful);
-        $this->assertEquals(1, $result->skipped);
-        $this->assertCount(1, $result->observations);
-        $this->assertStringContainsString('Falta codigo sis del estudiante (codigo_sis).', $result->observations[0]);
-    }
+
+    $result = $this->storage->importStudentRoster($fileData);
+
+
+
+    $this->assertTrue($result->isSuccessful);
+
+    $this->assertEquals(
+        2,
+        $result->totalProcessed
+    );
+
+    $this->assertEquals(
+        1,
+        $result->successful
+    );
+
+    $this->assertEquals(
+        1,
+        $result->skipped
+    );
+
+    $this->assertCount(
+        1,
+        $result->observations
+    );
+
+    $this->assertStringContainsString(
+        'Falta codigo sis del estudiante (codigo_sis).',
+        $result->observations[0]
+    );
+}
 
     public function test_detects_malformed_rows_with_column_count_mismatch(): void
     {
@@ -346,174 +547,377 @@ CSV;
     }
 
     public function test_get_academic_staff_returns_only_active_users_ordered_alphabetically(): void
-    {
-        // Active users (different roles, unordered)
-        User::create([
-            'name' => 'Carlos Zapata',
-            'email' => 'czapata@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
+{
+    $usuarioCarlos = Usuario::create([
+        'nombre' => 'Carlos Zapata',
+        'email' => 'czapata@umss.edu.bo',
+        'ci' => '111111',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
 
-        User::create([
-            'name' => 'Ana Morales',
-            'email' => 'amorales@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'ADMIN',
-            'is_active' => true,
-        ]);
 
-        User::create([
-            'name' => 'Bernardo Rojas',
-            'email' => 'brojas@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'ASSISTANT',
-            'is_active' => true,
-        ]);
+    $usuarioAna = Usuario::create([
+        'nombre' => 'Ana Morales',
+        'email' => 'amorales@umss.edu.bo',
+        'ci' => '222222',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
 
-        // Inactive user (must NOT appear in results)
-        User::create([
-            'name' => 'Alberto Desactivado',
-            'email' => 'adesactivado@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'TEACHER',
-            'is_active' => false,
-        ]);
 
-        $staff = $this->storage->getAcademicStaff();
+    $usuarioBernardo = Usuario::create([
+        'nombre' => 'Bernardo Rojas',
+        'email' => 'brojas@umss.edu.bo',
+        'ci' => '333333',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
 
-        $this->assertCount(3, $staff);
 
-        // Verify alphabetical order by full name
-        $this->assertEquals('Ana Morales', $staff[0]->fullName);
-        $this->assertEquals('amorales@umss.edu.bo', $staff[0]->email);
-        $this->assertEquals('ADMIN', $staff[0]->role);
-        $this->assertTrue($staff[0]->isActive);
+    Usuario::create([
+        'nombre' => 'Alberto Desactivado',
+        'email' => 'adesactivado@umss.edu.bo',
+        'ci' => '444444',
+        'contrasena' => bcrypt('password'),
+        'activo' => false,
+    ]);
 
-        $this->assertEquals('Bernardo Rojas', $staff[1]->fullName);
-        $this->assertEquals('brojas@umss.edu.bo', $staff[1]->email);
-        $this->assertEquals('ASSISTANT', $staff[1]->role);
-        $this->assertTrue($staff[1]->isActive);
 
-        $this->assertEquals('Carlos Zapata', $staff[2]->fullName);
-        $this->assertEquals('czapata@umss.edu.bo', $staff[2]->email);
-        $this->assertEquals('TEACHER', $staff[2]->role);
-        $this->assertTrue($staff[2]->isActive);
-    }
+    $staff = $this->storage->getAcademicStaff();
+
+
+
+    $this->assertCount(
+        3,
+        $staff
+    );
+
+
+
+    $this->assertEquals(
+        'Ana Morales',
+        $staff[0]->fullName
+    );
+
+    $this->assertEquals(
+        'amorales@umss.edu.bo',
+        $staff[0]->email
+    );
+
+    $this->assertTrue(
+        $staff[0]->isActive
+    );
+
+
+
+    $this->assertEquals(
+        'Bernardo Rojas',
+        $staff[1]->fullName
+    );
+
+    $this->assertEquals(
+        'brojas@umss.edu.bo',
+        $staff[1]->email
+    );
+
+    $this->assertTrue(
+        $staff[1]->isActive
+    );
+
+
+
+    $this->assertEquals(
+        'Carlos Zapata',
+        $staff[2]->fullName
+    );
+
+    $this->assertEquals(
+        'czapata@umss.edu.bo',
+        $staff[2]->email
+    );
+
+    $this->assertTrue(
+        $staff[2]->isActive
+    );
+}
 
     public function test_get_academic_staff_returns_empty_when_no_active_users(): void
-    {
-        // Only inactive users
-        User::create([
-            'name' => 'Inactivo User',
-            'email' => 'inactivo@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'TEACHER',
-            'is_active' => false,
-        ]);
+{
+    Usuario::create([
+        'nombre' => 'Inactivo User',
+        'email' => 'inactivo@umss.edu.bo',
+        'ci' => '999999',
+        'contrasena' => bcrypt('password'),
+        'activo' => false,
+    ]);
 
-        $staff = $this->storage->getAcademicStaff();
 
-        $this->assertIsArray($staff);
-        $this->assertEmpty($staff);
-    }
+    $staff = $this->storage->getAcademicStaff();
 
-    public function test_get_teacher_courses_returns_assigned_courses_with_enrolled_count(): void
-    {
-        $teacher = User::create([
-            'name' => 'Dr. Walter Sanchez',
-            'email' => 'wsanchez@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
 
-        $otherTeacher = User::create([
-            'name' => 'Lic. Patricia Rios',
-            'email' => 'prios@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
 
-        // Courses for Dr. Walter Sanchez
-        CourseGroup::create([
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'Introduccion a la Programacion',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-            'teacher_id' => $teacher->id,
-        ]);
+    $this->assertIsArray($staff);
 
-        CourseGroup::create([
-            'course_group_id' => 'INF120-G2-2/2026',
-            'subject_code' => 'INF120',
-            'subject_name' => 'Estructura de Datos',
-            'group_code' => '2',
-            'academic_term' => '2/2026',
-            'teacher_id' => $teacher->id,
-        ]);
+    $this->assertEmpty($staff);
+}
 
-        // Course for Lic. Patricia Rios (should not be returned for Walter)
-        CourseGroup::create([
-            'course_group_id' => 'SIS211-G1-2/2026',
-            'subject_code' => 'SIS211',
-            'subject_name' => 'Sistemas Operativos',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-            'teacher_id' => $otherTeacher->id,
-        ]);
+   public function test_get_teacher_courses_returns_assigned_courses_with_enrolled_count(): void
+{
+    $teacher = Usuario::create([
+        'nombre' => 'Dr. Walter Sanchez',
+        'email' => 'wsanchez@umss.edu.bo',
+        'ci' => '111111',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
 
-        // Students & Enrollments
-        Student::create(['student_key' => '20210001', 'ci' => '111111', 'full_name' => 'Estudiante Uno']);
-        Student::create(['student_key' => '20210002', 'ci' => '222222', 'full_name' => 'Estudiante Dos']);
-        Student::create(['student_key' => '20210003', 'ci' => '333333', 'full_name' => 'Estudiante Tres']);
 
-        // 2 students in INF110-G1
-        StudentCourseEnrollment::create(['student_key' => '20210001', 'course_group_id' => 'INF110-G1-2/2026', 'status' => 'HABILITADO']);
-        StudentCourseEnrollment::create(['student_key' => '20210002', 'course_group_id' => 'INF110-G1-2/2026', 'status' => 'HABILITADO']);
+    $otherTeacher = Usuario::create([
+        'nombre' => 'Lic. Patricia Rios',
+        'email' => 'prios@umss.edu.bo',
+        'ci' => '222222',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
 
-        // 1 student in INF120-G2
-        StudentCourseEnrollment::create(['student_key' => '20210003', 'course_group_id' => 'INF120-G2-2/2026', 'status' => 'HABILITADO']);
 
-        $courses = $this->storage->getTeacherCourses($teacher->id);
 
-        $this->assertCount(2, $courses);
+    $materiaInf110 = Materia::create([
+        'sigla' => 'INF110',
+        'nombre' => 'Introduccion a la Programacion',
+        'activo' => true,
+    ]);
 
-        $this->assertEquals('INF110-G1-2/2026', $courses[0]->courseGroupId);
-        $this->assertEquals('INF110', $courses[0]->subjectCode);
-        $this->assertEquals('Introduccion a la Programacion', $courses[0]->subjectName);
-        $this->assertEquals('1', $courses[0]->groupCode);
-        $this->assertEquals('2/2026', $courses[0]->academicTerm);
-        $this->assertEquals(2, $courses[0]->totalEnrolled);
-        $this->assertEquals($teacher->id, $courses[0]->teacherId);
 
-        $this->assertEquals('INF120-G2-2/2026', $courses[1]->courseGroupId);
-        $this->assertEquals('INF120', $courses[1]->subjectCode);
-        $this->assertEquals('Estructura de Datos', $courses[1]->subjectName);
-        $this->assertEquals('2', $courses[1]->groupCode);
-        $this->assertEquals('2/2026', $courses[1]->academicTerm);
-        $this->assertEquals(1, $courses[1]->totalEnrolled);
-        $this->assertEquals($teacher->id, $courses[1]->teacherId);
-    }
+    $materiaInf120 = Materia::create([
+        'sigla' => 'INF120',
+        'nombre' => 'Estructura de Datos',
+        'activo' => true,
+    ]);
 
-    public function test_get_teacher_courses_returns_empty_when_teacher_has_no_courses(): void
-    {
-        $teacher = User::create([
-            'name' => 'Docente Sin Materias',
-            'email' => 'sinmaterias@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
 
-        $courses = $this->storage->getTeacherCourses($teacher->id);
+    $materiaSis211 = Materia::create([
+        'sigla' => 'SIS211',
+        'nombre' => 'Sistemas Operativos',
+        'activo' => true,
+    ]);
 
-        $this->assertIsArray($courses);
-        $this->assertEmpty($courses);
-    }
+
+
+    $grupoInf110 = MateriaGrupo::create([
+        'materia_id' => $materiaInf110->id,
+        'grupo' => '1',
+        'gestion' => '2/2026',
+        'docente_id' => $teacher->id,
+        'activo' => true,
+    ]);
+
+
+    $grupoInf120 = MateriaGrupo::create([
+        'materia_id' => $materiaInf120->id,
+        'grupo' => '2',
+        'gestion' => '2/2026',
+        'docente_id' => $teacher->id,
+        'activo' => true,
+    ]);
+
+
+    MateriaGrupo::create([
+        'materia_id' => $materiaSis211->id,
+        'grupo' => '1',
+        'gestion' => '2/2026',
+        'docente_id' => $otherTeacher->id,
+        'activo' => true,
+    ]);
+
+
+
+    $usuarioEstudiante1 = Usuario::create([
+        'nombre' => 'Estudiante Uno',
+        'email' => '111111@estudiante.umss.edu.bo',
+        'ci' => '1111111',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
+
+
+    $usuarioEstudiante2 = Usuario::create([
+        'nombre' => 'Estudiante Dos',
+        'email' => '222222@estudiante.umss.edu.bo',
+        'ci' => '2222222',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
+
+
+    $usuarioEstudiante3 = Usuario::create([
+        'nombre' => 'Estudiante Tres',
+        'email' => '333333@estudiante.umss.edu.bo',
+        'ci' => '3333333',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
+
+
+
+    Estudiante::create([
+        'codigo_sis' => '20210001',
+        'usuario_id' => $usuarioEstudiante1->id,
+    ]);
+
+
+    Estudiante::create([
+        'codigo_sis' => '20210002',
+        'usuario_id' => $usuarioEstudiante2->id,
+    ]);
+
+
+    Estudiante::create([
+        'codigo_sis' => '20210003',
+        'usuario_id' => $usuarioEstudiante3->id,
+    ]);
+
+
+
+    $estado = EstadoInscripcion::create([
+        'nombre' => 'HABILITADO',
+        'descripcion' => 'Estudiante habilitado para rendir examen',
+    ]);
+
+
+
+    Inscripcion::create([
+        'usuario_id' => $usuarioEstudiante1->id,
+        'materia_grupo_id' => $grupoInf110->id,
+        'estado_inscripcion_id' => $estado->id,
+        'motivo_inhabilitacion' => null,
+        'fecha_inscripcion' => now(),
+    ]);
+
+
+    Inscripcion::create([
+        'usuario_id' => $usuarioEstudiante2->id,
+        'materia_grupo_id' => $grupoInf110->id,
+        'estado_inscripcion_id' => $estado->id,
+        'motivo_inhabilitacion' => null,
+        'fecha_inscripcion' => now(),
+    ]);
+
+
+    Inscripcion::create([
+        'usuario_id' => $usuarioEstudiante3->id,
+        'materia_grupo_id' => $grupoInf120->id,
+        'estado_inscripcion_id' => $estado->id,
+        'motivo_inhabilitacion' => null,
+        'fecha_inscripcion' => now(),
+    ]);
+
+
+
+    $courses = $this->storage->getTeacherCourses($teacher->id);
+
+
+
+    $this->assertCount(
+        2,
+        $courses
+    );
+
+
+
+    $this->assertEquals(
+        $grupoInf110->id,
+        $courses[0]->courseGroupId
+    );
+
+    $this->assertEquals(
+        'INF110',
+        $courses[0]->subjectCode
+    );
+
+    $this->assertEquals(
+        'Introduccion a la Programacion',
+        $courses[0]->subjectName
+    );
+
+    $this->assertEquals(
+        '1',
+        $courses[0]->groupCode
+    );
+
+    $this->assertEquals(
+        '2/2026',
+        $courses[0]->academicTerm
+    );
+
+    $this->assertEquals(
+        2,
+        $courses[0]->totalEnrolled
+    );
+
+    $this->assertEquals(
+        $teacher->id,
+        $courses[0]->teacherId
+    );
+
+
+
+    $this->assertEquals(
+        $grupoInf120->id,
+        $courses[1]->courseGroupId
+    );
+
+    $this->assertEquals(
+        'INF120',
+        $courses[1]->subjectCode
+    );
+
+    $this->assertEquals(
+        'Estructura de Datos',
+        $courses[1]->subjectName
+    );
+
+    $this->assertEquals(
+        '2',
+        $courses[1]->groupCode
+    );
+
+    $this->assertEquals(
+        '2/2026',
+        $courses[1]->academicTerm
+    );
+
+    $this->assertEquals(
+        1,
+        $courses[1]->totalEnrolled
+    );
+
+    $this->assertEquals(
+        $teacher->id,
+        $courses[1]->teacherId
+    );
+}
+
+   public function test_get_teacher_courses_returns_empty_when_teacher_has_no_courses(): void
+{
+    $teacher = Usuario::create([
+        'nombre' => 'Docente Sin Materias',
+        'email' => 'sinmaterias@umss.edu.bo',
+        'ci' => '555555',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
+    ]);
+
+
+    $courses = $this->storage->getTeacherCourses($teacher->id);
+
+
+
+    $this->assertIsArray($courses);
+
+    $this->assertEmpty($courses);
+}
 
  public function test_register_academic_user_successfully(): void
 {
@@ -524,18 +928,27 @@ CSV;
         role: 'DOCENTE'
     );
 
+
     $result = $this->storage->registerAcademicUser($data);
 
-    $this->assertTrue($result->isSuccessful);
+
+
+    $this->assertTrue(
+        $result->isSuccessful
+    );
+
+
     $this->assertEquals(
         'Usuario registrado correctamente',
         $result->message
     );
 
-    $this->assertDatabaseHas('users', [
+
+
+    $this->assertDatabaseHas('usuario', [
         'email' => 'juan.perez@umss.edu.bo',
-        'role' => 'TEACHER',
-        'is_active' => true,
+        'nombre' => 'Juan Perez',
+        'activo' => true,
     ]);
 }
 
@@ -560,13 +973,14 @@ public function test_register_academic_user_rejects_invalid_email_domain(): void
 
 public function test_register_academic_user_rejects_existing_email(): void
 {
-    User::create([
-        'name' => 'Usuario Existente',
+    Usuario::create([
+        'nombre' => 'Usuario Existente',
         'email' => 'existente@umss.edu.bo',
-        'password' => bcrypt('password123'),
-        'role' => 'TEACHER',
-        'is_active' => true,
+        'ci' => '777777',
+        'contrasena' => bcrypt('password123'),
+        'activo' => true,
     ]);
+
 
     $data = new UserRegistrationData(
         fullName: 'Nuevo Usuario',
@@ -575,9 +989,16 @@ public function test_register_academic_user_rejects_existing_email(): void
         role: 'DOCENTE'
     );
 
+
     $result = $this->storage->registerAcademicUser($data);
 
-    $this->assertFalse($result->isSuccessful);
+
+
+    $this->assertFalse(
+        $result->isSuccessful
+    );
+
+
     $this->assertEquals(
         'El correo ya está registrado',
         $result->message
@@ -586,70 +1007,160 @@ public function test_register_academic_user_rejects_existing_email(): void
 
     public function test_get_processed_rosters_returns_all_rosters_with_student_count(): void
 {
-    $teacher = User::create([
-        'name' => 'Walter Sanchez',
+    $teacher = Usuario::create([
+        'nombre' => 'Walter Sanchez',
         'email' => 'wsanchez@umss.edu.bo',
-        'password' => bcrypt('password'),
-        'role' => 'TEACHER',
-        'is_active' => true,
-    ]);
-
-    CourseGroup::create([
-        'course_group_id' => 'INF110-G1-2/2026',
-        'subject_code' => 'INF110',
-        'subject_name' => 'Introduccion a la Programacion',
-        'group_code' => '1',
-        'academic_term' => '2/2026',
-        'teacher_id' => $teacher->id,
-    ]);
-
-    CourseGroup::create([
-        'course_group_id' => 'INF120-G2-2/2026',
-        'subject_code' => 'INF120',
-        'subject_name' => 'Estructura de Datos',
-        'group_code' => '2',
-        'academic_term' => '2/2026',
-        'teacher_id' => $teacher->id,
-    ]);
-
-    Student::create([
-        'student_key' => '20210001',
         'ci' => '111111',
-        'full_name' => 'Student One',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
     ]);
 
-    Student::create([
-        'student_key' => '20210002',
+
+    $materiaInf110 = Materia::create([
+        'sigla' => 'INF110',
+        'nombre' => 'Introduccion a la Programacion',
+        'activo' => true,
+    ]);
+
+
+    $materiaInf120 = Materia::create([
+        'sigla' => 'INF120',
+        'nombre' => 'Estructura de Datos',
+        'activo' => true,
+    ]);
+
+
+
+    $grupoInf110 = MateriaGrupo::create([
+        'materia_id' => $materiaInf110->id,
+        'grupo' => '1',
+        'gestion' => '2/2026',
+        'docente_id' => $teacher->id,
+        'activo' => true,
+    ]);
+
+
+    $grupoInf120 = MateriaGrupo::create([
+        'materia_id' => $materiaInf120->id,
+        'grupo' => '2',
+        'gestion' => '2/2026',
+        'docente_id' => $teacher->id,
+        'activo' => true,
+    ]);
+
+
+
+    $usuarioEstudiante1 = Usuario::create([
+        'nombre' => 'Student One',
+        'email' => 'student1@umss.edu.bo',
         'ci' => '222222',
-        'full_name' => 'Student Two',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
     ]);
 
-    StudentCourseEnrollment::create([
-        'student_key' => '20210001',
-        'course_group_id' => 'INF110-G1-2/2026',
-        'status' => 'HABILITADO',
+
+    $usuarioEstudiante2 = Usuario::create([
+        'nombre' => 'Student Two',
+        'email' => 'student2@umss.edu.bo',
+        'ci' => '333333',
+        'contrasena' => bcrypt('password'),
+        'activo' => true,
     ]);
 
-    StudentCourseEnrollment::create([
-        'student_key' => '20210002',
-        'course_group_id' => 'INF110-G1-2/2026',
-        'status' => 'HABILITADO',
+
+
+    Estudiante::create([
+        'codigo_sis' => '20210001',
+        'usuario_id' => $usuarioEstudiante1->id,
     ]);
+
+
+    Estudiante::create([
+        'codigo_sis' => '20210002',
+        'usuario_id' => $usuarioEstudiante2->id,
+    ]);
+
+
+
+    $estado = EstadoInscripcion::create([
+        'nombre' => 'HABILITADO',
+        'descripcion' => 'Estudiante habilitado para rendir examen',
+    ]);
+
+
+
+    Inscripcion::create([
+        'usuario_id' => $usuarioEstudiante1->id,
+        'materia_grupo_id' => $grupoInf110->id,
+        'estado_inscripcion_id' => $estado->id,
+        'motivo_inhabilitacion' => null,
+        'fecha_inscripcion' => now(),
+    ]);
+
+
+    Inscripcion::create([
+        'usuario_id' => $usuarioEstudiante2->id,
+        'materia_grupo_id' => $grupoInf110->id,
+        'estado_inscripcion_id' => $estado->id,
+        'motivo_inhabilitacion' => null,
+        'fecha_inscripcion' => now(),
+    ]);
+
+
 
     $rosters = $this->storage->getProcessedRosters();
 
-    $this->assertCount(2, $rosters);
 
-    $this->assertEquals('INF110-G1-2/2026', $rosters[0]->courseGroupId);
-    $this->assertEquals('INF110', $rosters[0]->subjectCode);
-    $this->assertEquals('Introduccion a la Programacion', $rosters[0]->subjectName);
-    $this->assertEquals('1', $rosters[0]->groupCode);
-    $this->assertEquals('2/2026', $rosters[0]->academicTerm);
-    $this->assertEquals(2, $rosters[0]->totalStudents);
 
-    $this->assertEquals('INF120-G2-2/2026', $rosters[1]->courseGroupId);
-    $this->assertEquals(0, $rosters[1]->totalStudents);
-} 
+    $this->assertCount(
+        2,
+        $rosters
+    );
+
+
+
+    $this->assertEquals(
+        $grupoInf110->id,
+        $rosters[0]->courseGroupId
+    );
+
+    $this->assertEquals(
+        'INF110',
+        $rosters[0]->subjectCode
+    );
+
+    $this->assertEquals(
+        'Introduccion a la Programacion',
+        $rosters[0]->subjectName
+    );
+
+    $this->assertEquals(
+        '1',
+        $rosters[0]->groupCode
+    );
+
+    $this->assertEquals(
+        '2/2026',
+        $rosters[0]->academicTerm
+    );
+
+    $this->assertEquals(
+        2,
+        $rosters[0]->totalStudents
+    );
+
+
+
+    $this->assertEquals(
+        $grupoInf120->id,
+        $rosters[1]->courseGroupId
+    );
+
+    $this->assertEquals(
+        0,
+        $rosters[1]->totalStudents
+    );
+}
 
     public function test_get_processed_rosters_returns_empty_array_when_no_rosters_exist(): void
     {
@@ -660,62 +1171,101 @@ public function test_register_academic_user_rejects_existing_email(): void
     }
 
     public function test_update_academic_user_successfully(): void
-    {
-        $user = User::create([
-            'name' => 'Carlos Morales',
-            'email' => 'carlos.morales@umss.edu.bo',
-            'password' => bcrypt('oldpassword123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
+{
+    $user = Usuario::create([
+        'nombre' => 'Carlos Morales',
+        'email' => 'carlos.morales@umss.edu.bo',
+        'ci' => '888888',
+        'contrasena' => bcrypt('oldpassword123'),
+        'activo' => true,
+    ]);
 
-        $updateData = new UserUpdateData(
-            fullName: 'Carlos Morales Modificado',
-            email: 'carlos.m@umss.edu.bo',
-            role: 'DOCENTE',
-            newPassword: null
-        );
 
-        $result = $this->storage->updateAcademicUser($user->id, $updateData);
+    $updateData = new UserUpdateData(
+        fullName: 'Carlos Morales Modificado',
+        email: 'carlos.m@umss.edu.bo',
+        role: 'DOCENTE',
+        newPassword: null
+    );
 
-        $this->assertTrue($result->isSuccessful);
-        $this->assertEquals('Usuario actualizado correctamente', $result->message);
 
-        $this->assertDatabaseHas('users', [
-            'id' => $user->id,
-            'name' => 'Carlos Morales Modificado',
-            'email' => 'carlos.m@umss.edu.bo',
-            'role' => 'TEACHER',
-        ]);
-    }
+    $result = $this->storage->updateAcademicUser(
+        $user->id,
+        $updateData
+    );
+
+
+    $this->assertTrue(
+        $result->isSuccessful
+    );
+
+
+    $this->assertEquals(
+        'Usuario actualizado correctamente',
+        $result->message
+    );
+
+
+    $this->assertDatabaseHas('usuario', [
+        'id' => $user->id,
+        'nombre' => 'Carlos Morales Modificado',
+        'email' => 'carlos.m@umss.edu.bo',
+        'activo' => true,
+    ]);
+}
 
     public function test_update_academic_user_with_new_password_successfully(): void
-    {
-        $user = User::create([
-            'name' => 'Ana Torrico',
-            'email' => 'ana.torrico@umss.edu.bo',
-            'password' => bcrypt('oldpassword123'),
-            'role' => 'ASSISTANT',
-            'is_active' => true,
-        ]);
+{
+    $user = Usuario::create([
+        'nombre' => 'Ana Torrico',
+        'email' => 'ana.torrico@umss.edu.bo',
+        'ci' => '999999',
+        'contrasena' => bcrypt('oldpassword123'),
+        'activo' => true,
+    ]);
 
-        $updateData = new UserUpdateData(
-            fullName: 'Ana Patricia Torrico',
-            email: 'ana.torrico@umss.edu.bo',
-            role: 'DOCENTE',
-            newPassword: 'NewSecurePassword123'
-        );
 
-        $result = $this->storage->updateAcademicUser($user->id, $updateData);
+    $updateData = new UserUpdateData(
+        fullName: 'Ana Patricia Torrico',
+        email: 'ana.torrico@umss.edu.bo',
+        role: 'DOCENTE',
+        newPassword: 'NewSecurePassword123'
+    );
 
-        $this->assertTrue($result->isSuccessful);
-        $this->assertEquals('Usuario actualizado correctamente', $result->message);
 
-        $user->refresh();
-        $this->assertEquals('Ana Patricia Torrico', $user->name);
-        $this->assertEquals('TEACHER', $user->role);
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewSecurePassword123', $user->password));
-    }
+    $result = $this->storage->updateAcademicUser(
+        $user->id,
+        $updateData
+    );
+
+
+    $this->assertTrue(
+        $result->isSuccessful
+    );
+
+
+    $this->assertEquals(
+        'Usuario actualizado correctamente',
+        $result->message
+    );
+
+
+    $user->refresh();
+
+
+    $this->assertEquals(
+        'Ana Patricia Torrico',
+        $user->nombre
+    );
+
+
+    $this->assertTrue(
+        \Illuminate\Support\Facades\Hash::check(
+            'NewSecurePassword123',
+            $user->contrasena
+        )
+    );
+}
 
     public function test_update_academic_user_returns_error_when_user_not_found(): void
     {
@@ -732,121 +1282,235 @@ public function test_register_academic_user_rejects_existing_email(): void
     }
 
     public function test_update_academic_user_rejects_invalid_email_domain(): void
-    {
-        $user = User::create([
-            'name' => 'Docente Prueba',
-            'email' => 'prueba@umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
+{
+    $user = Usuario::create([
+        'nombre' => 'Docente Prueba',
+        'email' => 'prueba@umss.edu.bo',
+        'ci' => '123456',
+        'contrasena' => bcrypt('password123'),
+        'activo' => true,
+    ]);
 
-        $updateData = new UserUpdateData(
-            fullName: 'Docente Prueba',
-            email: 'prueba@gmail.com',
-            role: 'DOCENTE'
-        );
 
-        $result = $this->storage->updateAcademicUser($user->id, $updateData);
+    $updateData = new UserUpdateData(
+        fullName: 'Docente Prueba',
+        email: 'prueba@gmail.com',
+        role: 'DOCENTE'
+    );
 
-        $this->assertFalse($result->isSuccessful);
-        $this->assertStringContainsString('@umss.edu.bo', $result->message);
-    }
+
+    $result = $this->storage->updateAcademicUser(
+        $user->id,
+        $updateData
+    );
+
+
+    $this->assertFalse(
+        $result->isSuccessful
+    );
+
+
+    $this->assertStringContainsString(
+        '@umss.edu.bo',
+        $result->message
+    );
+}
 
     public function test_update_academic_user_rejects_email_used_by_another_user(): void
-    {
-        User::create([
-            'name' => 'Usuario Uno',
-            'email' => 'usuario.uno@umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
+{
+    Usuario::create([
+        'nombre' => 'Usuario Uno',
+        'email' => 'usuario.uno@umss.edu.bo',
+        'ci' => '111111',
+        'contrasena' => bcrypt('password123'),
+        'activo' => true,
+    ]);
 
-        $userTwo = User::create([
-            'name' => 'Usuario Dos',
-            'email' => 'usuario.dos@umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
 
-        $updateData = new UserUpdateData(
-            fullName: 'Usuario Dos Modificado',
-            email: 'usuario.uno@umss.edu.bo',
-            role: 'DOCENTE'
-        );
+    $userTwo = Usuario::create([
+        'nombre' => 'Usuario Dos',
+        'email' => 'usuario.dos@umss.edu.bo',
+        'ci' => '222222',
+        'contrasena' => bcrypt('password123'),
+        'activo' => true,
+    ]);
 
-        $result = $this->storage->updateAcademicUser($userTwo->id, $updateData);
 
-        $this->assertFalse($result->isSuccessful);
-        $this->assertEquals('El correo ya está registrado por otro usuario', $result->message);
-    }
 
+    $updateData = new UserUpdateData(
+        fullName: 'Usuario Dos Modificado',
+        email: 'usuario.uno@umss.edu.bo',
+        role: 'DOCENTE'
+    );
+
+
+
+    $result = $this->storage->updateAcademicUser(
+        $userTwo->id,
+        $updateData
+    );
+
+
+
+    $this->assertFalse(
+        $result->isSuccessful
+    );
+
+
+    $this->assertEquals(
+        'El correo ya está registrado por otro usuario',
+        $result->message
+    );
+}
     public function test_get_enrolled_students_returns_students_with_status_ordered_by_name(): void
-    {
-        $teacher = User::create([
-            'name' => 'Docente Titular',
-            'email' => 'docente@umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
+{
+    $teacher = Usuario::create([
+        'nombre' => 'Docente Titular',
+        'email' => 'docente@umss.edu.bo',
+        'ci' => '111111',
+        'contrasena' => bcrypt('password123'),
+        'activo' => true,
+    ]);
 
-        CourseGroup::create([
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'Introduccion a la Programacion',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-            'teacher_id' => $teacher->id,
-        ]);
 
-        Student::create([
-            'student_key' => '202001234',
-            'ci' => '7891234',
-            'full_name' => 'ZAMBRANA MARIO',
-        ]);
+    $materia = Materia::create([
+        'sigla' => 'INF110',
+        'nombre' => 'Introduccion a la Programacion',
+        'activo' => true,
+    ]);
 
-        Student::create([
-            'student_key' => '202005678',
-            'ci' => '6543210',
-            'full_name' => 'ALVAREZ PEDRO',
-        ]);
 
-        StudentCourseEnrollment::create([
-            'student_key' => '202001234',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'INHABILITADO',
-            'ineligibility_reason' => 'No entrego Proyecto 2',
-        ]);
+    $materiaGrupo = MateriaGrupo::create([
+        'materia_id' => $materia->id,
+        'grupo' => '1',
+        'gestion' => '2/2026',
+        'docente_id' => $teacher->id,
+        'activo' => true,
+    ]);
 
-        StudentCourseEnrollment::create([
-            'student_key' => '202005678',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
-            'ineligibility_reason' => null,
-        ]);
 
-        $results = $this->storage->getEnrolledStudents('INF110-G1-2/2026');
 
-        $this->assertCount(2, $results);
-        $this->assertEquals('ALVAREZ PEDRO', $results[0]->fullName);
-        $this->assertEquals('HABILITADO', $results[0]->status);
-        $this->assertNull($results[0]->ineligibilityReason);
+    $usuarioMario = Usuario::create([
+        'nombre' => 'ZAMBRANA MARIO',
+        'email' => 'mario@umss.edu.bo',
+        'ci' => '7891234',
+        'contrasena' => bcrypt('password123'),
+        'activo' => true,
+    ]);
 
-        $this->assertEquals('ZAMBRANA MARIO', $results[1]->fullName);
-        $this->assertEquals('INHABILITADO', $results[1]->status);
-        $this->assertEquals('No entrego Proyecto 2', $results[1]->ineligibilityReason);
-    }
 
-    public function test_get_enrolled_students_returns_empty_when_no_students(): void
-    {
-        $results = $this->storage->getEnrolledStudents('MAT101-G1-2/2026');
+    $usuarioPedro = Usuario::create([
+        'nombre' => 'ALVAREZ PEDRO',
+        'email' => 'pedro@umss.edu.bo',
+        'ci' => '6543210',
+        'contrasena' => bcrypt('password123'),
+        'activo' => true,
+    ]);
 
-        $this->assertIsArray($results);
-        $this->assertEmpty($results);
-    }
+
+
+    Estudiante::create([
+        'codigo_sis' => '202001234',
+        'usuario_id' => $usuarioMario->id,
+    ]);
+
+
+    Estudiante::create([
+        'codigo_sis' => '202005678',
+        'usuario_id' => $usuarioPedro->id,
+    ]);
+
+
+
+    $estadoHabilitado = EstadoInscripcion::create([
+        'nombre' => 'HABILITADO',
+        'descripcion' => 'Estudiante habilitado para rendir examen',
+    ]);
+
+
+    $estadoInhabilitado = EstadoInscripcion::create([
+        'nombre' => 'INHABILITADO',
+        'descripcion' => 'Estudiante inhabilitado para rendir examen',
+    ]);
+
+
+
+    Inscripcion::create([
+        'usuario_id' => $usuarioMario->id,
+        'materia_grupo_id' => $materiaGrupo->id,
+        'estado_inscripcion_id' => $estadoInhabilitado->id,
+        'motivo_inhabilitacion' => 'No entrego Proyecto 2',
+        'fecha_inscripcion' => now(),
+    ]);
+
+
+    Inscripcion::create([
+        'usuario_id' => $usuarioPedro->id,
+        'materia_grupo_id' => $materiaGrupo->id,
+        'estado_inscripcion_id' => $estadoHabilitado->id,
+        'motivo_inhabilitacion' => null,
+        'fecha_inscripcion' => now(),
+    ]);
+
+
+
+    $results = $this->storage->getEnrolledStudents(
+        $materiaGrupo->id
+    );
+
+
+
+    $this->assertCount(
+        2,
+        $results
+    );
+
+
+    $this->assertEquals(
+        'ALVAREZ PEDRO',
+        $results[0]->fullName
+    );
+
+
+    $this->assertEquals(
+        'HABILITADO',
+        $results[0]->status
+    );
+
+
+    $this->assertNull(
+        $results[0]->ineligibilityReason
+    );
+
+
+
+    $this->assertEquals(
+        'ZAMBRANA MARIO',
+        $results[1]->fullName
+    );
+
+
+    $this->assertEquals(
+        'INHABILITADO',
+        $results[1]->status
+    );
+
+
+    $this->assertEquals(
+        'No entrego Proyecto 2',
+        $results[1]->ineligibilityReason
+    );
+}
+
+   public function test_get_enrolled_students_returns_empty_when_no_students(): void
+{
+    $results = $this->storage->getEnrolledStudents(99999);
+
+
+    $this->assertIsArray($results);
+
+    $this->assertEmpty($results);
+}
 
     /** @param array<int, array<int, string>> $rows */
     private function makeXlsxContent(array $rows): string
