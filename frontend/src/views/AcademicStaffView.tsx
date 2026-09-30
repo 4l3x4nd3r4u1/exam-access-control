@@ -26,6 +26,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [isNewUserDrawerOpen, setIsNewUserDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AcademicStaffMember | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const loadStaff = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -41,6 +42,17 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
       setIsLoading(false);
     }
   }, []);
+
+  const filteredStaff = staff.filter((member) => {
+    const search = searchTerm.toLowerCase().trim();
+
+    if (!search) return true;
+
+    return (
+      member.full_name.toLowerCase().includes(search) ||
+      member.role.toLowerCase().includes(search)
+    );
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -86,6 +98,17 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
       </section>
 
       <section className="academic-staff-list" aria-label="Listado de personal académico">
+
+        <div className="academic-staff-search">
+          <input
+            type="text"
+            placeholder="Buscar usuario..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            aria-label="Buscar usuario"
+          />
+        </div>
+
         <div className="academic-staff-table-header">
           <span>rol</span>
           <span>nombre</span>
@@ -94,14 +117,10 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
 
         {isLoading && <p className="academic-staff-feedback">Cargando personal académico...</p>}
         {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
-        {!isLoading && !error && staff.map((member) => (
+        {!isLoading && !error && filteredStaff.map((member) => (
           <div className="academic-staff-row" key={member.user_id}>
             <span>{formatRole(member.role)}</span>
             <span title={member.full_name}>{member.full_name}</span>
-            <button type="button" className="academic-staff-edit" onClick={() => {
-              setSelectedUser(member);
-              setIsNewUserDrawerOpen(true);
-            }}>Editar</button>
           </div>
         ))}
       </section>
