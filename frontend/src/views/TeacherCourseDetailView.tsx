@@ -1,6 +1,8 @@
+import { useState } from "react";
 import enrolledStudentsIcon from "../assets/estudiantes_inscritos.svg";
 import examDocumentIcon from "../assets/documento_examen.svg";
 import defaultSubjectIcon from "../assets/icono_materia-2.svg";
+import { ScheduleExamDrawer } from "../components/ScheduleExamDrawer";
 import type { TeacherCourse } from "../types/course";
 
 interface TeacherCourseDetailViewProps {
@@ -42,6 +44,7 @@ export function TeacherCourseDetailView({
     onOpenStudents,
     onOpenExams,
 }: TeacherCourseDetailViewProps) {
+    const [isScheduleExamOpen, setIsScheduleExamOpen] = useState(false);
     const iconoMateria = course.subject_name?.toLowerCase().includes("program")
         ? defaultSubjectIcon
         : (subjectIcon || defaultSubjectIcon);
@@ -102,11 +105,13 @@ export function TeacherCourseDetailView({
 
                 <button
                     type="button"
-                    className="teacher-course-action-card disabled-action"
-                    aria-label="Exámenes"
+                    className="teacher-course-action-card"
+                    onClick={() => setIsScheduleExamOpen(true)}
+                    aria-label="Programar Examen"
                 >
+                    <span className="teacher-course-action-chevron" aria-hidden="true">›</span>
                     <img src={examDocumentIcon} alt="" />
-                    <span>Exámenes</span>
+                    <span>Programar<br />Examen</span>
                 </button>
 
                 <button
@@ -115,6 +120,7 @@ export function TeacherCourseDetailView({
                     onClick={onOpenExams}
                     aria-label="Ver exámenes programados"
                 >
+                    <span className="teacher-course-action-chevron" aria-hidden="true">›</span>
                     <img src={examDocumentIcon} alt="" />
                     <span>Examenes<br />Programados</span>
                 </button>
@@ -128,6 +134,12 @@ export function TeacherCourseDetailView({
                     <span>Estado de<br />habilitacion</span>
                 </button>
             </section>
+
+            <ScheduleExamDrawer
+                isOpen={isScheduleExamOpen}
+                onClose={() => setIsScheduleExamOpen(false)}
+                course={course}
+            />
         </main>
     );
 }

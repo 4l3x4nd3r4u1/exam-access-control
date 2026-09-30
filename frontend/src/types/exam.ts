@@ -29,3 +29,12 @@ export interface CourseExamsResponse {
 }
 
 export type RespuestaExamenesCurso = CourseExamsResponse;
+
+export interface ScheduleExamPayload {
+    tipo_examen: string;
+    fecha: string;
+    hora_inicio: string;
+    hora_fin: string;
+    aulas: string[];
+    normas: string[];
+}

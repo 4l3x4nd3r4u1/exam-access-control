@@ -9,6 +9,8 @@ use App\DTOs\UserSession;
 use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
+use App\DTOs\ExamSummary;
+use App\DTOs\ScheduleExamData;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\EstadoInscripcion;
 use App\Models\Usuario;
@@ -17,6 +19,11 @@ use App\Models\Estudiante;
 use App\Models\Materia;
 use App\Models\MateriaGrupo;
 use App\Models\Inscripcion;
+use App\Models\Examen;
+use App\Models\TipoExamen;
+use App\Models\Aula;
+use App\Models\ExamenAula;
+use App\Models\ExamenNorma;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -316,6 +323,182 @@ class CoreDataStorage
             );
         })->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
     }
+
+    /**
+     * Retrieves all exams scheduled for a course group.
+     *
+     * @param string $courseGroupId
+     * @return array<ExamSummary>
+     */
+    public function getCourseExams(string $courseGroupId): array
+    {
+        $mGroupId = $this->resolveCourseGroupId($courseGroupId);
+
+        if (!$mGroupId) {
+            return [];
+        }
+
+        $exams = Examen::where('materia_grupo_id', $mGroupId)
+            ->where('activo', true)
+            ->with(['tipo', 'aulas', 'normas'])
+            ->orderBy('fecha', 'asc')
+            ->orderBy('hora_inicio', 'asc')
+            ->get();
+
+        $now = now();
+        $todayStr = $now->format('Y-m-d');
+        $nowTimeStr = $now->format('H:i:s');
+
+        return $exams->map(function (Examen $exam) use ($courseGroupId, $todayStr, $nowTimeStr) {
+            $fechaStr = $exam->fecha instanceof \DateTimeInterface
+                ? $exam->fecha->format('Y-m-d')
+                : (string) $exam->fecha;
+
+            $startTimeFormatted = date('H:i', strtotime($exam->hora_inicio));
+            $endTimeFormatted = date('H:i', strtotime($exam->hora_fin));
+            $dateDisplay = date('d/m/Y', strtotime($fechaStr));
+
+            if ($fechaStr < $todayStr || ($fechaStr === $todayStr && $exam->hora_fin < $nowTimeStr)) {
+                $status = 'Finalizado';
+            } elseif ($fechaStr === $todayStr && $exam->hora_inicio <= $nowTimeStr && $exam->hora_fin >= $nowTimeStr) {
+                $status = 'En curso';
+            } else {
+                $status = 'Próximamente';
+            }
+
+            return new ExamSummary(
+                id: (int) $exam->id,
+                courseGroupId: $courseGroupId,
+                title: (string) ($exam->tipo?->nombre ?? 'Examen'),
+                date: $dateDisplay,
+                startTime: $startTimeFormatted,
+                endTime: $endTimeFormatted,
+                status: $status,
+                classrooms: $exam->aulas->pluck('nombre')->all(),
+                rules: $exam->normas->pluck('descripcion')->all()
+            );
+        })->all();
+    }
+
+    /**
+     * Schedules a new exam for a course group.
+     *
+     * @param string $courseGroupId
+     * @param ScheduleExamData $data
+     * @return OperationResult
+     */
+    public function scheduleExam(string $courseGroupId, ScheduleExamData $data): OperationResult
+    {
+        $mGroupId = $this->resolveCourseGroupId($courseGroupId);
+
+        if (!$mGroupId || !MateriaGrupo::where('id', $mGroupId)->exists()) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El grupo de materia especificado no existe.'
+            );
+        }
+
+        $parsedDate = date('Y-m-d', strtotime($data->date));
+        $parsedStartTime = date('H:i:s', strtotime($data->startTime));
+        $parsedEndTime = date('H:i:s', strtotime($data->endTime));
+
+        if (!$parsedDate || $parsedDate === '1970-01-01') {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'La fecha proporcionada no es válida.'
+            );
+        }
+
+        try {
+            DB::transaction(function () use ($mGroupId, $data, $parsedDate, $parsedStartTime, $parsedEndTime) {
+                $tipoExamen = TipoExamen::firstOrCreate([
+                    'nombre' => trim($data->title)
+                ]);
+
+                $examen = Examen::create([
+                    'materia_grupo_id' => $mGroupId,
+                    'tipo_examen_id' => $tipoExamen->id,
+                    'fecha' => $parsedDate,
+                    'hora_inicio' => $parsedStartTime,
+                    'hora_fin' => $parsedEndTime,
+                    'activo' => true,
+                ]);
+
+                foreach ($data->classrooms as $roomName) {
+                    $cleanName = trim((string) $roomName);
+                    if ($cleanName === '') {
+                        continue;
+                    }
+
+                    $capacidad = str_contains(strtolower($cleanName), 'auditorio') ? 120 : 80;
+                    $aula = Aula::firstOrCreate(
+                        ['nombre' => $cleanName],
+                        ['capacidad' => $capacidad]
+                    );
+
+                    ExamenAula::firstOrCreate([
+                        'examen_id' => $examen->id,
+                        'aula_id' => $aula->id,
+                    ], [
+                        'cupo_asignado' => $aula->capacidad ?? $capacidad,
+                    ]);
+                }
+
+                foreach ($data->rules as $ruleText) {
+                    $cleanRule = trim((string) $ruleText);
+                    if ($cleanRule === '') {
+                        continue;
+                    }
+
+                    ExamenNorma::create([
+                        'examen_id' => $examen->id,
+                        'descripcion' => $cleanRule,
+                    ]);
+                }
+            });
+
+            return new OperationResult(
+                isSuccessful: true,
+                message: 'Examen programado exitosamente.'
+            );
+        } catch (\Throwable $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Error al programar el examen: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Resolves course group ID from an integer string or canonical format (e.g. 'INF110-G1-2/2026').
+     */
+    private function resolveCourseGroupId(string $courseGroupId): ?int
+    {
+        if (is_numeric($courseGroupId)) {
+            return (int) $courseGroupId;
+        }
+
+        $parts = explode('-', $courseGroupId);
+        if (count($parts) >= 3) {
+            $sigla = $parts[0];
+            $grupo = ltrim($parts[1], 'Gg');
+            $gestion = implode('-', array_slice($parts, 2));
+
+            $materia = Materia::where('sigla', strtoupper($sigla))->first();
+            if ($materia) {
+                $mg = MateriaGrupo::where('materia_id', $materia->id)
+                    ->where('grupo', strtoupper($grupo))
+                    ->where('gestion', $gestion)
+                    ->first();
+                if ($mg) {
+                    return (int) $mg->id;
+                }
+            }
+        }
+
+        return null;
+    }
+
 
     /**
      * Mandatory column headers required in the roster file.

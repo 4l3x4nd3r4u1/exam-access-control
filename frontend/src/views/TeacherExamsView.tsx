@@ -109,7 +109,11 @@ export function TeacherExamsView({ course, onBack }: TeacherExamsViewProps) {
                 {cargando && <p className="teacher-courses-feedback">Cargando exámenes...</p>}
                 {error && <p className="teacher-courses-feedback teacher-courses-error" role="alert">{error}</p>}
 
-                {!cargando && !error && (
+                {!cargando && !error && examenes.length === 0 && (
+                    <p className="teacher-courses-feedback">No hay exámenes programados para esta materia.</p>
+                )}
+
+                {!cargando && !error && examenes.length > 0 && (
                     <div className="teacher-exams-list">
                         {examenes.map((examen) => (
                             <article className="teacher-exam-card" key={examen.id}>
