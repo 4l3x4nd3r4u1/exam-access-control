@@ -10,8 +10,29 @@ class AcademicUserTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function createAuthenticatedUser(): array
+    {
+        $user = User::create([
+            'nombre' => 'Admin User',
+            'email' => 'admin@umss.edu.bo',
+            'contrasena' => bcrypt('password123'),
+            'activo' => true,
+        ]);
+
+        $loginResponse = $this->postJson('/api/auth/login', [
+            'email' => 'admin@umss.edu.bo',
+            'password' => 'password123',
+        ]);
+
+        $token = $loginResponse->json('data.token');
+
+        return ['user' => $user, 'token' => $token];
+    }
+
     public function test_can_register_academic_user(): void
     {
+        $auth = $this->createAuthenticatedUser();
+
         $payload = [
             'fullName' => 'Mariana Rios',
             'email' => 'mariana.rios@umss.edu.bo',
@@ -19,7 +40,8 @@ class AcademicUserTest extends TestCase
             'roles' => ['DOCENTE'],
         ];
 
-        $response = $this->postJson('/api/academic-users', $payload);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $auth['token'])
+            ->postJson('/api/academic-users', $payload);
 
         $response
             ->assertStatus(201)
@@ -34,8 +56,10 @@ class AcademicUserTest extends TestCase
         ]);
     }
 
-    public function test_can_update_academic_user(): void
+    public function test_can_update_user_roles(): void
     {
+        $auth = $this->createAuthenticatedUser();
+
         $user = User::create([
             'nombre' => 'Carlos Morales',
             'email' => 'carlos.morales@umss.edu.bo',
@@ -44,65 +68,32 @@ class AcademicUserTest extends TestCase
         ]);
 
         $payload = [
-            'fullName' => 'Carlos Morales Modificado',
-            'email' => 'carlos.m@umss.edu.bo',
-            'roles' => ['DOCENTE'],
+            'userId' => $user->id,
+            'roles' => ['DOCENTE', 'ADMIN'],
         ];
 
-        $response = $this->putJson("/api/academic-users/{$user->id}", $payload);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $auth['token'])
+            ->putJson("/api/academic-users/{$user->id}/roles", $payload);
 
         $response
             ->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Usuario actualizado correctamente',
+                'message' => 'Roles actualizados correctamente',
             ]);
-
-        $this->assertDatabaseHas('usuario', [
-            'id' => $user->id,
-            'nombre' => 'Carlos Morales Modificado',
-            'email' => 'carlos.m@umss.edu.bo',
-        ]);
     }
 
-    public function test_can_update_academic_user_with_new_password(): void
+    public function test_update_user_roles_returns_404_when_user_not_found(): void
     {
-        $user = User::create([
-            'nombre' => 'Ana Torrico',
-            'email' => 'ana.torrico@umss.edu.bo',
-            'contrasena' => bcrypt('oldpassword123'),
-            'activo' => true,
-        ]);
+        $auth = $this->createAuthenticatedUser();
 
         $payload = [
-            'fullName' => 'Ana Patricia Torrico',
-            'email' => 'ana.torrico@umss.edu.bo',
-            'roles' => ['DOCENTE'],
-            'newPassword' => 'NewPassword123!',
-        ];
-
-        $response = $this->putJson("/api/academic-users/{$user->id}", $payload);
-
-        $response
-            ->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'message' => 'Usuario actualizado correctamente',
-            ]);
-
-        $user->refresh();
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewPassword123!', $user->contrasena));
-    }
-
-    public function test_update_returns_404_when_user_not_found(): void
-    {
-        $payload = [
-            'fullName' => 'No Existe',
-            'email' => 'no.existe@umss.edu.bo',
+            'userId' => 99999,
             'roles' => ['DOCENTE'],
         ];
 
-        $response = $this->putJson('/api/academic-users/99999', $payload);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $auth['token'])
+            ->putJson('/api/academic-users/99999/roles', $payload);
 
         $response
             ->assertStatus(404)
@@ -112,19 +103,20 @@ class AcademicUserTest extends TestCase
             ]);
     }
 
-    public function test_update_validates_required_fields(): void
+    public function test_update_user_roles_validates_required_fields(): void
     {
+        $auth = $this->createAuthenticatedUser();
+
         $payload = [
-            'fullName' => '',
-            'email' => 'invalido',
+            'userId' => 1,
             'roles' => ['ROL_INVALIDO'],
-            'newPassword' => '123',
         ];
 
-        $response = $this->putJson('/api/academic-users/1', $payload);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $auth['token'])
+            ->putJson('/api/academic-users/1/roles', $payload);
 
         $response
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['fullName', 'email', 'roles.0', 'newPassword']);
+            ->assertJsonValidationErrors(['roles.0']);
     }
 }

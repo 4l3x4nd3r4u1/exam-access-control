@@ -10,22 +10,40 @@ class ExamRoom extends Model
 {
     use HasFactory;
 
-    protected $table = 'exam_rooms';
+    protected $table = 'examen_aula';
     public $incrementing = false;
+    protected $primaryKey = ['examen_id', 'aula_id'];
 
     protected $fillable = [
-        'exam_id',
-        'room_id',
-        'assigned_capacity',
+        'examen_id',
+        'aula_id',
+        'cupo_asignado',
+        'auxiliar_id',
     ];
 
     public function exam(): BelongsTo
     {
-        return $this->belongsTo(Exam::class, 'exam_id');
+        return $this->belongsTo(Exam::class, 'examen_id');
     }
 
     public function room(): BelongsTo
     {
-        return $this->belongsTo(Room::class, 'room_id');
+        return $this->belongsTo(Room::class, 'aula_id');
+    }
+
+    public function assistant(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'auxiliar_id');
+    }
+
+    // Accessors for backward compatibility
+    public function getAssignedCapacityAttribute(): int
+    {
+        return (int) ($this->cupo_asignado ?? 0);
+    }
+
+    public function getRoomIdAttribute(): mixed
+    {
+        return $this->aula_id;
     }
 }

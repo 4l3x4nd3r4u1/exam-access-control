@@ -347,6 +347,8 @@ CSV;
 
     public function test_get_academic_staff_returns_only_active_users_ordered_alphabetically(): void
     {
+        User::query()->update(['activo' => false]);
+
         // Active users (different roles, unordered)
         User::create([
             'name' => 'Carlos Zapata',
@@ -404,6 +406,8 @@ CSV;
 
     public function test_get_academic_staff_returns_empty_when_no_active_users(): void
     {
+        User::query()->update(['activo' => false]);
+
         // Only inactive users
         User::create([
             'name' => 'Inactivo User',
@@ -518,8 +522,8 @@ CSV;
  public function test_register_academic_user_successfully(): void
 {
     $data = new UserRegistrationData(
-        fullName: 'Juan Perez',
-        email: 'juan.perez@umss.edu.bo',
+        fullName: 'Juan Perez Nuevo',
+        email: 'juan.perez.nuevo@umss.edu.bo',
         password: 'password123',
         role: 'DOCENTE'
     );
@@ -532,10 +536,10 @@ CSV;
         $result->message
     );
 
-    $this->assertDatabaseHas('users', [
-        'email' => 'juan.perez@umss.edu.bo',
-        'role' => 'TEACHER',
-        'is_active' => true,
+    $this->assertDatabaseHas('usuario', [
+        'email' => 'juan.perez.nuevo@umss.edu.bo',
+        'nombre' => 'Juan Perez Nuevo',
+        'activo' => true,
     ]);
 }
 
@@ -681,12 +685,13 @@ public function test_register_academic_user_rejects_existing_email(): void
         $this->assertTrue($result->isSuccessful);
         $this->assertEquals('Usuario actualizado correctamente', $result->message);
 
-        $this->assertDatabaseHas('users', [
+        $this->assertDatabaseHas('usuario', [
             'id' => $user->id,
-            'name' => 'Carlos Morales Modificado',
+            'nombre' => 'Carlos Morales Modificado',
             'email' => 'carlos.m@umss.edu.bo',
-            'role' => 'TEACHER',
         ]);
+        $user->refresh();
+        $this->assertEquals('TEACHER', $user->role);
     }
 
     public function test_update_academic_user_with_new_password_successfully(): void

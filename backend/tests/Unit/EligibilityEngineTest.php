@@ -64,11 +64,12 @@ class EligibilityEngineTest extends TestCase
         $this->assertTrue($result->isSuccessful);
         $this->assertEquals('Estado del estudiante actualizado correctamente.', $result->message);
 
-        $this->assertDatabaseHas('student_course_enrollments', [
-            'student_key' => '202100482',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'INHABILITADO',
-            'ineligibility_reason' => 'No entrego Proyecto 2',
+        $enrollment = StudentCourseEnrollment::first();
+        $this->assertNotNull($enrollment);
+        $this->assertEquals('INHABILITADO', $enrollment->status);
+        $this->assertEquals('No entrego Proyecto 2', $enrollment->ineligibility_reason);
+        $this->assertDatabaseHas('inscripcion', [
+            'motivo_inhabilitacion' => 'No entrego Proyecto 2',
         ]);
     }
 
@@ -114,11 +115,12 @@ class EligibilityEngineTest extends TestCase
         $this->assertTrue($result->isSuccessful);
         $this->assertEquals('Estado del estudiante actualizado correctamente.', $result->message);
 
-        $this->assertDatabaseHas('student_course_enrollments', [
-            'student_key' => '202100482',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
-            'ineligibility_reason' => null,
+        $enrollment = StudentCourseEnrollment::first();
+        $this->assertNotNull($enrollment);
+        $this->assertEquals('HABILITADO', $enrollment->status);
+        $this->assertNull($enrollment->ineligibility_reason);
+        $this->assertDatabaseHas('inscripcion', [
+            'motivo_inhabilitacion' => null,
         ]);
     }
 

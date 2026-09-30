@@ -25,6 +25,8 @@ Route::middleware('auth.jwt')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::put('/academic-users/me', [AcademicUserController::class, 'updatePersonalData']);
+    Route::put('/academic-users/{userId}/roles', [AcademicUserController::class, 'updateUserRoles'])
+        ->where('userId', '[0-9]+');
 });
 Route::post('/students/import', [StudentRosterController::class, 'import']);
 Route::post('/courses/import-roster', [StudentRosterController::class, 'import']);

@@ -31,7 +31,7 @@ class AuthTest extends TestCase
                 'message' => 'Inicio de sesión exitoso',
                 'data' => [
                     'user_id' => $user->id,
-                    'role' => 'TEACHER',
+                    'role' => 'DOCENTE',
                     'full_name' => 'Docente Perez',
                     'email' => 'docente@umss.edu.bo',
                     'token_type' => 'bearer',
@@ -39,6 +39,46 @@ class AuthTest extends TestCase
             ]);
 
         $this->assertNotNull($response->json('data.token'));
+    }
+
+    public function test_authenticated_user_can_get_profile_and_logout(): void
+    {
+        $user = User::create([
+            'name' => 'Docente Perez',
+            'email' => 'docente@umss.edu.bo',
+            'role' => 'DOCENTE',
+            'password' => bcrypt('password123'),
+            'is_active' => true,
+        ]);
+
+        $loginResponse = $this->postJson('/api/auth/login', [
+            'email' => 'docente@umss.edu.bo',
+            'password' => 'password123',
+        ]);
+
+        $token = $loginResponse->json('data.token');
+
+        $meResponse = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/auth/me');
+
+        $meResponse->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'user_id' => $user->id,
+                    'email' => 'docente@umss.edu.bo',
+                    'role' => 'DOCENTE',
+                ],
+            ]);
+
+        $logoutResponse = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/auth/logout');
+
+        $logoutResponse->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Sesión cerrada exitosamente',
+            ]);
     }
 
     public function test_login_fails_with_invalid_credentials(): void

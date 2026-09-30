@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\DTOs\UserRegistrationData;
-use App\DTOs\UserUpdateData;
+use App\DTOs\UserRolesData;
 use App\DTOs\OperationResult;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -161,13 +161,13 @@ class CoreDataStorage
     }
 
     /**
-     * Updates an existing academic user in the system.
+     * Updates roles of a specific user. Only for admin use.
      *
      * @param int $userId
-     * @param UserUpdateData $data
+     * @param UserRolesData $data
      * @return OperationResult
      */
-    public function updateAcademicUser(int $userId, UserUpdateData $data): OperationResult
+    public function updateUserRoles(int $userId, UserRolesData $data): OperationResult
     {
         $user = User::find($userId);
 
@@ -175,26 +175,6 @@ class CoreDataStorage
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Usuario no encontrado'
-            );
-        }
-
-        $email = strtolower(trim($data->email));
-
-        $emailDomain = EmailDomain::where('activo', true)
-            ->get()
-            ->first(fn($d) => str_ends_with($email, $d->dominio));
-
-        if (!$emailDomain) {
-            return new OperationResult(
-                isSuccessful: false,
-                message: 'El correo debe pertenecer a un dominio institucional válido (@umss.edu.bo)'
-            );
-        }
-
-        if (User::where('email', $email)->where('id', '!=', $userId)->exists()) {
-            return new OperationResult(
-                isSuccessful: false,
-                message: 'El correo ya está registrado por otro usuario'
             );
         }
 
@@ -209,21 +189,9 @@ class CoreDataStorage
         }
 
         try {
-            DB::transaction(function () use ($user, $data, $email, $emailDomain, $roles) {
-                $user->nombre = trim($data->fullName);
-                $user->email = $email;
-                $user->email_id = $emailDomain->id;
-                if (!empty($data->ci)) {
-                    $user->ci = trim($data->ci);
-                }
-
-                if (!empty($data->newPassword)) {
-                    $user->contrasena = Hash::make($data->newPassword);
-                }
-
-                $user->save();
-
+            DB::transaction(function () use ($user, $roles) {
                 $roleIds = $roles->pluck('id')->toArray();
+
                 $user->roles()->syncWithPivotValues($roleIds, [
                     'activo' => true,
                     'fecha_asignacion' => now(),
@@ -231,13 +199,10 @@ class CoreDataStorage
 
                 DB::table('registro_auditoria')->insert([
                     'usuario_id' => $user->id,
-                    'accion' => 'MODIFICAR_USUARIO',
+                    'accion' => 'MODIFICAR_ROLES',
                     'entidad_tipo' => 'usuario',
                     'entidad_id' => $user->id,
                     'detalles' => json_encode([
-                        'nombre' => $data->fullName,
-                        'email' => $email,
-                        'ci' => $data->ci,
                         'roles_asignados' => $roles->pluck('nombre')->toArray(),
                     ]),
                     'fecha' => now(),
@@ -246,12 +211,12 @@ class CoreDataStorage
 
             return new OperationResult(
                 isSuccessful: true,
-                message: 'Usuario actualizado correctamente'
+                message: 'Roles actualizados correctamente'
             );
         } catch (\Throwable $e) {
             return new OperationResult(
                 isSuccessful: false,
-                message: 'Error al actualizar usuario: ' . $e->getMessage()
+                message: 'Error al actualizar roles: ' . $e->getMessage()
             );
         }
     }

@@ -50,7 +50,7 @@ class AcademicStaffTest extends TestCase
             ->assertJsonPath('data.0.is_active', true)
             ->assertJsonPath('data.1.full_name', 'Zulma Quispe')
             ->assertJsonPath('data.1.email', 'zquispe@umss.edu.bo')
-            ->assertJsonPath('data.1.role', 'TEACHER')
+            ->assertJsonPath('data.1.role', 'DOCENTE')
             ->assertJsonPath('data.1.is_active', true);
     }
 }
