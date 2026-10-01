@@ -284,20 +284,22 @@ class CoreDataStorage
      */
     public function getAcademicStaff(): array
     {
-        $users = User::whereHas('roles', function ($query) {
-            $query->whereIn('rol.nombre', ['DOCENTE', 'AUXILIAR', 'ADMIN']);
-        })
-        ->where('activo', true)
-        ->orderBy('nombre', 'asc')
-        ->get();
-
-        return $users->map(fn(User $user) => new UserSummary(
-            userId: (int) $user->id,
-            fullName: (string) $user->nombre,
-            email: (string) $user->email,
-            role: (string) ($user->role ?? 'TEACHER'),
-            isActive: (bool) $user->activo,
-        ))->all();
+        return User::with(['roles' => function ($query) {
+                $query->wherePivot('activo', true);
+            }])
+            ->where('activo', true)
+            ->whereHas('roles', function ($query) {
+                $query->where('rol.nombre', '!=', 'ESTUDIANTE');
+            })
+            ->orderBy('nombre', 'asc')
+            ->get()
+            ->map(fn(User $user) => new UserSummary(
+                userId: (int) $user->id,
+                fullName: (string) $user->nombre,
+                email: (string) $user->email,
+                roles: $user->roles->pluck('nombre')->toArray(),
+                isActive: (bool) $user->activo,
+            ))->all();
     }
 
     /**

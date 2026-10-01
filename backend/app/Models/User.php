@@ -131,27 +131,6 @@ class User extends Authenticatable implements JWTSubject
         return (bool) $this->activo;
     }
 
-    /**
-     * Accessor for role backwards-compatibility.
-     */
-    public function getRoleAttribute(): ?string
-    {
-        $role = $this->roles()->wherePivot('activo', true)->first();
-        if ($role) {
-            $name = $role->nombre;
-            return match ($name) {
-                'DOCENTE' => 'TEACHER',
-                'AUXILIAR' => 'ASSISTANT',
-                default => $name,
-            };
-        }
-        return $this->tempRole ? match ($this->tempRole) {
-            'DOCENTE' => 'TEACHER',
-            'AUXILIAR' => 'ASSISTANT',
-            default => $this->tempRole,
-        } : null;
-    }
-
     public function setNameAttribute($value): void
     {
         $this->attributes['nombre'] = $value;
