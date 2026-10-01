@@ -308,24 +308,30 @@ class CoreDataStorage
      * @param int $teacherId
      * @return array<CourseGroupSummary>
      */
-    public function getTeacherCourses(int $teacherId): array
+    public function getTeacherCourses(int $teacherId, ?string $gestion = null): array
     {
-        $courses = CourseGroup::where('docente_id', $teacherId)
-            ->with(['course', 'enrollments'])
-            ->withCount('enrollments')
-            ->get()
-            ->sortBy(fn($c) => ($c->course?->sigla ?? '') . '-' . $c->grupo)
-            ->values();
+        $currentUserId = auth()->id();
 
-        return $courses->map(fn(CourseGroup $c) => new CourseGroupSummary(
-            courseGroupId: (string) $c->course_group_id,
-            subjectCode: (string) ($c->course?->sigla ?? ''),
-            subjectName: (string) ($c->course?->nombre ?? ''),
-            groupCode: (string) $c->grupo,
-            academicTerm: (string) $c->gestion,
-            totalEnrolled: (int) ($c->enrollments_count ?? 0),
-            teacherId: (int) $c->docente_id,
-        ))->all();
+        $query = CourseGroup::with('course')
+            ->withCount('enrollments')
+            ->where('docente_id', $teacherId);
+
+        if ($gestion !== null) {
+            $query->where('gestion', $gestion);
+        }
+
+        return $query->orderBy('grupo', 'asc')
+            ->get()
+            ->map(fn(CourseGroup $c) => new CourseGroupSummary(
+                courseGroupId: (string) $c->course_group_id,
+                subjectCode: (string) ($c->course?->sigla ?? ''),
+                subjectName: (string) ($c->course?->nombre ?? ''),
+                groupCode: (string) $c->grupo,
+                academicTerm: (string) $c->gestion,
+                totalEnrolled: (int) ($c->enrollments_count ?? 0),
+                teacherId: $c->docente_id,
+                canInteract: $c->docente_id === $currentUserId,
+            ))->all();
     }
     
     /**
