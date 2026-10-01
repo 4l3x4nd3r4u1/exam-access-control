@@ -397,39 +397,21 @@ class CoreDataStorage
      * @param int|string $courseGroupId Course group numeric ID (materia_grupo.id) or composite key
      * @return array<EnrolledStudentSummary>
      */
-    public function getEnrolledStudents(int|string $courseGroupId): array
+    public function getEnrolledStudents(int $courseGroupId): array
     {
-        $cleanCourseGroupId = trim((string) $courseGroupId);
-        $courseGroup = null;
-
-        if (is_numeric($cleanCourseGroupId)) {
-            $courseGroup = CourseGroup::find((int) $cleanCourseGroupId);
-        } elseif (preg_match('/^([A-Z0-9]+)-G?([A-Z0-9]+)-(.*)$/i', $cleanCourseGroupId, $m)) {
-            $courseGroup = CourseGroup::whereHas('course', fn($q) => $q->where('sigla', strtoupper($m[1])))
-                ->where('grupo', strtoupper($m[2]))
-                ->where('gestion', $m[3])
-                ->first();
-        }
-
-        if (!$courseGroup) {
-            return [];
-        }
-
-        $enrollments = StudentCourseEnrollment::where('materia_grupo_id', $courseGroup->id)
+        return StudentCourseEnrollment::where('materia_grupo_id', $courseGroupId)
             ->with(['user.student', 'enrollmentStatus'])
-            ->get();
-
-        return $enrollments->map(function (StudentCourseEnrollment $enrollment) {
-            $student = $enrollment->user?->student;
-            $user = $enrollment->user;
-            return new EnrolledStudentSummary(
-                studentKey: (string) ($student?->codigo_sis ?? ''),
-                ci: (string) ($user?->ci ?? ''),
-                fullName: (string) ($user?->nombre ?? ''),
+            ->get()
+            ->map(fn(StudentCourseEnrollment $enrollment) => new EnrolledStudentSummary(
+                studentKey: (string) ($enrollment->user?->student?->codigo_sis ?? ''),
+                ci: (string) ($enrollment->user?->ci ?? ''),
+                fullName: (string) ($enrollment->user?->nombre ?? ''),
                 status: (string) ($enrollment->enrollmentStatus?->nombre ?? 'HABILITADO'),
                 ineligibilityReason: $enrollment->motivo_inhabilitacion,
-            );
-        })->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+            ))
+            ->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
     }
 
     /**
