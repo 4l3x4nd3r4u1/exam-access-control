@@ -169,6 +169,13 @@ class CoreDataStorage
      */
     public function updateUserRoles(int $userId, UserRolesData $data): OperationResult
     {
+        if (auth()->id() === $userId) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'No puede cambiar sus propios roles'
+            );
+        }
+
         $user = User::find($userId);
 
         if (!$user) {
