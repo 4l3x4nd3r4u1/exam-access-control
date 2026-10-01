@@ -348,21 +348,47 @@ class CoreDataStorage
     */
     public function getProcessedRosters(): array
     {
-        $courses = CourseGroup::with(['course', 'teacher'])
-            ->withCount('enrollments')
+        return CourseGroup::with(['course', 'teacher'])
+            ->where('activo', true)
+            ->orderBy('id', 'asc')
             ->get()
-            ->sortBy(fn($c) => ($c->course?->sigla ?? '') . '-' . $c->grupo)
-            ->values();
+            ->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
+                courseGroupId: (string) $course->course_group_id,
+                subjectCode: (string) ($course->course?->sigla ?? ''),
+                subjectName: (string) ($course->course?->nombre ?? ''),
+                groupCode: (string) $course->grupo,
+                academicTerm: (string) $course->gestion,
+                teacherName: $course->teacher?->nombre,
+            ))->all();
+    }
 
-        return $courses->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
-            courseGroupId: (string) $course->course_group_id,
-            subjectCode: (string) ($course->course?->sigla ?? ''),
-            subjectName: (string) ($course->course?->nombre ?? ''),
-            groupCode: (string) $course->grupo,
-            academicTerm: (string) $course->gestion,
-            totalStudents: (int) ($course->enrollments_count ?? 0),
-            teacherName: $course->teacher?->nombre,
-        ))->all();
+    public function getProcessedRosterDetail(int $courseGroupId): ProcessedRosterDetail
+    {
+        $courseGroup = CourseGroup::with(['course', 'teacher'])
+            ->where('id', $courseGroupId)
+            ->firstOrFail();
+
+        $metadata = new ProcessedRosterSummary(
+            courseGroupId: (string) $courseGroup->id,
+            subjectCode: (string) ($courseGroup->course?->sigla ?? ''),
+            subjectName: (string) ($courseGroup->course?->nombre ?? ''),
+            groupCode: (string) $courseGroup->grupo,
+            academicTerm: (string) $courseGroup->gestion,
+            teacherName: $courseGroup->teacher?->nombre,
+        );
+
+        $students = StudentCourseEnrollment::where('materia_grupo_id', $courseGroupId)
+            ->with(['user.student'])
+            ->get()
+            ->map(fn(StudentCourseEnrollment $e) => new EnrolledStudentSummary(
+                studentKey: (string) ($e->user?->student?->codigo_sis ?? ''),
+                ci: (string) ($e->user?->ci ?? ''),
+                fullName: (string) ($e->user?->nombre ?? ''),
+            ))
+            ->values()
+            ->all();
+
+        return new ProcessedRosterDetail($metadata, $students);
     }
 
     /**
