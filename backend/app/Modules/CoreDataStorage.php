@@ -128,7 +128,7 @@ class CoreDataStorage
                 ]);
 
                 DB::table('registro_auditoria')->insert([
-                    'usuario_id' => $user->id,
+                    'usuario_id' => auth()->user()->id,
                     'accion' => 'REGISTRAR_USUARIO',
                     'entidad_tipo' => 'usuario',
                     'entidad_id' => $user->id,
@@ -415,7 +415,7 @@ class CoreDataStorage
                 examId: (string) $exam->id,
                 courseGroupId: (string) $exam->materia_grupo_id,
                 examType: (string) ($exam->examType?->nombre ?? ''),
-                date: (string) $exam->fecha,
+                date: $exam->fecha->format('Y-m-d'),
                 startTime: (string) $exam->hora_inicio,
                 endTime: (string) $exam->hora_fin,
                 rooms: $exam->rooms->map(fn(ExamRoom $room) => new ExamRoomSummary(
@@ -505,11 +505,15 @@ class CoreDataStorage
             ))->all();
     }
 
-    public function getProcessedRosterDetail(int $courseGroupId): ProcessedRosterDetail
+    public function getProcessedRosterDetail(int $courseGroupId): ?ProcessedRosterDetail
     {
         $courseGroup = CourseGroup::with(['course', 'teacher'])
             ->where('id', $courseGroupId)
-            ->firstOrFail();
+            ->first();
+
+        if (!$courseGroup) {
+            return null;
+        }
 
         $metadata = new ProcessedRosterSummary(
             courseGroupId: (string) $courseGroup->id,
@@ -604,15 +608,15 @@ class CoreDataStorage
      */
     public function generateCsvTemplate(): string
     {
-        return "Docente: Lic. Juan Carlos Perez Gomez\n"
+        return "Docente: Juan Carlos Perez Gomez\n"
             . "Email Docente: juan.perez@umss.edu.bo\n"
             . "Materia: INF110 - INTRODUCCION A LA PROGRAMACION\n"
             . "Grupo: 1\n"
             . "Gestion: 2/2026\n\n"
             . "Codigo SIS,CI,Nombre Completo\n"
-            . "202001234,7891234,ALVAREZ CLAROS PEDRO\n"
-            . "202005678,6543210,BENITEZ LOPEZ CARMEN\n"
-            . "202109876,8912345,CASTRO ROJAS MARIO\n";
+            . "202001234,7891234,Alvarez Claros Pedro\n"
+            . "202005678,6543210,Benitez Lopez Carmen\n"
+            . "202109876,8912345,Castro Rojas Mario\n";
     }
 
     /**
