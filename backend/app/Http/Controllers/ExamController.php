@@ -19,9 +19,9 @@ class ExamController extends Controller
     /**
      * Endpoint to get available rooms for a specific date.
      */
-    public function availableRooms(string $date): JsonResponse
+    public function availableRooms(string $date, string $startTime): JsonResponse
     {
-        $rooms = $this->storage->getAvailableRooms($date);
+        $rooms = $this->storage->getAvailableRooms($date, $startTime);
 
         return response()->json([
             'success' => true,

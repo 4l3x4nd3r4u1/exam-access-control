@@ -370,15 +370,23 @@ class CoreDataStorage
     }
 
     /**
-     * Retrieves all available (non-reserved) rooms for a specific date.
+     * Retrieves all available (non-reserved) rooms for a specific date and time.
+     * A room is unavailable if it has an exam that overlaps with the given time slot.
      *
      * @param string $date
+     * @param string $startTime
      * @return array<RoomSummary>
      */
-    public function getAvailableRooms(string $date): array
+    public function getAvailableRooms(string $date, string $startTime): array
     {
-        $reservedRoomIds = ExamRoom::whereHas('exam', fn($q) => $q->where('fecha', $date))
-            ->pluck('aula_id');
+        $endTime = \Carbon\Carbon::parse($startTime)->addMinutes(90)->format('H:i');
+
+        // Find rooms that have exams overlapping with the requested time slot
+        $reservedRoomIds = ExamRoom::whereHas('exam', function ($query) use ($date, $startTime, $endTime) {
+            $query->where('fecha', $date)
+                ->where('hora_inicio', '<', $endTime)
+                ->where('hora_fin', '>', $startTime);
+        })->pluck('aula_id');
 
         return Room::whereNotIn('id', $reservedRoomIds)
             ->orderBy('capacidad', 'asc')
