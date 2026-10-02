@@ -285,6 +285,91 @@ class CoreDataStorage
     }
 
     /**
+     * Registers a new exam with room assignments and rules.
+     *
+     * @param ExamRegistrationData $data
+     * @return OperationResult
+     */
+    public function registerExam(ExamRegistrationData $data): OperationResult
+    {
+        try {
+            DB::transaction(function () use ($data) {
+                $now = now();
+
+                // Calculate end time (start + 1:30h)
+                $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
+
+                // Create exam
+                $exam = Exam::create([
+                    'materia_grupo_id' => $data->courseGroupId,
+                    'tipo_examen_id' => $data->examTypeId,
+                    'fecha' => $data->date,
+                    'hora_inicio' => $data->startTime,
+                    'hora_fin' => $endTime,
+                    'activo' => true,
+                ]);
+
+                // Assign rooms
+                foreach ($data->rooms as $room) {
+                    ExamRoom::create([
+                        'examen_id' => $exam->id,
+                        'aula_id' => $room->roomId,
+                        'cupo_asignado' => $room->capacity,
+                    ]);
+                }
+
+                // Create general rules
+                foreach ($data->generalRules as $rule) {
+                    ExamRule::create([
+                        'examen_id' => $exam->id,
+                        'descripcion' => $rule,
+                    ]);
+                }
+
+                // Create student-specific rules
+                foreach ($data->studentRules as $studentRule) {
+                    ExamStudent::create([
+                        'examen_id' => $exam->id,
+                        'usuario_id' => $studentRule->studentId,
+                        'estado_id' => 1, // Default: PRESENTE
+                        'observaciones' => $studentRule->rule,
+                    ]);
+                }
+
+                // Audit
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => auth()->user()->id,
+                    'accion' => 'PROGRAMAR_EXAMEN',
+                    'entidad_tipo' => 'examen',
+                    'entidad_id' => $exam->id,
+                    'detalles' => json_encode([
+                        'course_group_id' => $data->courseGroupId,
+                        'exam_type_id' => $data->examTypeId,
+                        'date' => $data->date,
+                        'start_time' => $data->startTime,
+                        'end_time' => $endTime,
+                        'rooms_count' => count($data->rooms),
+                        'general_rules_count' => count($data->generalRules),
+                        'student_rules_count' => count($data->studentRules),
+                    ]),
+                    'fecha' => $now,
+                ]);
+            });
+
+            return new OperationResult(
+                isSuccessful: true,
+                message: 'Examen programado correctamente'
+            );
+        } catch (\Throwable $e) {
+            Log::error('Error registering exam: ' . $e->getMessage());
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Error al programar el examen. Contacte al administrador.'
+            );
+        }
+    }
+
+    /**
      * Retrieves all active exams for a specific course group with their assigned rooms.
      *
      * @param int $courseGroupId

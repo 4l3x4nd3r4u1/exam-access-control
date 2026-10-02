@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\DTOs\ExamRegistrationData;
+use App\DTOs\ExamRoomData;
+use App\DTOs\ExamStudentRuleData;
 use App\DTOs\ExamSummary;
 use App\Modules\CoreDataStorage;
 use Illuminate\Http\JsonResponse;
@@ -24,5 +27,35 @@ class ExamController extends Controller
             'data' => array_map(fn(ExamSummary $exam) => $exam->toArray(), $exams),
             'message' => 'Exámenes obtenidos exitosamente.',
         ], 200);
+    }
+
+    /**
+     * Endpoint to register a new exam.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $data = new ExamRegistrationData(
+            courseGroupId: (int) $request->input('courseGroupId'),
+            examTypeId: (int) $request->input('examTypeId'),
+            date: $request->input('date'),
+            startTime: $request->input('startTime'),
+            rooms: array_map(fn($r) => new ExamRoomData(
+                roomId: (int) $r['roomId'],
+                capacity: (int) $r['capacity'],
+            ), $request->input('rooms', [])),
+            generalRules: $request->input('generalRules', []),
+            studentRules: array_map(fn($r) => new ExamStudentRuleData(
+                studentId: (int) $r['studentId'],
+                rule: $r['rule'],
+            ), $request->input('studentRules', [])),
+        );
+
+        $result = $this->storage->registerExam($data);
+
+        return response()->json([
+            'success' => $result->isSuccessful,
+            'message' => $result->message,
+            'timestamp' => $result->timestamp,
+        ], $result->isSuccessful ? 201 : 400);
     }
 }
