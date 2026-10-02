@@ -69,7 +69,7 @@ class ExamController extends Controller
             startTime: $request->input('startTime'),
             rooms: array_map(fn($r) => new ExamRoomData(
                 roomId: (int) $r['roomId'],
-                capacity: (int) $r['capacity'],
+                students: array_map('intval', $r['students'] ?? []),
             ), $request->input('rooms', [])),
             generalRules: $request->input('generalRules', []),
             studentRules: array_map(fn($r) => new ExamStudentRuleData(

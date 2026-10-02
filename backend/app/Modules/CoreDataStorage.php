@@ -299,6 +299,9 @@ class CoreDataStorage
                 // Calculate end time (start + 1:30h)
                 $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
 
+                // Get default status: AUSENTE
+                $ausenteStatus = ExamStudentStatus::where('nombre', 'AUSENTE')->first();
+
                 // Create exam
                 $exam = Exam::create([
                     'materia_grupo_id' => $data->courseGroupId,
@@ -309,13 +312,24 @@ class CoreDataStorage
                     'activo' => true,
                 ]);
 
-                // Assign rooms
+                // Assign rooms with students
                 foreach ($data->rooms as $room) {
-                    ExamRoom::create([
+                    $examRoom = ExamRoom::create([
                         'examen_id' => $exam->id,
                         'aula_id' => $room->roomId,
-                        'cupo_asignado' => $room->capacity,
+                        'cupo_asignado' => count($room->students),
                     ]);
+
+                    // Assign students to this room
+                    foreach ($room->students as $studentId) {
+                        ExamStudent::create([
+                            'examen_id' => $exam->id,
+                            'usuario_id' => $studentId,
+                            'aula_id' => $room->roomId,
+                            'estado_id' => $ausenteStatus->id,
+                            'observaciones' => null,
+                        ]);
+                    }
                 }
 
                 // Create general rules
@@ -326,14 +340,13 @@ class CoreDataStorage
                     ]);
                 }
 
-                // Create student-specific rules
+                // Create student-specific rules (normas particulares)
                 foreach ($data->studentRules as $studentRule) {
-                    ExamStudent::create([
-                        'examen_id' => $exam->id,
-                        'usuario_id' => $studentRule->studentId,
-                        'estado_id' => 1, // Default: PRESENTE
-                        'observaciones' => $studentRule->rule,
-                    ]);
+                    ExamStudent::where('examen_id', $exam->id)
+                        ->where('usuario_id', $studentRule->studentId)
+                        ->update([
+                            'norma_particular' => $studentRule->rule,
+                        ]);
                 }
 
                 // Audit

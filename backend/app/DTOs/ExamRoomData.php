@@ -4,8 +4,11 @@ namespace App\DTOs;
 
 class ExamRoomData
 {
+    /**
+     * @param list<int> $students
+     */
     public function __construct(
         public readonly int $roomId,
-        public readonly int $capacity,
+        public readonly array $students,
     ) {}
 }
