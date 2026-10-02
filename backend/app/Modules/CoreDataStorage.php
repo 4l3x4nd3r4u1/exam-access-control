@@ -754,9 +754,6 @@ class CoreDataStorage
         // 8. Bulk Persistence in Database Transaction
         try {
             DB::transaction(function () use ($teacher, $materia, $grupo, $gestion, $validRows) {
-                $now = now();
-
-                // Find or create CourseGroup
                 $courseGroup = CourseGroup::firstOrCreate(
                     [
                         'materia_id' => $materia->id,
@@ -769,75 +766,7 @@ class CoreDataStorage
                     ]
                 );
 
-                // Catalog lookups
-                $habilitadoStatus = EnrollmentStatus::where('nombre', 'HABILITADO')->firstOrFail();
-                $studentEmailDomain = EmailDomain::where('dominio', '@est.umss.edu.bo')->first();
-                if (!$studentEmailDomain) {
-                    throw new \RuntimeException('Student email domain not configured');
-                }
-                $studentRole = Role::where('nombre', 'ESTUDIANTE')->first();
-
-                // Process each student (passive role: activo = false)
-                foreach ($validRows as $row) {
-                    $sisCode = is_numeric($row['studentKey']) ? (int)$row['studentKey'] : 0;
-                    $ciNumber = trim($row['ci']);
-                    $fullName = trim($row['fullName']);
-
-                    $student = Student::where('codigo_sis', $sisCode)->first();
-                    if ($student) {
-                        $user = $student->user;
-                        if ($user) {
-                            $user->nombre = $fullName;
-                            if (!empty($ciNumber)) {
-                                $user->ci = $ciNumber;
-                            }
-                            $user->save();
-                        }
-                    } else {
-                        $studentEmail = "{$sisCode}@est.umss.edu.bo";
-                        $user = User::where('email', $studentEmail)
-                            ->orWhere(function ($q) use ($ciNumber) {
-                                if (!empty($ciNumber)) {
-                                    $q->where('ci', $ciNumber);
-                                }
-                            })->first();
-
-                        if (!$user) {
-                            $user = User::create([
-                                'nombre' => $fullName,
-                                'email' => $studentEmail,
-                                'email_id' => $studentEmailDomain->id,
-                                'contrasena' => Hash::make((string)$ciNumber),
-                                'activo' => false,
-                                'ci' => $ciNumber ?: null,
-                            ]);
-
-                            if ($studentRole) {
-                                $user->roles()->attach($studentRole->id, [
-                                    'activo' => true,
-                                    'fecha_asignacion' => $now,
-                                ]);
-                            }
-                        }
-
-                        $student = Student::create([
-                            'codigo_sis' => $sisCode,
-                            'usuario_id' => $user->id,
-                        ]);
-                    }
-
-                    StudentCourseEnrollment::updateOrCreate(
-                        [
-                            'usuario_id' => $student->usuario_id,
-                            'materia_grupo_id' => $courseGroup->id,
-                        ],
-                        [
-                            'estado_inscripcion_id' => $habilitadoStatus->id,
-                            'motivo_inhabilitacion' => null,
-                            'fecha_inscripcion' => $now,
-                        ]
-                    );
-                }
+                $this->persistEnrollments($validRows, $courseGroup);
             });
 
             $successful = count($validRows);
@@ -1032,12 +961,10 @@ class CoreDataStorage
         // 4. Persistence
         try {
             DB::transaction(function () use ($validRows, $groupCombos) {
-                $now = now();
-
                 // Create or find course groups
                 $courseGroups = [];
                 foreach ($groupCombos as $key => $combo) {
-                    $cg = CourseGroup::firstOrCreate(
+                    $courseGroups[$key] = CourseGroup::firstOrCreate(
                         [
                             'materia_id' => $combo['materia']->id,
                             'grupo' => $combo['grupo'],
@@ -1048,79 +975,18 @@ class CoreDataStorage
                             'activo' => true,
                         ]
                     );
-                    $courseGroups[$key] = $cg;
                 }
 
-                $habilitadoStatus = EnrollmentStatus::where('nombre', 'HABILITADO')->firstOrFail();
-                $studentEmailDomain = EmailDomain::where('dominio', '@est.umss.edu.bo')->first();
-                if (!$studentEmailDomain) {
-                    throw new \RuntimeException('Student email domain not configured');
-                }
-                $studentRole = Role::where('nombre', 'ESTUDIANTE')->first();
-
-                // Process each student (passive role)
+                // Group valid rows by course group key
+                $rowsByGroup = [];
                 foreach ($validRows as $row) {
-                    $sisCode = is_numeric($row['studentKey']) ? (int)$row['studentKey'] : 0;
-                    $rowData = $row['rowData'];
-                    $ciNumber = trim($rowData['ci']);
-                    $fullName = trim($rowData['nombre_completo']);
                     $groupKey = $row['sigla'] . ':::' . $row['grupo'] . ':::' . $row['gestion'];
-                    $courseGroup = $courseGroups[$groupKey];
+                    $rowsByGroup[$groupKey][] = $row;
+                }
 
-                    $student = Student::where('codigo_sis', $sisCode)->first();
-                    if ($student) {
-                        $user = $student->user;
-                        if ($user) {
-                            $user->nombre = $fullName;
-                            if (!empty($ciNumber)) {
-                                $user->ci = $ciNumber;
-                            }
-                            $user->save();
-                        }
-                    } else {
-                        $studentEmail = "{$sisCode}@est.umss.edu.bo";
-                        $user = User::where('email', $studentEmail)
-                            ->orWhere(function ($q) use ($ciNumber) {
-                                if (!empty($ciNumber)) {
-                                    $q->where('ci', $ciNumber);
-                                }
-                            })->first();
-
-                        if (!$user) {
-                            $user = User::create([
-                                'nombre' => $fullName,
-                                'email' => $studentEmail,
-                                'email_id' => $studentEmailDomain->id,
-                                'contrasena' => Hash::make((string)$ciNumber),
-                                'activo' => false,
-                                'ci' => $ciNumber ?: null,
-                            ]);
-
-                            if ($studentRole) {
-                                $user->roles()->attach($studentRole->id, [
-                                    'activo' => true,
-                                    'fecha_asignacion' => $now,
-                                ]);
-                            }
-                        }
-
-                        $student = Student::create([
-                            'codigo_sis' => $sisCode,
-                            'usuario_id' => $user->id,
-                        ]);
-                    }
-
-                    StudentCourseEnrollment::updateOrCreate(
-                        [
-                            'usuario_id' => $student->usuario_id,
-                            'materia_grupo_id' => $courseGroup->id,
-                        ],
-                        [
-                            'estado_inscripcion_id' => $habilitadoStatus->id,
-                            'motivo_inhabilitacion' => null,
-                            'fecha_inscripcion' => $now,
-                        ]
-                    );
+                // Persist enrollments for each course group
+                foreach ($rowsByGroup as $groupKey => $groupRows) {
+                    $this->persistEnrollments($groupRows, $courseGroups[$groupKey]);
                 }
             });
 
@@ -1139,6 +1005,129 @@ class CoreDataStorage
             isSuccessful: $successful > 0,
             failedRows: $failedRows
         );
+    }
+
+    /**
+     * Persists student enrollments for a single course group.
+     * Optimized to avoid N+1 queries by loading all existing records at once.
+     *
+     * @param list<array<string, string>> $validRows
+     * @param CourseGroup $courseGroup
+     * @return int Number of successful enrollments
+     */
+    private function persistEnrollments(array $validRows, CourseGroup $courseGroup): int
+    {
+        $now = now();
+
+        // Catalog lookups
+        $habilitadoStatus = EnrollmentStatus::where('nombre', 'HABILITADO')->firstOrFail();
+        $studentEmailDomain = EmailDomain::where('dominio', '@est.umss.edu.bo')->first();
+        if (!$studentEmailDomain) {
+            throw new \RuntimeException('Student email domain not configured');
+        }
+        $studentRole = Role::where('nombre', 'ESTUDIANTE')->first();
+
+        // OPTIMIZATION: Load all existing students and users at once (avoid N+1)
+        $sisCodes = array_filter(array_column($validRows, 'studentKey'), 'is_numeric');
+        $ciNumbers = array_filter(array_column($validRows, 'ci'), fn($ci) => !empty($ci));
+        $studentEmails = array_map(fn($sis) => "{$sis}@est.umss.edu.bo", $sisCodes);
+
+        $existingStudents = Student::with('user')
+            ->whereIn('codigo_sis', $sisCodes)
+            ->get()
+            ->keyBy('codigo_sis');
+
+        $existingUsers = User::whereIn('email', $studentEmails)
+            ->orWhereIn('ci', $ciNumbers)
+            ->get()
+            ->keyBy('email');
+
+        // Index users by CI for lookup
+        $usersByCi = [];
+        foreach ($existingUsers as $user) {
+            if ($user->ci) {
+                $usersByCi[$user->ci] = $user;
+            }
+        }
+
+        $successful = 0;
+
+        foreach ($validRows as $row) {
+            $sisCode = is_numeric($row['studentKey']) ? (int)$row['studentKey'] : 0;
+            $ciNumber = trim($row['ci']);
+            $fullName = trim($row['fullName']);
+
+            // Check memory first, then database
+            $student = $existingStudents->get($sisCode);
+            $user = null;
+
+            if ($student) {
+                $user = $student->user;
+                if ($user) {
+                    $user->nombre = $fullName;
+                    if (!empty($ciNumber)) {
+                        $user->ci = $ciNumber;
+                    }
+                    $user->save();
+                }
+            } else {
+                $studentEmail = "{$sisCode}@est.umss.edu.bo";
+
+                // Check memory first
+                $user = $existingUsers->get($studentEmail);
+                if (!$user && !empty($ciNumber)) {
+                    $user = $usersByCi[$ciNumber] ?? null;
+                }
+
+                if (!$user) {
+                    $user = User::create([
+                        'nombre' => $fullName,
+                        'email' => $studentEmail,
+                        'email_id' => $studentEmailDomain->id,
+                        'contrasena' => Hash::make((string)$ciNumber),
+                        'activo' => false,
+                        'ci' => $ciNumber ?: null,
+                    ]);
+
+                    if ($studentRole) {
+                        $user->roles()->attach($studentRole->id, [
+                            'activo' => true,
+                            'fecha_asignacion' => $now,
+                        ]);
+                    }
+
+                    // Add to memory for subsequent lookups
+                    $existingUsers->put($studentEmail, $user);
+                    if ($ciNumber) {
+                        $usersByCi[$ciNumber] = $user;
+                    }
+                }
+
+                $student = Student::create([
+                    'codigo_sis' => $sisCode,
+                    'usuario_id' => $user->id,
+                ]);
+
+                // Add to memory
+                $existingStudents->put($sisCode, $student);
+            }
+
+            StudentCourseEnrollment::updateOrCreate(
+                [
+                    'usuario_id' => $student->usuario_id,
+                    'materia_grupo_id' => $courseGroup->id,
+                ],
+                [
+                    'estado_inscripcion_id' => $habilitadoStatus->id,
+                    'motivo_inhabilitacion' => null,
+                    'fecha_inscripcion' => $now,
+                ]
+            );
+
+            $successful++;
+        }
+
+        return $successful;
     }
 
     /**
