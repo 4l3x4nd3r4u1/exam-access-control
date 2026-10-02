@@ -41,6 +41,8 @@ Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::cla
     ->where('courseGroupId', '[0-9]+');
 Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class, 'index'])
     ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
+Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
+    ->where('courseGroupId', '[0-9]+');
 Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
     ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
 

@@ -285,6 +285,35 @@ class CoreDataStorage
     }
 
     /**
+     * Retrieves all active exams for a specific course group with their assigned rooms.
+     *
+     * @param int $courseGroupId
+     * @return array<ExamSummary>
+     */
+    public function getExamsByCourseGroup(int $courseGroupId): array
+    {
+        return Exam::with(['examType', 'rooms.room'])
+            ->where('materia_grupo_id', $courseGroupId)
+            ->where('activo', true)
+            ->orderBy('fecha', 'asc')
+            ->get()
+            ->map(fn(Exam $exam) => new ExamSummary(
+                examId: (string) $exam->id,
+                courseGroupId: (string) $exam->materia_grupo_id,
+                examType: (string) ($exam->examType?->nombre ?? ''),
+                date: (string) $exam->fecha,
+                startTime: (string) $exam->hora_inicio,
+                endTime: (string) $exam->hora_fin,
+                rooms: $exam->rooms->map(fn(ExamRoom $room) => new ExamRoomSummary(
+                    roomId: (string) $room->aula_id,
+                    roomName: (string) ($room->room?->nombre ?? ''),
+                    assignedCapacity: (int) $room->cupo_asignado,
+                    assistantId: $room->auxiliar_id ? (int) $room->auxiliar_id : null,
+                ))->toArray(),
+            ))->all();
+    }
+
+    /**
      * Retrieves all active academic staff members ordered alphabetically by name.
      *
      * @return array<UserSummary>
