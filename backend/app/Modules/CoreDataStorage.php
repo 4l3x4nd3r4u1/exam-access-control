@@ -770,6 +770,20 @@ class CoreDataStorage
             });
 
             $successful = count($validRows);
+
+            DB::table('registro_auditoria')->insert([
+                'usuario_id' => auth()->user()->id,
+                'accion' => 'IMPORTAR_PADRON',
+                'entidad_tipo' => 'materia_grupo',
+                'entidad_id' => $courseGroup->id,
+                'detalles' => json_encode([
+                    'sigla' => $sigla,
+                    'grupo' => $grupo,
+                    'gestion' => $gestion,
+                    'total_estudiantes' => $successful,
+                ]),
+                'fecha' => now(),
+            ]);
         } catch (\Throwable $e) {
             $skipped += count($validRows);
             $observations[] = "Bulk import transaction error: " . $e->getMessage();
@@ -991,6 +1005,22 @@ class CoreDataStorage
             });
 
             $successful = count($validRows);
+
+            foreach ($courseGroups as $courseGroup) {
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => auth()->user()->id,
+                    'accion' => 'IMPORTAR_PADRON',
+                    'entidad_tipo' => 'materia_grupo',
+                    'entidad_id' => $courseGroup->id,
+                    'detalles' => json_encode([
+                        'sigla' => $courseGroup->course->sigla ?? null,
+                        'grupo' => $courseGroup->grupo,
+                        'gestion' => $courseGroup->gestion,
+                        'total_estudiantes' => $successful,
+                    ]),
+                    'fecha' => now(),
+                ]);
+            }
         } catch (\Throwable $e) {
             $skipped += count($validRows);
             $observations[] = "Bulk import transaction error: " . $e->getMessage();
