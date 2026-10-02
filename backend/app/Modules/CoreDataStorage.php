@@ -370,6 +370,27 @@ class CoreDataStorage
     }
 
     /**
+     * Retrieves all available (non-reserved) rooms for a specific date.
+     *
+     * @param string $date
+     * @return array<RoomSummary>
+     */
+    public function getAvailableRooms(string $date): array
+    {
+        $reservedRoomIds = ExamRoom::whereHas('exam', fn($q) => $q->where('fecha', $date))
+            ->pluck('aula_id');
+
+        return Room::whereNotIn('id', $reservedRoomIds)
+            ->orderBy('capacidad', 'asc')
+            ->get()
+            ->map(fn(Room $room) => new RoomSummary(
+                roomId: (string) $room->id,
+                roomName: (string) $room->nombre,
+                capacity: (int) $room->capacidad,
+            ))->all();
+    }
+
+    /**
      * Retrieves all active exams for a specific course group with their assigned rooms.
      *
      * @param int $courseGroupId

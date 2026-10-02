@@ -6,6 +6,7 @@ use App\DTOs\ExamRegistrationData;
 use App\DTOs\ExamRoomData;
 use App\DTOs\ExamStudentRuleData;
 use App\DTOs\ExamSummary;
+use App\DTOs\RoomSummary;
 use App\Modules\CoreDataStorage;
 use Illuminate\Http\JsonResponse;
 
@@ -14,6 +15,20 @@ class ExamController extends Controller
     public function __construct(
         private readonly CoreDataStorage $storage
     ) {}
+
+    /**
+     * Endpoint to get available rooms for a specific date.
+     */
+    public function availableRooms(string $date): JsonResponse
+    {
+        $rooms = $this->storage->getAvailableRooms($date);
+
+        return response()->json([
+            'success' => true,
+            'data' => array_map(fn(RoomSummary $room) => $room->toArray(), $rooms),
+            'message' => 'Aulas disponibles obtenidas exitosamente.',
+        ], 200);
+    }
 
     /**
      * Endpoint to list all exams for a specific course group.
