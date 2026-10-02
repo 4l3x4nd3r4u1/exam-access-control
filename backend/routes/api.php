@@ -20,6 +20,9 @@ Route::get('/health', function () {
 });
 
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/student-roster/import', [StudentRosterController::class, 'import']);
+
+Route::get('/student-roster/template', [StudentRosterController::class, 'template']);
 
 Route::middleware('auth.jwt')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
@@ -28,11 +31,8 @@ Route::middleware('auth.jwt')->group(function () {
     Route::put('/academic-users/{userId}/roles', [AcademicUserController::class, 'updateUserRoles'])
         ->where('userId', '[0-9]+');
 });
-Route::post('/students/import', [StudentRosterController::class, 'import']);
-Route::post('/courses/import-roster', [StudentRosterController::class, 'import']);
-Route::get('/courses/roster-template', [StudentRosterController::class, 'template']);
-Route::get('/students/roster-template', [StudentRosterController::class, 'template']);
-Route::get('/academic-staff', [AcademicStaffController::class, 'index']);
+
+Route::get('/academic-staff', [AcademicStaffController::class, 'list']);
 Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
 Route::post('/academic-users', [AcademicUserController::class, 'store']);
 Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
@@ -48,5 +48,3 @@ Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])
     ->where('courseGroupId', '[0-9]+');
 Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
     ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
-
-
