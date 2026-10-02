@@ -7,6 +7,8 @@ use App\Models\CourseGroup;
 use App\Models\EnrollmentStatus;
 use App\Models\Student;
 use App\Models\StudentCourseEnrollment;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class EligibilityEngine
@@ -14,20 +16,18 @@ class EligibilityEngine
     /**
      * Updates the academic eligibility status of a student for a specific course group.
      *
-     * @param string $key Student SIS code or CI
-     * @param string $courseGroupId Canonical course group identifier or numeric ID
-     * @param string $status Academic status ('HABILITADO' | 'INHABILITADO')
-     * @param string|null $reason Justification reason (mandatory when status is 'INHABILITADO')
+     * @param int $studentId
+     * @param int $courseGroupId
+     * @param string $status 'HABILITADO' | 'INHABILITADO'
+     * @param string|null $reason Mandatory when status is 'INHABILITADO'
      * @return StatusUpdateResult
      */
     public function updateStudentStatus(
-        string $key,
-        string $courseGroupId,
+        int $studentId,
+        int $courseGroupId,
         string $status,
         ?string $reason = null
     ): StatusUpdateResult {
-        $cleanKey = trim($key);
-        $cleanCourseGroupId = trim($courseGroupId);
         $cleanStatus = strtoupper(trim($status));
         $cleanReason = $reason !== null ? trim($reason) : null;
 
@@ -45,9 +45,7 @@ class EligibilityEngine
             );
         }
 
-        $student = Student::where('codigo_sis', is_numeric($cleanKey) ? (int)$cleanKey : 0)
-            ->orWhereHas('user', fn($q) => $q->where('ci', $cleanKey))
-            ->first();
+        $student = Student::find($studentId);
 
         if (!$student) {
             return new StatusUpdateResult(
@@ -56,21 +54,12 @@ class EligibilityEngine
             );
         }
 
-        // Find course group by numeric ID or composite string
-        $courseGroup = null;
-        if (is_numeric($cleanCourseGroupId)) {
-            $courseGroup = CourseGroup::find((int) $cleanCourseGroupId);
-        } elseif (preg_match('/^([A-Z0-9]+)-G?([A-Z0-9]+)-(.*)$/i', $cleanCourseGroupId, $m)) {
-            $courseGroup = CourseGroup::whereHas('course', fn($q) => $q->where('sigla', strtoupper($m[1])))
-                ->where('grupo', strtoupper($m[2]))
-                ->where('gestion', $m[3])
-                ->first();
-        }
+        $courseGroup = CourseGroup::find($courseGroupId);
 
         if (!$courseGroup) {
             return new StatusUpdateResult(
                 isSuccessful: false,
-                message: 'El estudiante no está inscrito en este grupo de materia.'
+                message: 'Grupo de materia no encontrado.'
             );
         }
 
@@ -86,6 +75,7 @@ class EligibilityEngine
         }
 
         $statusModel = EnrollmentStatus::where('nombre', $cleanStatus)->first();
+
         if (!$statusModel) {
             return new StatusUpdateResult(
                 isSuccessful: false,
@@ -94,22 +84,40 @@ class EligibilityEngine
         }
 
         try {
-            StudentCourseEnrollment::where('usuario_id', $student->usuario_id)
-                ->where('materia_grupo_id', $courseGroup->id)
-                ->update([
-                    'estado_inscripcion_id' => $statusModel->id,
-                    'motivo_inhabilitacion' => ($cleanStatus === 'INHABILITADO') ? $cleanReason : null,
-                    'updated_at' => now(),
+            DB::transaction(function () use ($student, $courseGroup, $statusModel, $cleanStatus, $cleanReason) {
+                StudentCourseEnrollment::where('usuario_id', $student->usuario_id)
+                    ->where('materia_grupo_id', $courseGroup->id)
+                    ->update([
+                        'estado_inscripcion_id' => $statusModel->id,
+                        'motivo_inhabilitacion' => ($cleanStatus === 'INHABILITADO') ? $cleanReason : null,
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => auth()->user()->id,
+                    'accion' => 'CAMBIAR_ESTADO_HABILITACION',
+                    'entidad_tipo' => 'inscripcion',
+                    'entidad_id' => $enrollment->id,
+                    'detalles' => json_encode([
+                        'estudiante_id' => $student->id,
+                        'course_group_id' => $courseGroup->id,
+                        'estado_anterior' => $enrollment->estado_inscripcion_id,
+                        'estado_nuevo' => $statusModel->id,
+                        'motivo' => $cleanReason,
+                    ]),
+                    'fecha' => now(),
                 ]);
+            });
 
             return new StatusUpdateResult(
                 isSuccessful: true,
                 message: 'Estado del estudiante actualizado correctamente.'
             );
         } catch (Throwable $e) {
+            Log::error('Error updating student status: ' . $e->getMessage());
             return new StatusUpdateResult(
                 isSuccessful: false,
-                message: 'Error al actualizar el estado: ' . $e->getMessage()
+                message: 'Error al actualizar el estado. Contacte al administrador.'
             );
         }
     }
