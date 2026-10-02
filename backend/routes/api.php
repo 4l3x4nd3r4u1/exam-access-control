@@ -40,8 +40,8 @@ Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
 Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::class, 'show'])
     ->where('courseGroupId', '[0-9]+');
 Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class, 'index'])
-    ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
-Route::get('/rooms/available/{date}/{startTime}', [ExamController::class, 'availableRooms']);
+    ->where('courseGroupId', '[0-9]+');
+Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
 Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
     ->where('courseGroupId', '[0-9]+');
 Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])

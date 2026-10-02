@@ -7,8 +7,11 @@ use App\DTOs\ExamRoomData;
 use App\DTOs\ExamStudentRuleData;
 use App\DTOs\ExamSummary;
 use App\DTOs\RoomSummary;
+use App\Http\Requests\AvailableRoomsRequest;
 use App\Modules\CoreDataStorage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ExamController extends Controller
 {
@@ -17,17 +20,27 @@ class ExamController extends Controller
     ) {}
 
     /**
-     * Endpoint to get available rooms for a specific date.
+     * Endpoint to get available rooms for a specific date and time.
      */
-    public function availableRooms(string $date, string $startTime): JsonResponse
+    public function availableRooms(AvailableRoomsRequest $request): JsonResponse
     {
-        $rooms = $this->storage->getAvailableRooms($date, $startTime);
+        try {
+            $date = $request->query('date');
+            $startTime = $request->query('startTime');
+            $rooms = $this->storage->getAvailableRooms($date, $startTime);
 
-        return response()->json([
-            'success' => true,
-            'data' => array_map(fn(RoomSummary $room) => $room->toArray(), $rooms),
-            'message' => 'Aulas disponibles obtenidas exitosamente.',
-        ], 200);
+            return response()->json([
+                'success' => true,
+                'data' => array_map(fn(RoomSummary $room) => $room->toArray(), $rooms),
+                'message' => 'Aulas disponibles obtenidas exitosamente.',
+            ], 200);
+        } catch (Throwable $e) {
+            Log::error('Error getting available rooms: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener las aulas disponibles.',
+            ], 500);
+        }
     }
 
     /**
