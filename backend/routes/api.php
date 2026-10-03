@@ -42,9 +42,20 @@ Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::cla
 Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class, 'index'])
     ->where('courseGroupId', '[0-9]+');
 Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
+
 Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
     ->where('courseGroupId', '[0-9]+');
+
 Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])
     ->where('courseGroupId', '[0-9]+');
+
 Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
-    ->where('courseGroupId', '[A-Za-z0-9\-_]+(\/[0-9]+)?');
+    ->where('courseGroupId', '[0-9]+');
+
+
+
+
+
+// Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
+//     ->where('courseGroupId', '[0-9]+');
+

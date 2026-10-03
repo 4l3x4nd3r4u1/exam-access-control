@@ -17,14 +17,16 @@ class StudentStatusController extends Controller
      */
     public function update(
         UpdateStudentStatusRequest $request,
-        string $courseGroupId,
+        int $courseGroupId,
         string $studentKey
     ): JsonResponse {
+        $studentId = (int) $studentKey;
+
         $result = $this->eligibilityEngine->updateStudentStatus(
-            key: $studentKey,
-            courseGroupId: $courseGroupId,
-            status: $request->input('status'),
-            reason: $request->input('reason')
+            $studentId,
+            $courseGroupId,
+            $request->input('status'),
+            $request->input('reason')
         );
 
         $statusCode = $result->isSuccessful
