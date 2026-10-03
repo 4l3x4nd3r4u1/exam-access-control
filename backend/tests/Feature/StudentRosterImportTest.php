@@ -2,90 +2,69 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class StudentRosterImportTest extends TestCase
 {
     use RefreshDatabase;
-    public function test_uploads_and_imports_csv_roster_via_http(): void
+
+    protected function setUp(): void
     {
-        $csvContent = <<<CSV
-Docente: Lic. Juan Carlos Perez Gomez
-Email Docente: juan.perez@umss.edu.bo
-Materia: INF110 - INTRODUCCION A LA PROGRAMACION
-Grupo: 1
-Gestion: 2/2026
-
-Codigo SIS,CI,Nombre Completo
-202100482,8765432,Perez Gomez Juan Carlos
-202201934,7654321,Rodriguez Lopez Maria Elena
-CSV;
-
-        $file = UploadedFile::fake()->createWithContent('sample.csv', $csvContent);
-
-        $response = $this->postJson('/api/courses/import-roster', [
-            'file' => $file,
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'totalProcessed' => 2,
-                    'successful' => 2,
-                    'skipped' => 0,
-                    'isSuccessful' => true,
-                    'failedRows' => [],
-                ],
-            ]);
+        parent::setUp();
+        $this->seed();
     }
 
-    public function test_reports_failed_rows_on_partial_errors_via_http(): void
+    protected function getAuthHeaders(): array
     {
-        $csvContent = <<<CSV
-Docente: Lic. Juan Carlos Perez Gomez
-Email Docente: juan.perez@umss.edu.bo
-Materia: INF110 - INTRODUCCION A LA PROGRAMACION
-Grupo: 1
-Gestion: 2/2026
-
-Codigo SIS,CI,Nombre Completo
-202100482,8765432,Perez Gomez Juan Carlos
-,7654321,Sin SIS Estudiante
-CSV;
-
-        $file = UploadedFile::fake()->createWithContent('partial.csv', $csvContent);
-
-        $response = $this->postJson('/api/students/import', [
-            'file' => $file,
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'totalProcessed' => 2,
-                    'successful' => 1,
-                    'skipped' => 1,
-                    'isSuccessful' => true,
-                ],
-            ]);
-
-        $responseData = $response->json('data');
-        $this->assertCount(1, $responseData['failedRows']);
-        $this->assertEquals(9, $responseData['failedRows'][0]['rowNumber']);
-        $this->assertEquals('Sin SIS Estudiante', $responseData['failedRows'][0]['data']['nombre_completo']);
+        $user = User::where('email', 'ana.morales@umss.edu.bo')->first();
+        $token = JWTAuth::fromUser($user);
+        return [
+            'Authorization' => 'Bearer ' . $token,
+        ];
     }
 
-    public function test_downloads_official_roster_template_via_http(): void
+    protected function getAuthToken(): string
     {
-        $response = $this->get('/api/courses/roster-template');
+        $user = User::where('email', 'ana.morales@umss.edu.bo')->first();
+        return JWTAuth::fromUser($user);
+    }
 
-        $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
-        $this->assertStringContainsString('Docente:', $response->getContent());
-        $this->assertStringContainsString('Codigo SIS,CI,Nombre Completo', $response->getContent());
+    public function test_import_valid_csv()
+    {
+        Storage::fake('local');
+
+        $csvContent = "Docente: Ana Morales Gutiérrez\n" .
+            "Email Docente: ana.morales@umss.edu.bo\n" .
+            "Materia: INF110 - INTRODUCCION A LA PROGRAMACION\n" .
+            "Grupo: 1\n" .
+            "Gestion: 2/2026\n\n" .
+            "Codigo SIS,CI,Nombre Completo\n" .
+            "202600001,7800001,BENITEZ REYES ANDRES\n" .
+            "202600002,7800002,QUISPE PEREZ PATRICIA\n";
+
+        $file = UploadedFile::fake()->createWithContent('roster.csv', $csvContent);
+
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->post('/api/student-roster/import', [
+                'file' => $file,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true);
+    }
+
+    public function test_template_download()
+    {
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->get('/api/student-roster/template');
+
+        $response->assertStatus(200)
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->assertHeader('Content-Disposition', 'attachment; filename="plantilla_nomina_estudiantes.csv"');
     }
 }

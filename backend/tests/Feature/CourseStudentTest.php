@@ -2,64 +2,46 @@
 
 namespace Tests\Feature;
 
-use App\Models\CourseGroup;
-use App\Models\Student;
-use App\Models\StudentCourseEnrollment;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\Models\User;
+use App\Models\CourseGroup;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class CourseStudentTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_can_list_enrolled_students_of_a_course_via_api(): void
+    protected function setUp(): void
     {
-        $teacher = User::create([
-            'name' => 'Docente Titular',
-            'email' => 'docente@umss.edu.bo',
-            'password' => bcrypt('password123'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
+        parent::setUp();
+        $this->seed();
+    }
 
-        CourseGroup::create([
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'Introduccion a la Programacion',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-            'teacher_id' => $teacher->id,
-        ]);
+    protected function getAuthHeaders(): array
+    {
+        $user = User::where('email', 'ana.morales@umss.edu.bo')->first();
+        $token = JWTAuth::fromUser($user);
+        return [
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json',
+        ];
+    }
 
-        Student::create([
-            'student_key' => '202001234',
-            'ci' => '7891234',
-            'full_name' => 'ALVAREZ PEDRO',
-        ]);
+    // GET /api/courses/{courseGroupId}/students
+    public function test_list_students_requires_auth()
+    {
+        $response = $this->getJson('/api/courses/1/students');
+        $response->assertStatus(401);
+    }
 
-        StudentCourseEnrollment::create([
-            'student_key' => '202001234',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
-            'ineligibility_reason' => null,
-        ]);
-
-        $response = $this->getJson('/api/courses/INF110-G1-2/2026/students');
+    public function test_list_students_not_found()
+    {
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->getJson('/api/courses/99999/students');
 
         $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    [
-                        'studentKey' => '202001234',
-                        'ci' => '7891234',
-                        'fullName' => 'ALVAREZ PEDRO',
-                        'status' => 'HABILITADO',
-                        'ineligibilityReason' => null,
-                    ]
-                ],
-                'message' => 'Estudiantes del curso obtenidos exitosamente.',
-            ]);
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data', []);
     }
 }

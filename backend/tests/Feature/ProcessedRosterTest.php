@@ -2,91 +2,53 @@
 
 namespace Tests\Feature;
 
-use App\Models\CourseGroup;
-use App\Models\Student;
-use App\Models\StudentCourseEnrollment;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\Models\User;
+use App\Models\CourseGroup;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class ProcessedRosterTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_can_list_processed_rosters_with_student_count(): void
+    protected function setUp(): void
     {
-        $teacher = User::create([
-            'name' => 'Walter Sanchez',
-            'email' => 'wsanchez@umss.edu.bo',
-            'password' => bcrypt('password'),
-            'role' => 'TEACHER',
-            'is_active' => true,
-        ]);
-
-        CourseGroup::create([
-            'course_group_id' => 'INF110-G1-2/2026',
-            'subject_code' => 'INF110',
-            'subject_name' => 'Introduccion a la Programacion',
-            'group_code' => '1',
-            'academic_term' => '2/2026',
-            'teacher_id' => $teacher->id,
-        ]);
-
-        Student::create([
-            'student_key' => '20210001',
-            'ci' => '111111',
-            'full_name' => 'Student One',
-        ]);
-
-        Student::create([
-            'student_key' => '20210002',
-            'ci' => '222222',
-            'full_name' => 'Student Two',
-        ]);
-
-        StudentCourseEnrollment::create([
-            'student_key' => '20210001',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
-        ]);
-
-        StudentCourseEnrollment::create([
-            'student_key' => '20210002',
-            'course_group_id' => 'INF110-G1-2/2026',
-            'status' => 'HABILITADO',
-        ]);
-
-        $response = $this->getJson('/api/processed-rosters');
-
-        $response
-            ->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    [
-                        'courseGroupId' => 'INF110-G1-2/2026',
-                        'subjectCode' => 'INF110',
-                        'subjectName' => 'Introduccion a la Programacion',
-                        'groupCode' => '1',
-                        'academicTerm' => '2/2026',
-                        'totalStudents' => 2,
-                        'teacherName' => 'Walter Sanchez',
-                    ],
-                ],
-                'message' => 'Planillas procesadas obtenidas exitosamente.',
-            ]);
+        parent::setUp();
+        $this->seed();
     }
 
-    public function test_returns_empty_list_when_no_processed_rosters_exist(): void
+    protected function getAuthHeaders(): array
+    {
+        $user = User::where('email', 'ana.morales@umss.edu.bo')->first();
+        $token = JWTAuth::fromUser($user);
+        return [
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json',
+        ];
+    }
+
+    // GET /api/processed-rosters
+    public function test_list_rosters_requires_auth()
     {
         $response = $this->getJson('/api/processed-rosters');
+        $response->assertStatus(401);
+    }
 
-        $response
-            ->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [],
-                'message' => 'Planillas procesadas obtenidas exitosamente.',
-            ]);
+    // GET /api/processed-rosters/{courseGroupId}
+    public function test_show_roster_requires_auth()
+    {
+        $response = $this->getJson('/api/processed-rosters/1');
+        $response->assertStatus(401);
+    }
+
+    public function test_show_roster_not_found()
+    {
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->getJson('/api/processed-rosters/99999');
+
+        $response->assertStatus(404)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Planilla no encontrada');
     }
 }

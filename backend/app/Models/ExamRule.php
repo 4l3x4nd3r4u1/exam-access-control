@@ -10,15 +10,21 @@ class ExamRule extends Model
 {
     use HasFactory;
 
-    protected $table = 'exam_rules';
+    protected $table = 'examen_norma';
 
     protected $fillable = [
-        'exam_id',
-        'rule_description',
+        'examen_id',
+        'descripcion',
     ];
 
     public function exam(): BelongsTo
     {
-        return $this->belongsTo(Exam::class, 'exam_id');
+        return $this->belongsTo(Exam::class, 'examen_id');
+    }
+
+    // Accessors for backward compatibility
+    public function getRuleDescriptionAttribute(): string
+    {
+        return $this->descripcion ?? '';
     }
 }

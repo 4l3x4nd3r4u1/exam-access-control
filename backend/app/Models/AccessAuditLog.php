@@ -10,29 +10,24 @@ class AccessAuditLog extends Model
 {
     use HasFactory;
 
-    protected $table = 'access_audit_logs';
+    protected $table = 'registro_acceso_examen';
 
     protected $fillable = [
-        'raw_id',
-        'student_key',
         'exam_id',
-        'room_id',
-        'event_type',
-        'reason_details',
-        'supervisor_id',
-        'recorded_at',
+        'aula_id',
+        'user_id_estudiante',
+        'user_id_operador',
+        'fecha',
+        'hora',
+        'resultado',
+        'observacion',
     ];
 
     protected function casts(): array
     {
         return [
-            'recorded_at' => 'datetime',
+            'fecha' => 'date',
         ];
-    }
-
-    public function student(): BelongsTo
-    {
-        return $this->belongsTo(Student::class, 'student_key', 'student_key');
     }
 
     public function exam(): BelongsTo
@@ -42,11 +37,52 @@ class AccessAuditLog extends Model
 
     public function room(): BelongsTo
     {
-        return $this->belongsTo(Room::class, 'room_id', 'id');
+        return $this->belongsTo(Room::class, 'aula_id');
+    }
+
+    public function studentUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id_estudiante');
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class, 'user_id_estudiante', 'usuario_id');
+    }
+
+    public function operator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id_operador');
     }
 
     public function supervisor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'supervisor_id');
+        return $this->operator();
+    }
+
+    // Accessors for backward compatibility
+    public function getStudentKeyAttribute(): string
+    {
+        return (string) ($this->student?->codigo_sis ?? '');
+    }
+
+    public function getEventTypeAttribute(): string
+    {
+        return $this->resultado ?? '';
+    }
+
+    public function getReasonDetailsAttribute(): ?string
+    {
+        return $this->observacion;
+    }
+
+    public function getSupervisorIdAttribute(): mixed
+    {
+        return $this->user_id_operador;
+    }
+
+    public function getRoomIdAttribute(): mixed
+    {
+        return $this->aula_id;
     }
 }

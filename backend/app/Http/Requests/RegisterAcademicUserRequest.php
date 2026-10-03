@@ -3,8 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-//Su principar funcionalidad es poder validar 
-//La entrada HTTP
+
 class RegisterAcademicUserRequest extends FormRequest
 {
     public function authorize(): bool
@@ -32,10 +31,21 @@ class RegisterAcademicUserRequest extends FormRequest
                 'min:8',
             ],
 
-            'role' => [
+            'roles' => [
                 'required',
+                'array',
+                'min:1',
+            ],
+            'roles.*' => [
                 'string',
                 'in:DOCENTE,AUXILIAR,ADMIN',
+            ],
+
+            'ci' => [
+                'nullable',
+                'string',
+                'max:30',
+                'unique:usuario,ci',
             ],
         ];
     }
@@ -49,11 +59,13 @@ class RegisterAcademicUserRequest extends FormRequest
             'email.required' => 'El correo es obligatorio.',
             'email.email' => 'El correo no tiene un formato válido.',
 
-            'password.required' => 'La contraseña provisional es obligatoria.',
+            'password.required' => 'La contraseña es obligatoria.',
             'password.min' => 'La contraseña debe tener mínimo 8 caracteres.',
 
-            'role.required' => 'El rol es obligatorio.',
-            'role.in' => 'El rol seleccionado no es válido.',
+            'roles.required' => 'Debe seleccionar al menos un rol.',
+            'roles.*.in' => 'Uno o más roles seleccionados no son válidos.',
+
+            'ci.unique' => 'El CI ya está registrado.',
         ];
     }
 }

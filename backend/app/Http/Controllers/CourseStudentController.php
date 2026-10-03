@@ -15,7 +15,7 @@ class CourseStudentController extends Controller
     /**
      * Retrieves the list of enrolled students with eligibility status for a course group.
      */
-    public function index(string $courseGroupId): JsonResponse
+    public function index(int $courseGroupId): JsonResponse
     {
         $students = $this->storage->getEnrolledStudents($courseGroupId);
 
