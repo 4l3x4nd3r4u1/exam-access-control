@@ -524,6 +524,41 @@ class CoreDataStorage
     }
 
     /**
+     * Retrieves all course groups (materia_grupo) with optional filters.
+     *
+     * @param string|null $gestion
+     * @param string|null $sigla
+     * @return array<CourseGroupSummary>
+     */
+    public function getAllCourseGroups(?string $gestion = null, ?string $sigla = null): array
+    {
+        $query = CourseGroup::with('course')
+            ->withCount('enrollments')
+            ->where('activo', true);
+
+        if ($gestion !== null) {
+            $query->where('gestion', $gestion);
+        }
+
+        if ($sigla !== null) {
+            $query->whereHas('course', fn($q) => $q->where('sigla', $sigla));
+        }
+
+        return $query->orderBy('id', 'asc')
+            ->get()
+            ->map(fn(CourseGroup $c) => new CourseGroupSummary(
+                courseGroupId: (string) $c->id,
+                subjectCode: (string) ($c->course?->sigla ?? ''),
+                subjectName: (string) ($c->course?->nombre ?? ''),
+                groupCode: (string) $c->grupo,
+                academicTerm: (string) $c->gestion,
+                totalEnrolled: (int) ($c->enrollments_count ?? 0),
+                teacherId: $c->docente_id,
+                canInteract: false,
+            ))->all();
+    }
+
+    /**
      * Retrieves all course groups assigned to a specific teacher with the enrolled student count.
      *
      * @param int $teacherId
@@ -554,12 +589,12 @@ class CoreDataStorage
                 canInteract: $c->docente_id === $currentUserId,
             ))->all();
     }
-    
+
     /**
-    * Retrieves all processed course rosters with the enrolled student count.
-    *
-    *   @return array<ProcessedRosterSummary>
-    */
+     * Retrieves all processed course rosters with the enrolled student count.
+     *
+     *   @return array<ProcessedRosterSummary>
+     */
     public function getProcessedRosters(): array
     {
         return CourseGroup::with(['course', 'teacher'])

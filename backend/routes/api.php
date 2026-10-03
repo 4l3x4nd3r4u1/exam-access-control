@@ -3,6 +3,7 @@
 use App\Http\Controllers\AcademicStaffController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CourseGroupController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\StudentRosterController;
 use App\Http\Controllers\TeacherCourseController;
@@ -47,6 +48,7 @@ Route::middleware('auth.jwt')->group(function () {
     Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class, 'index'])
         ->where('courseGroupId', '[0-9]+');
     Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
+    Route::get('/course-groups', [CourseGroupController::class, 'index']);
     Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
         ->where('courseGroupId', '[0-9]+');
     Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])
@@ -66,6 +68,8 @@ Route::prefix('catalog')->group(function () {
     Route::get('/exam-types', [CatalogController::class, 'examTypes']);
     Route::get('/rooms', [CatalogController::class, 'rooms']);
     Route::get('/courses', [CatalogController::class, 'courses']);
+    Route::get('/course-groups', [CatalogController::class, 'courseGroups']);
     Route::get('/functions', [CatalogController::class, 'functions']);
     Route::get('/emails', [CatalogController::class, 'emails']);
+    Route::get('/user-roles', [CatalogController::class, 'userRoles']);
 });

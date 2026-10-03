@@ -9,6 +9,7 @@ use App\Models\EnrollmentStatus;
 use App\Models\ExamType;
 use App\Models\Room;
 use App\Models\Course;
+use App\Models\CourseGroup;
 use App\Models\SystemFunction;
 use App\Models\FunctionUi;
 use App\Models\UiComponent;
@@ -156,6 +157,33 @@ class CatalogController extends Controller
             'success' => true,
             'data' => $courses,
             'message' => 'Materias obtenidas exitosamente.',
+        ]);
+    }
+
+    /**
+     * Get all course groups (materia_grupo) for select inputs.
+     */
+    public function courseGroups(): JsonResponse
+    {
+        $groups = CourseGroup::with('course')
+            ->where('activo', true)
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(fn(CourseGroup $group) => [
+                'value' => (string) $group->id,
+                'label' => "{$group->course->sigla} - {$group->course->nombre} - Grupo {$group->grupo} ({$group->gestion})",
+                'course_group_id' => (string) $group->id,
+                'sigla' => $group->course->sigla,
+                'course_name' => $group->course->nombre,
+                'group_code' => $group->grupo,
+                'gestion' => $group->gestion,
+                'teacher_id' => $group->docente_id,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $groups,
+            'message' => 'Grupos de materia obtenidos exitosamente.',
         ]);
     }
 
