@@ -9,6 +9,7 @@ use App\DTOs\UserSession;
 use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
+use App\DTOs\UserPersonalData;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\Course;
 use App\Models\CourseGroup;
@@ -299,7 +300,7 @@ class CoreDataStorage
      * @param ExamRegistrationData $data
      * @return OperationResult
      */
-    public function registerExam(ExamRegistrationData $data): OperationResult
+    public function registerExam(ExamRegistrationData $data, ?int $auditUserId = null): OperationResult
     {
         try {
             DB::transaction(function () use ($data) {
@@ -400,7 +401,6 @@ class CoreDataStorage
                 }
 
                 // Audit
-                $auditUserId = auth()->user()?->id;
                 if ($auditUserId) {
                     DB::table('registro_auditoria')->insert([
                         'usuario_id' => $auditUserId,
@@ -539,7 +539,7 @@ class CoreDataStorage
         return $query->orderBy('grupo', 'asc')
             ->get()
             ->map(fn(CourseGroup $c) => new CourseGroupSummary(
-                courseGroupId: (string) $c->course_group_id,
+                courseGroupId: (string) $c->id,
                 subjectCode: (string) ($c->course?->sigla ?? ''),
                 subjectName: (string) ($c->course?->nombre ?? ''),
                 groupCode: (string) $c->grupo,
