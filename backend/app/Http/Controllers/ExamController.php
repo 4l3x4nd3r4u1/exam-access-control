@@ -71,6 +71,7 @@ class ExamController extends Controller
             rooms: array_map(fn($r) => new ExamRoomData(
                 roomId: (int) $r['roomId'],
                 students: array_map('intval', $r['students'] ?? []),
+                auxiliarId: isset($r['auxiliarId']) ? (int) $r['auxiliarId'] : null,
             ), $request->input('rooms', [])),
             generalRules: $request->input('generalRules', []),
             studentRules: array_map(fn($r) => new ExamStudentRuleData(
@@ -79,7 +80,7 @@ class ExamController extends Controller
             ), $request->input('studentRules', [])),
         );
 
-        $result = $this->storage->registerExam($data);
+        $result = $this->storage->registerExam($data, $request->user()?->id ?? (\PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth::setToken($request->bearerToken())->authenticate()?->id));
 
         return response()->json([
             'success' => $result->isSuccessful,

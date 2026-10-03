@@ -14,7 +14,7 @@ return new class extends Migration
         // 1. Table: email (Registered Institutional Email Domains)
         Schema::create('email', function (Blueprint $table) {
             $table->id();
-            $table->string('dominio', 100)->unique(); // e.g. '@umss.edu.bo', '@fcyt.umss.edu.bo', '@est.umss.edu.bo'
+            $table->string('dominio', 100)->unique(); // e.g. '@umss.edu.bo', '@fcyt.umss.edu.bo', '@est.umss.edu'
             $table->string('descripcion', 255)->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamps();

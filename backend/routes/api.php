@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AcademicStaffController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\StudentRosterController;
 use App\Http\Controllers\TeacherCourseController;
@@ -37,23 +38,34 @@ Route::middleware('auth.jwt')->group(function () {
 
 Route::get('/academic-staff', [AcademicStaffController::class, 'list']);
 
-
-// can interact, sigue construyendo course_group_id como antes
 Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
 
-Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
-Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
-Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::class, 'show'])
-    ->where('courseGroupId', '[0-9]+');
-Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class, 'index'])
-    ->where('courseGroupId', '[0-9]+');
-Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
+Route::middleware('auth.jwt')->group(function () {
+    Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
+    Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::class, 'show'])
+        ->where('courseGroupId', '[0-9]+');
+    Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class, 'index'])
+        ->where('courseGroupId', '[0-9]+');
+    Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
+    Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
+        ->where('courseGroupId', '[0-9]+');
+    Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])
+        ->where('courseGroupId', '[0-9]+');
+    Route::put('/courses/{courseGroupId}/students/{userId}/status', [StudentStatusController::class, 'update'])
+        ->where('courseGroupId', '[0-9]+')
+        ->where('userId', '[0-9]+');
+});
 
-Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
-    ->where('courseGroupId', '[0-9]+');
-
-Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])
-    ->where('courseGroupId', '[0-9]+');
-
-Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
-    ->where('courseGroupId', '[0-9]+');
+/**
+ * Catalog/Lookup tables endpoints for select inputs
+ */
+Route::prefix('catalog')->group(function () {
+    Route::get('/roles', [CatalogController::class, 'roles']);
+    Route::get('/exam-student-statuses', [CatalogController::class, 'examStudentStatuses']);
+    Route::get('/enrollment-statuses', [CatalogController::class, 'enrollmentStatuses']);
+    Route::get('/exam-types', [CatalogController::class, 'examTypes']);
+    Route::get('/rooms', [CatalogController::class, 'rooms']);
+    Route::get('/courses', [CatalogController::class, 'courses']);
+    Route::get('/functions', [CatalogController::class, 'functions']);
+    Route::get('/emails', [CatalogController::class, 'emails']);
+});

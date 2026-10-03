@@ -3,12 +3,16 @@
 namespace App\Modules;
 
 use App\DTOs\ProcessedRosterSummary;
+use App\DTOs\ProcessedRosterDetail;
 use App\DTOs\RawFileData;
 use App\DTOs\ImportSummary;
 use App\DTOs\UserSession;
 use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
+use App\DTOs\RoomSummary;
+use App\DTOs\ExamSummary;
+use App\DTOs\ExamRoomSummary;
 use App\DTOs\UserPersonalData;
 use App\Exceptions\InvalidCredentialsException;
 use App\Models\Course;
@@ -303,7 +307,7 @@ class CoreDataStorage
     public function registerExam(ExamRegistrationData $data, ?int $auditUserId = null): OperationResult
     {
         try {
-            DB::transaction(function () use ($data) {
+            DB::transaction(function () use ($data, $auditUserId) {
                 $now = now();
 
                 // Validate course group exists
@@ -369,6 +373,7 @@ class CoreDataStorage
                         'examen_id' => $exam->id,
                         'aula_id' => $room->roomId,
                         'cupo_asignado' => count($room->students),
+                        'auxiliar_id' => $room->auxiliarId,
                     ]);
 
                     // Assign students to this room
@@ -472,7 +477,7 @@ class CoreDataStorage
      */
     public function getExamsByCourseGroup(int $courseGroupId): array
     {
-        return Exam::with(['examType', 'rooms.room'])
+        return Exam::with(['examType', 'rooms'])
             ->where('materia_grupo_id', $courseGroupId)
             ->where('activo', true)
             ->orderBy('fecha', 'asc')
@@ -484,11 +489,11 @@ class CoreDataStorage
                 date: $exam->fecha->format('Y-m-d'),
                 startTime: (string) $exam->hora_inicio,
                 endTime: (string) $exam->hora_fin,
-                rooms: $exam->rooms->map(fn(ExamRoom $room) => new ExamRoomSummary(
-                    roomId: (string) $room->aula_id,
-                    roomName: (string) ($room->room?->nombre ?? ''),
-                    assignedCapacity: (int) $room->cupo_asignado,
-                    assistantId: $room->auxiliar_id ? (int) $room->auxiliar_id : null,
+                rooms: $exam->rooms->map(fn(Room $room) => new ExamRoomSummary(
+                    roomId: (string) $room->pivot->aula_id,
+                    roomName: (string) $room->nombre,
+                    assignedCapacity: (int) $room->pivot->cupo_asignado,
+                    assistantId: $room->pivot->auxiliar_id ? (int) $room->pivot->auxiliar_id : null,
                 ))->toArray(),
             ))->all();
     }
@@ -562,7 +567,7 @@ class CoreDataStorage
             ->orderBy('id', 'asc')
             ->get()
             ->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
-                courseGroupId: (string) $course->course_group_id,
+                courseGroupId: (string) $course->id,
                 subjectCode: (string) ($course->course?->sigla ?? ''),
                 subjectName: (string) ($course->course?->nombre ?? ''),
                 groupCode: (string) $course->grupo,
@@ -591,12 +596,14 @@ class CoreDataStorage
         );
 
         $students = StudentCourseEnrollment::where('materia_grupo_id', $courseGroupId)
-            ->with(['user.student'])
+            ->with(['user.student', 'enrollmentStatus'])
             ->get()
             ->map(fn(StudentCourseEnrollment $e) => new EnrolledStudentSummary(
                 studentKey: (string) ($e->user?->student?->codigo_sis ?? ''),
                 ci: (string) ($e->user?->ci ?? ''),
                 fullName: (string) ($e->user?->nombre ?? ''),
+                status: (string) ($e->enrollmentStatus?->nombre ?? 'HABILITADO'),
+                ineligibilityReason: $e->motivo_inhabilitacion,
             ))
             ->values()
             ->all();
@@ -996,7 +1003,7 @@ class CoreDataStorage
                         ],
                         [
                             'nombre' => $item['fullName'],
-                            'email' => $item['ci'] . '@est.umss.edu',
+                            'email' => $sKey . '@est.umss.edu',
                             'contrasena' => $defaultPasswordHash,
                             'activo' => false,
                             'email_id' => $estudianteEmailId

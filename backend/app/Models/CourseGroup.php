@@ -81,24 +81,6 @@ class CourseGroup extends Model
         $this->attributes['docente_id'] = $value;
     }
 
-    public ?string $tempCourseGroupId = null;
-
-    public function setCourseGroupIdAttribute($value): void
-    {
-        $this->tempCourseGroupId = (string) $value;
-        if (preg_match('/^([A-Z0-9]+)-G?([A-Z0-9]+)-(.*)$/i', (string) $value, $m)) {
-            if (empty($this->tempSubjectCode)) {
-                $this->tempSubjectCode = strtoupper($m[1]);
-            }
-            if (empty($this->attributes['grupo'])) {
-                $this->attributes['grupo'] = strtoupper($m[2]);
-            }
-            if (empty($this->attributes['gestion'])) {
-                $this->attributes['gestion'] = $m[3];
-            }
-        }
-    }
-
     protected function casts(): array
     {
         return [
@@ -155,23 +137,5 @@ class CourseGroup extends Model
     public function getAcademicTermAttribute(): string
     {
         return $this->gestion ?? '';
-    }
-
-    public function getCourseGroupIdAttribute(): string
-    {
-        if (!empty($this->tempCourseGroupId)) {
-            return $this->tempCourseGroupId;
-        }
-
-        $sigla = $this->course?->sigla ?? $this->tempSubjectCode;
-        $grupo = $this->grupo;
-        $gestion = $this->gestion;
-
-        if ($sigla && $grupo && $gestion) {
-            $g = str_starts_with(strtoupper($grupo), 'G') ? strtoupper($grupo) : 'G' . $grupo;
-            return "{$sigla}-{$g}-{$gestion}";
-        }
-
-        return (string) $this->id;
     }
 }

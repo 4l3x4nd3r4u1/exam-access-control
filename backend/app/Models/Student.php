@@ -56,15 +56,15 @@ class Student extends Model
         static::creating(function (Student $student) {
             if (empty($student->usuario_id)) {
                 $sis = $student->codigo_sis;
-                $emailDomain = EmailDomain::where('dominio', '@est.umss.edu.bo')->first()
+                $emailDomain = EmailDomain::where('dominio', '@est.umss.edu')->first()
                     ?? EmailDomain::firstOrCreate(
-                        ['dominio' => '@est.umss.edu.bo'],
+                        ['dominio' => '@est.umss.edu'],
                         ['descripcion' => 'Estudiantes UMSS', 'activo' => true]
                     );
 
                 $user = User::create([
                     'nombre' => $student->tempFullName ?? ('Estudiante ' . $sis),
-                    'email' => "{$sis}@est.umss.edu.bo",
+                    'email' => "{$sis}@est.umss.edu",
                     'email_id' => $emailDomain->id,
                     'contrasena' => bcrypt('password123'),
                     'ci' => $student->tempCi,

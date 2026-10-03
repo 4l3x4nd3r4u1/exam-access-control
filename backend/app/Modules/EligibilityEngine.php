@@ -23,10 +23,11 @@ class EligibilityEngine
      * @return StatusUpdateResult
      */
     public function updateStudentStatus(
-        int $studentId,
+        int $userId,
         int $courseGroupId,
         string $status,
-        ?string $reason = null
+        ?string $reason = null,
+        ?int $auditUserId = null
     ): StatusUpdateResult {
         $cleanStatus = strtoupper(trim($status));
         $cleanReason = $reason !== null ? trim($reason) : null;
@@ -45,15 +46,6 @@ class EligibilityEngine
             );
         }
 
-        $student = Student::find($studentId);
-
-        if (!$student) {
-            return new StatusUpdateResult(
-                isSuccessful: false,
-                message: 'Estudiante no encontrado.'
-            );
-        }
-
         $courseGroup = CourseGroup::find($courseGroupId);
 
         if (!$courseGroup) {
@@ -63,9 +55,16 @@ class EligibilityEngine
             );
         }
 
-        $enrollment = StudentCourseEnrollment::where('usuario_id', $student->usuario_id)
+        $enrollment = StudentCourseEnrollment::where('usuario_id', $userId)
             ->where('materia_grupo_id', $courseGroup->id)
             ->first();
+
+        if (!$enrollment) {
+            return new StatusUpdateResult(
+                isSuccessful: false,
+                message: 'El estudiante no está inscrito en este grupo de materia.'
+            );
+        }
 
         if (!$enrollment) {
             return new StatusUpdateResult(
@@ -84,8 +83,8 @@ class EligibilityEngine
         }
 
         try {
-            DB::transaction(function () use ($student, $courseGroup, $statusModel, $cleanStatus, $cleanReason) {
-                StudentCourseEnrollment::where('usuario_id', $student->usuario_id)
+            DB::transaction(function () use ($userId, $courseGroup, $statusModel, $cleanStatus, $cleanReason, $auditUserId, $enrollment) {
+                StudentCourseEnrollment::where('usuario_id', $userId)
                     ->where('materia_grupo_id', $courseGroup->id)
                     ->update([
                         'estado_inscripcion_id' => $statusModel->id,
@@ -94,12 +93,12 @@ class EligibilityEngine
                     ]);
 
                 DB::table('registro_auditoria')->insert([
-                    'usuario_id' => auth()->user()->id,
+                    'usuario_id' => $auditUserId,
                     'accion' => 'CAMBIAR_ESTADO_HABILITACION',
                     'entidad_tipo' => 'inscripcion',
                     'entidad_id' => $enrollment->id,
                     'detalles' => json_encode([
-                        'estudiante_id' => $student->id,
+                        'estudiante_id' => $userId,
                         'course_group_id' => $courseGroup->id,
                         'estado_anterior' => $enrollment->estado_inscripcion_id,
                         'estado_nuevo' => $statusModel->id,

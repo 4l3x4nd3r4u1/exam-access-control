@@ -16,7 +16,7 @@ class CatalogSeeder extends Seeder
         $dominios = [
             ['dominio' => '@umss.edu.bo', 'descripcion' => 'Personal docente y administrativo UMSS', 'activo' => true],
             ['dominio' => '@fcyt.umss.edu.bo', 'descripcion' => 'Facultad de Ciencias y Tecnología', 'activo' => true],
-            ['dominio' => '@est.umss.edu.bo', 'descripcion' => 'Estudiantes regulares UMSS', 'activo' => true],
+            ['dominio' => '@est.umss.edu', 'descripcion' => 'Estudiantes regulares UMSS', 'activo' => true],
         ];
         foreach ($dominios as $d) {
             DB::table('email')->updateOrInsert(
@@ -70,7 +70,7 @@ class CatalogSeeder extends Seeder
         $aulas = [
             ['nombre' => 'Aula 691A', 'capacidad' => 50],
             ['nombre' => 'Aula 691B', 'capacidad' => 80],
-            ['nombre' => 'Auditorio de Informática', 'capacidad' => 120],
+            ['nombre' => 'Auditorio', 'capacidad' => 200],
         ];
         foreach ($aulas as $a) {
             DB::table('aula')->updateOrInsert(
