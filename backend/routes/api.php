@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AcademicStaffController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\StudentRosterController;
 use App\Http\Controllers\TeacherCourseController;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ Route::get('/health', function () {
 });
 
 Route::post('/auth/login', [AuthController::class, 'login']);
+// rehacer
 Route::post('/student-roster/import', [StudentRosterController::class, 'import']);
 
 Route::get('/student-roster/template', [StudentRosterController::class, 'template']);
@@ -30,11 +32,15 @@ Route::middleware('auth.jwt')->group(function () {
     Route::put('/academic-users/me', [AcademicUserController::class, 'updatePersonalData']);
     Route::put('/academic-users/{userId}/roles', [AcademicUserController::class, 'updateUserRoles'])
         ->where('userId', '[0-9]+');
+    Route::post('/academic-users', [AcademicUserController::class, 'store']);
 });
 
 Route::get('/academic-staff', [AcademicStaffController::class, 'list']);
+
+
+// can interact, sigue construyendo course_group_id como antes
 Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
-Route::post('/academic-users', [AcademicUserController::class, 'store']);
+
 Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
 Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
 Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::class, 'show'])
@@ -51,11 +57,3 @@ Route::post('/courses/{courseGroupId}/exams', [ExamController::class, 'store'])
 
 Route::put('/courses/{courseGroupId}/students/{studentKey}/status', [StudentStatusController::class, 'update'])
     ->where('courseGroupId', '[0-9]+');
-
-
-
-
-
-// Route::put('/academic-users/{userId}', [AcademicUserController::class, 'update']);
-//     ->where('courseGroupId', '[0-9]+');
-

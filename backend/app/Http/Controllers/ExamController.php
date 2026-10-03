@@ -10,6 +10,7 @@ use App\DTOs\RoomSummary;
 use App\Http\Requests\AvailableRoomsRequest;
 use App\Modules\CoreDataStorage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -60,10 +61,10 @@ class ExamController extends Controller
     /**
      * Endpoint to register a new exam.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, int $courseGroupId): JsonResponse
     {
         $data = new ExamRegistrationData(
-            courseGroupId: (int) $request->input('courseGroupId'),
+            courseGroupId: $courseGroupId,
             examTypeId: (int) $request->input('examTypeId'),
             date: $request->input('date'),
             startTime: $request->input('startTime'),
