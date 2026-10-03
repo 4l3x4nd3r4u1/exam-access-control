@@ -13,6 +13,7 @@ use App\Http\Controllers\AcademicUserController;
 use App\Http\Controllers\CourseStudentController;
 use App\Http\Controllers\ProcessedRosterController;
 use App\Http\Controllers\StudentStatusController;
+use App\Http\Controllers\StudentCourseGroupController;
 
 Route::get('/health', function () {
     return response()->json([
@@ -56,6 +57,8 @@ Route::middleware('auth.jwt')->group(function () {
     Route::put('/courses/{courseGroupId}/students/{userId}/status', [StudentStatusController::class, 'update'])
         ->where('courseGroupId', '[0-9]+')
         ->where('userId', '[0-9]+');
+    Route::get('/courses/{courseGroupId}/check-enrollment', [StudentCourseGroupController::class, 'checkEnrollment'])
+        ->where('courseGroupId', '[0-9]+');
 });
 
 /**

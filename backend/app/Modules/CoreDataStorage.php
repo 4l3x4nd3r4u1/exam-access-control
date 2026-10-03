@@ -554,7 +554,7 @@ class CoreDataStorage
                 academicTerm: (string) $c->gestion,
                 totalEnrolled: (int) ($c->enrollments_count ?? 0),
                 teacherId: $c->docente_id,
-                canInteract: false,
+                canInteract: $c->docente_id === auth()->id(),
             ))->all();
     }
 
@@ -670,7 +670,54 @@ class CoreDataStorage
     }
 
     /**
-     * Mandatory column headers required in the roster file.
+     * Checks if a student (by codigo_sis) is enrolled in a specific course group.
+     *
+     * @param string $codigoSis Student's SIS code
+     * @param int $courseGroupId Course group ID (materia_grupo.id)
+     * @return array{belongs: bool, message: string, enrollment?: array}
+     */
+    public function checkStudentBelongsToCourseGroup(string $codigoSis, int $courseGroupId): array
+    {
+        // Find student by codigo_sis
+        $student = Student::where('codigo_sis', $codigoSis)->first();
+
+        if (!$student) {
+            return [
+                'belongs' => false,
+                'message' => "Student with codigo_sis '{$codigoSis}' not found.",
+            ];
+        }
+
+        // Check enrollment
+        $enrollment = StudentCourseEnrollment::where('usuario_id', $student->usuario_id)
+            ->where('materia_grupo_id', $courseGroupId)
+            ->first();
+
+        if (!$enrollment) {
+            return [
+                'belongs' => false,
+                'message' => "Estudiante '{$codigoSis}' no esta inscrito en la materia.",
+            ];
+        }
+
+        return [
+            'belongs' => true,
+            'message' => "Estudiante '{$codigoSis}' esta inscrito en la materia.",
+            'enrollment' => [
+                'enrollment_id' => $enrollment->id ?? null,
+                'student_key' => $enrollment->studentKey ?? null,
+                'status' => $enrollment->enrollmentStatus?->nombre ?? 'HABILITADO',
+                'ineligibility_reason' => $enrollment->motivo_inhabilitacion,
+                'enrollment_date' => $enrollment->fecha_inscripcion?->format('Y-m-d'),
+            ],
+        ];
+    }
+
+    /**
+     * Retrieves the list of enrolled students for a specific course group with their eligibility status.
+     *
+     * @param int|string $courseGroupId Course group numeric ID (materia_grupo.id) or composite key
+     * @return array<EnrolledStudentSummary>
      */
     private const REQUIRED_COLUMNS = [
         'codigo_sis',
