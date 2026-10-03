@@ -101,6 +101,34 @@ class SecuritySeeder extends Seeder
                 'ci' => '30000003',
                 'roles' => ['DOCENTE'],
             ],
+            // Docente: Ana Morales Gutierrez
+            [
+                'email' => 'ana.morales@umss.edu.bo',
+                'nombre' => 'Ana Morales Gutierrez',
+                'ci' => '30000001',
+                'roles' => ['DOCENTE'],
+            ],
+            // Docente: Carlos Mendoza Rios
+            [
+                'email' => 'carlos.mendoza@umss.edu.bo',
+                'nombre' => 'Carlos Mendoza Rios',
+                'ci' => '30000002',
+                'roles' => ['DOCENTE'],
+            ],
+            // Docente: Fernando Quiroga Lopez
+            [
+                'email' => 'fernando.quiroga@umss.edu.bo',
+                'nombre' => 'Fernando Quiroga Lopez',
+                'ci' => '30000004',
+                'roles' => ['DOCENTE'],
+            ],
+            // Docente: Roberto Salazar Vargas
+            [
+                'email' => 'roberto.salazar@umss.edu.bo',
+                'nombre' => 'Roberto Salazar Vargas',
+                'ci' => '30000005',
+                'roles' => ['DOCENTE'],
+            ],
             // Superusuario with ALL roles (ADMIN, DOCENTE, AUXILIAR, ESTUDIANTE)
             [
                 'email' => 'superadmin@umss.edu.bo',

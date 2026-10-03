@@ -82,8 +82,8 @@ class CatalogSeeder extends Seeder
         // 6. Master Subjects (materia) - Independent Strong Catalog
         $materias = [
             ['sigla' => 'INF110', 'nombre' => 'Introduccion a la Programacion', 'activo' => true],
-            ['sigla' => 'INF120', 'nombre' => 'Algoritmos y Estructuras de Datos', 'activo' => true],
-            ['sigla' => 'MAT101', 'nombre' => 'Algebra Lineal', 'activo' => true],
+            ['sigla' => 'INF210', 'nombre' => 'Estructura de Datos', 'activo' => true],
+            ['sigla' => 'FIS100', 'nombre' => 'Fisica General', 'activo' => true],
         ];
         foreach ($materias as $m) {
             DB::table('materia')->updateOrInsert(
