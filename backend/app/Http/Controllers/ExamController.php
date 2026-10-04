@@ -7,10 +7,11 @@ use App\DTOs\ExamRoomData;
 use App\DTOs\ExamStudentRuleData;
 use App\DTOs\ExamSummary;
 use App\DTOs\RoomSummary;
+use App\DTOs\ScheduleExamData;
 use App\Http\Requests\AvailableRoomsRequest;
+use App\Http\Requests\ScheduleExamRequest;
 use App\Modules\CoreDataStorage;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -54,30 +55,39 @@ class ExamController extends Controller
         return response()->json([
             'success' => true,
             'data' => array_map(fn(ExamSummary $exam) => $exam->toArray(), $exams),
-            'message' => 'Exámenes obtenidos exitosamente.',
+            'message' => 'Exámenes del curso obtenidos exitosamente.',
         ], 200);
     }
 
     /**
      * Endpoint to register a new exam.
      */
-    public function store(Request $request, int $courseGroupId): JsonResponse
+    public function store(ScheduleExamRequest $request, int $courseGroupId): JsonResponse
     {
+        $scheduleData = $request->toDTO();
+
+        // Convert ScheduleExamData to ExamRegistrationData
+        // We need to map exam type title to examTypeId, classroom names to room IDs
+        $examType = \App\Models\ExamType::where('nombre', $scheduleData->title)->firstOrFail();
+        
+        $rooms = [];
+        foreach ($scheduleData->classrooms as $classroomName) {
+            $room = \App\Models\Room::where('nombre', $classroomName)->firstOrFail();
+            $rooms[] = new ExamRoomData(
+                roomId: $room->id,
+                students: [],
+                auxiliarId: null,
+            );
+        }
+
         $data = new ExamRegistrationData(
             courseGroupId: $courseGroupId,
-            examTypeId: (int) $request->input('examTypeId'),
-            date: $request->input('date'),
-            startTime: $request->input('startTime'),
-            rooms: array_map(fn($r) => new ExamRoomData(
-                roomId: (int) $r['roomId'],
-                students: array_map('intval', $r['students'] ?? []),
-                auxiliarId: isset($r['auxiliarId']) ? (int) $r['auxiliarId'] : null,
-            ), $request->input('rooms', [])),
-            generalRules: $request->input('generalRules', []),
-            studentRules: array_map(fn($r) => new ExamStudentRuleData(
-                studentId: (int) $r['studentId'],
-                rule: $r['rule'],
-            ), $request->input('studentRules', [])),
+            examTypeId: $examType->id,
+            date: $scheduleData->date,
+            startTime: $scheduleData->startTime,
+            rooms: $rooms,
+            generalRules: $scheduleData->rules,
+            studentRules: [],
         );
 
         $result = $this->storage->registerExam($data, $request->user()?->id ?? (\PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth::setToken($request->bearerToken())->authenticate()?->id));
