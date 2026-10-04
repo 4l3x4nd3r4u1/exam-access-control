@@ -24,6 +24,7 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
   const [selectedCourse, setSelectedCourse] = useState<{ course: TeacherCourse; icon: string } | null>(null);
   const [isStudentsViewOpen, setIsStudentsViewOpen] = useState(false);
   const [isExamsViewOpen, setIsExamsViewOpen] = useState(false);
+  const [isEligibilityStatusViewOpen, setIsEligibilityStatusViewOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,6 +51,15 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
   const academicTerm = courses[0]?.academic_term ?? '';
 
   if (selectedCourse) {
+    if (isEligibilityStatusViewOpen) {
+  return (
+    <TeacherStudentsView
+      course={selectedCourse.course}
+      onBack={() => setIsEligibilityStatusViewOpen(false)}
+      onLogout={onLogout}
+    />
+  );
+}
     if (isStudentsViewOpen) {
       return <TeacherStudentsView course={selectedCourse.course} onBack={() => setIsStudentsViewOpen(false)} onLogout={onLogout} />;
     }
@@ -60,21 +70,30 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
 
     return (
       <TeacherCourseDetailView
+        onOpenEligibilityStatus={() => {
+        setIsStudentsViewOpen(false);
+        setIsExamsViewOpen(false);
+        setIsEligibilityStatusViewOpen(true);
+        }}
         course={selectedCourse.course}
         subjectIcon={selectedCourse.icon}
         onBack={() => {
           setSelectedCourse(null);
+          setIsEligibilityStatusViewOpen(false);
           setIsStudentsViewOpen(false);
           setIsExamsViewOpen(false);
         }}
         onLogout={onLogout}
         onOpenStudents={() => {
+          setIsEligibilityStatusViewOpen(false);
           setIsExamsViewOpen(false);
           setIsStudentsViewOpen(true);
         }}
         onOpenExams={() => {
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(true);
+         setIsEligibilityStatusViewOpen(false);
+         setIsStudentsViewOpen(false);
+         setIsExamsViewOpen(true);
+
         }}
       />
     );
@@ -119,8 +138,10 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
 
             return (
               <button type="button" className="teacher-course-card" key={course.course_group_id} onClick={() => {
-                setIsStudentsViewOpen(false);
-                setSelectedCourse({ course, icon: courseIcon });
+                        setIsStudentsViewOpen(false);
+                        setIsExamsViewOpen(false);
+                        setIsEligibilityStatusViewOpen(false);
+                        setSelectedCourse({ course, icon: courseIcon });
               }}>
                 <img src={courseIcon} alt="" />
                 <div className="teacher-course-content">
