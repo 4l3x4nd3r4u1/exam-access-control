@@ -684,7 +684,7 @@ class CoreDataStorage
         if (!$student) {
             return [
                 'belongs' => false,
-                'message' => "Student with codigo_sis '{$codigoSis}' not found.",
+                'message' => "Estudiante con codigo_sis '{$codigoSis}' no encontrado.",
             ];
         }
 
@@ -704,8 +704,7 @@ class CoreDataStorage
             'belongs' => true,
             'message' => "Estudiante '{$codigoSis}' esta inscrito en la materia.",
             'enrollment' => [
-                'enrollment_id' => $enrollment->id ?? null,
-                'student_key' => $enrollment->studentKey ?? null,
+                'user_id' => $enrollment->usuario_id,
                 'status' => $enrollment->enrollmentStatus?->nombre ?? 'HABILITADO',
                 'ineligibility_reason' => $enrollment->motivo_inhabilitacion,
                 'enrollment_date' => $enrollment->fecha_inscripcion?->format('Y-m-d'),
