@@ -14,11 +14,14 @@ export interface TeacherCoursesResponse {
   message: string;
 }
 
+export type EnrollmentStatus = 'HABILITADO' | 'INHABILITADO';
+
 export interface EnrolledStudent {
+  userId?: number;
   studentKey: string;
   ci: string;
   fullName: string;
-  status: 'HABILITADO' | 'INHABILITADO';
+  status: EnrollmentStatus;
   ineligibilityReason: string | null;
 }
 
