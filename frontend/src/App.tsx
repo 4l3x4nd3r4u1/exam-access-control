@@ -32,11 +32,6 @@ export default function App() {
   if (!session) {
     return <LoginView onLoginSuccess={setSession} />;
   }
-
-  const userRoles = Array.isArray(session.roles) && session.roles.length > 0
-    ? session.roles.map((roleItem) => String(roleItem).toUpperCase())
-    : [String(session.role || '').toUpperCase()];
-
   if (selectedRoster) {
     return (
       <ProcessedRosterDetailView
