@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import subjectIconOne from '../assets/icono_materia-1.svg';
 import subjectIconTwo from '../assets/icono_materia-2.svg';
 import { courseService } from '../services/courseService';
 import type { TeacherCourse } from '../types/course';
-import { TeacherCourseDetailView } from './TeacherCourseDetailView';
-import { TeacherStudentsView } from './TeacherStudentsView';
-import { TeacherExamsView } from './TeacherExamsView';
 
 interface TeacherCoursesViewProps {
   teacherId: number;
-  onLogout: () => void;
+  teacherName: string;
+  onBack: () => void;
+}
+
+const courseIcons = [subjectIconOne, subjectIconTwo];
+
+function courseIcon(subjectCode: string): string {
+  const index = [...subjectCode].reduce((total, character) => total + character.charCodeAt(0), 0) % courseIcons.length;
+  return courseIcons[index];
 }
 
 function enrollmentColor(total: number): string {
@@ -17,13 +22,11 @@ function enrollmentColor(total: number): string {
   return '#f29e00';
 }
 
-export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewProps) {
+export function TeacherCoursesView({ teacherId, teacherName, onBack }: TeacherCoursesViewProps) {
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
+  const [selectedTerm, setSelectedTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<{ course: TeacherCourse; icon: string } | null>(null);
-  const [isStudentsViewOpen, setIsStudentsViewOpen] = useState(false);
-  const [isExamsViewOpen, setIsExamsViewOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -46,97 +49,68 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
     };
   }, [teacherId]);
 
-  const totalStudents = courses.reduce((total, course) => total + course.total_enrolled, 0);
-  const academicTerm = courses[0]?.academic_term ?? '';
+  const academicTerms = useMemo(() => (
+    [...new Set(courses.map((course) => course.academic_term))]
+      .sort((first, second) => second.localeCompare(first, 'es', { numeric: true }))
+  ), [courses]);
 
-  if (selectedCourse) {
-    if (isStudentsViewOpen) {
-      return <TeacherStudentsView course={selectedCourse.course} onBack={() => setIsStudentsViewOpen(false)} onLogout={onLogout} />;
-    }
-
-    if (isExamsViewOpen) {
-      return <TeacherExamsView course={selectedCourse.course} onBack={() => setIsExamsViewOpen(false)} onLogout={onLogout} />;
-    }
-
-    return (
-      <TeacherCourseDetailView
-        course={selectedCourse.course}
-        subjectIcon={selectedCourse.icon}
-        onBack={() => {
-          setSelectedCourse(null);
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(false);
-        }}
-        onLogout={onLogout}
-        onOpenStudents={() => {
-          setIsExamsViewOpen(false);
-          setIsStudentsViewOpen(true);
-        }}
-        onOpenExams={() => {
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(true);
-        }}
-      />
-    );
-  }
+  const visibleCourses = selectedTerm
+    ? courses.filter((course) => course.academic_term === selectedTerm)
+    : courses;
+  const totalStudents = visibleCourses.reduce((total, course) => total + course.total_enrolled, 0);
 
   return (
     <main className="app-shell teacher-courses-screen">
-      <header className="teacher-courses-header">
-        <div className="teacher-courses-heading-row">
+      <header className="teacher-courses-heading-row">
+        <button type="button" className="teacher-courses-back" onClick={onBack} aria-label="Volver a docentes">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4M10 6l-6 6 6 6" /></svg>
+        </button>
+        <div>
           <h1>Materias</h1>
-          <div className="teacher-courses-actions">
-            <button type="button" className="teacher-courses-icon-button" aria-label="Cambiar apariencia">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="3.25" />
-                <path d="M12 2v2.25M12 19.75V22M4.93 4.93l1.59 1.59M17.48 17.48l1.59 1.59M2 12h2.25M19.75 12H22M4.93 19.07l1.59-1.59M17.48 6.52l1.59-1.59" />
-              </svg>
-            </button>
-            <button type="button" className="teacher-courses-icon-button" onClick={onLogout} aria-label="Cerrar sesión">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="8" r="4.25" />
-                <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="teacher-courses-summary">
-          <span>{totalStudents} estudiantes</span>
-          <span>Asignadas <b>{courses.length}</b></span>
-          <span>{academicTerm}</span>
+          <p className="teacher-courses-name">{teacherName}</p>
         </div>
       </header>
 
+      <div className="teacher-courses-filters">
+        <label htmlFor="academic-term">Gestión</label>
+        <select id="academic-term" value={selectedTerm} onChange={(event) => setSelectedTerm(event.target.value)}>
+          <option value="">Todas</option>
+          {academicTerms.map((term) => <option value={term} key={term}>{term}</option>)}
+        </select>
+      </div>
+
+      <div className="teacher-courses-summary">
+        <span>{totalStudents} estudiantes</span>
+        <span>Asignadas <b>{visibleCourses.length}</b></span>
+      </div>
+
       {isLoading && <p className="teacher-courses-feedback">Cargando materias...</p>}
       {error && <p className="teacher-courses-feedback teacher-courses-error" role="alert">{error}</p>}
-      {!isLoading && !error && (
+      {!isLoading && !error && visibleCourses.length === 0 && (
+        <p className="teacher-courses-feedback">No hay materias asignadas para la gestión seleccionada.</p>
+      )}
+      {!isLoading && !error && visibleCourses.length > 0 && (
         <section className="teacher-courses-list" aria-label="Materias asignadas">
-          {courses.map((course, index) => {
-            const courseIcon = course.subject_name.toLowerCase().includes('program')
-              ? subjectIconTwo
-              : (index % 2 === 0 ? subjectIconTwo : subjectIconOne);
-
-            return (
-              <button type="button" className="teacher-course-card" key={course.course_group_id} onClick={() => {
-                setIsStudentsViewOpen(false);
-                setSelectedCourse({ course, icon: courseIcon });
-              }}>
-                <img src={courseIcon} alt="" />
-                <div className="teacher-course-content">
-                <h2>{course.subject_name.toUpperCase()}</h2>
+          {visibleCourses.map((course) => (
+            <article className="teacher-course-card teacher-course-card-readonly" key={course.course_group_id}>
+              <img src={courseIcon(course.subject_code)} alt="" />
+              <div className="teacher-course-content">
+                <h2>{course.subject_name}</h2>
                 <div className="teacher-course-meta">
                   <span>Grupo {course.group_code}</span>
                   <span><i style={{ background: enrollmentColor(course.total_enrolled) }} />{course.total_enrolled} inscritos</span>
-                  <span className="teacher-course-term"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1.5" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>{course.academic_term}</span>
+                  <span className="teacher-course-term">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1.5" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>
+                    {course.academic_term}
+                  </span>
                 </div>
               </div>
-              <span className="teacher-course-chevron" aria-hidden="true">›</span>
-            </button>
-          );
-        })}
+            </article>
+          ))}
         </section>
       )}
+
+      <button type="button" className="teacher-courses-close" onClick={onBack}>Cerrar</button>
     </main>
   );
 }
