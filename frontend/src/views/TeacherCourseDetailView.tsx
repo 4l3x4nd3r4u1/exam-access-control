@@ -12,6 +12,7 @@ interface TeacherCourseDetailViewProps {
     onLogout: () => void;
     onOpenStudents: () => void;
     onOpenExams?: () => void;
+    onOpenEligibilityStatus: () => void;
 }
 
 function colorInscritos(total: number): string {
@@ -127,11 +128,21 @@ export function TeacherCourseDetailView({
 
                 <button
                     type="button"
-                    className="teacher-course-action-card disabled-action"
+                    className="teacher-course-action-card"
+                    onClick={onOpenEligibilityStatus}
                     aria-label="Estado de habilitación"
                 >
-                    <img src={examDocumentIcon} alt="" />
-                    <span>Estado de<br />habilitacion</span>
+                <span className="teacher-course-action-chevron" aria-hidden="true">
+                ›
+                </span>
+
+                <img src={examDocumentIcon} alt="" />
+
+                <span>
+                    Estado de
+                    <br />
+                        habilitación
+                    </span>
                 </button>
             </section>
 

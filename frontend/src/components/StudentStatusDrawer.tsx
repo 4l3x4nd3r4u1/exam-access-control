@@ -33,7 +33,20 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
     setError(null);
     setIsSaving(true);
     try {
-      await courseService.updateStudentStatus(courseGroupId, student.studentKey, status, cleanReason);
+      if (!student.userId) {
+          setError('No se recibió el identificador del estudiante desde el servidor.');
+          return;
+      }
+      
+      setError(null);
+      setIsSaving(true);
+
+      await courseService.updateStudentStatus(
+          courseGroupId,
+          student.userId,
+          status,
+          cleanReason,
+       );
       onSaved({
         ...student,
         status,
@@ -58,9 +71,19 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
           <div>
             <dt>estado:</dt>
             <dd>
-              <select value={status} onChange={(event) => setStatus(event.target.value as EnrolledStudent['status'])}>
-                <option value="HABILITADO">Habilitado</option>
-                <option value="INHABILITADO">Inhabilitado</option>
+              <select
+                  value={status}
+                  onChange={(event) => {
+                      const newStatus = event.target.value as EnrolledStudent['status'];
+                      setStatus(newStatus);
+
+                      if (newStatus === 'HABILITADO') {
+                          setReason('');
+                      }
+                     }}
+                  >
+                       <option value="HABILITADO">Habilitado</option>
+                       <option value="INHABILITADO">Inhabilitado</option>
               </select>
             </dd>
           </div>
@@ -74,6 +97,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
             onChange={(event) => setReason(event.target.value)}
             placeholder={status === 'INHABILITADO' ? 'Escriba el motivo' : 'Sin motivo'}
             disabled={status === 'HABILITADO'}
+             maxLength={500}
           />
         </label>
 

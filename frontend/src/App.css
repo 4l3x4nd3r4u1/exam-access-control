@@ -1290,11 +1290,11 @@
 .student-status-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 30px;
+  gap: 10px;
+  margin-top: 28px;
   font-family: 'SF Pro Text', sans-serif;
   font-size: 16px;
-  line-height: 1;
+  line-height: 1.15;
 }
 
 .student-status-info div {
@@ -1303,8 +1303,8 @@
 }
 
 .student-status-info dt {
-  min-width: 108px;
-  font-weight: 700;
+  min-width: 100px;
+  font-weight: 600;
 }
 
 .student-status-info dd {
@@ -1312,15 +1312,24 @@
 }
 
 .student-status-info select {
-  min-width: 138px;
-  height: 44px;
-  padding: 3px 28px 3px 6px;
+  min-width: 145px;
+  height: 38px;
+  padding: 3px 30px 3px 9px;
   color: #000;
   background: #fff;
   border: 1px solid #c9c9c9;
   border-radius: 6px;
   font-family: 'SF Pro Text', sans-serif;
   font-size: 16px;
+  cursor: pointer;
+}
+
+.student-status-reason textarea::placeholder {
+  color: #777;
+}
+
+.student-status-reason textarea:focus {
+  outline: none;
 }
 
 .student-status-reason {
@@ -1355,6 +1364,8 @@
 
 .student-status-reason textarea:disabled {
   color: #777;
+   cursor: not-allowed;
+  opacity: .8;
 }
 
 .student-status-error {

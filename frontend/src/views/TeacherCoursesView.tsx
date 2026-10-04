@@ -24,6 +24,7 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
   const [selectedCourse, setSelectedCourse] = useState<{ course: TeacherCourse; icon: string } | null>(null);
   const [isStudentsViewOpen, setIsStudentsViewOpen] = useState(false);
   const [isExamsViewOpen, setIsExamsViewOpen] = useState(false);
+  const [isEligibilityStatusViewOpen, setIsEligibilityStatusViewOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,6 +51,15 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
   const academicTerm = courses[0]?.academic_term ?? '';
 
   if (selectedCourse) {
+    if (isEligibilityStatusViewOpen) {
+        return (
+            <TeacherStudentsView
+            course={selectedCourse.course}
+            onBack={() => setIsEligibilityStatusViewOpen(false)}
+            onLogout={onLogout}
+            />
+          );
+    }
     if (isStudentsViewOpen) {
       return <TeacherStudentsView course={selectedCourse.course} onBack={() => setIsStudentsViewOpen(false)} onLogout={onLogout} />;
     }
@@ -59,25 +69,33 @@ export function TeacherCoursesView({ teacherId, onLogout }: TeacherCoursesViewPr
     }
 
     return (
-      <TeacherCourseDetailView
-        course={selectedCourse.course}
-        subjectIcon={selectedCourse.icon}
-        onBack={() => {
-          setSelectedCourse(null);
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(false);
-        }}
-        onLogout={onLogout}
-        onOpenStudents={() => {
-          setIsExamsViewOpen(false);
-          setIsStudentsViewOpen(true);
-        }}
-        onOpenExams={() => {
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(true);
-        }}
-      />
-    );
+  <TeacherCourseDetailView
+    course={selectedCourse.course}
+    subjectIcon={selectedCourse.icon}
+    onBack={() => {
+      setSelectedCourse(null);
+      setIsStudentsViewOpen(false);
+      setIsExamsViewOpen(false);
+      setIsEligibilityStatusViewOpen(false);
+    }}
+    onLogout={onLogout}
+    onOpenStudents={() => {
+      setIsExamsViewOpen(false);
+      setIsEligibilityStatusViewOpen(false);
+      setIsStudentsViewOpen(true);
+    }}
+    onOpenExams={() => {
+      setIsStudentsViewOpen(false);
+      setIsEligibilityStatusViewOpen(false);
+      setIsExamsViewOpen(true);
+    }}
+    onOpenEligibilityStatus={() => {
+      setIsStudentsViewOpen(false);
+      setIsExamsViewOpen(false);
+      setIsEligibilityStatusViewOpen(true);
+    }}
+  />
+);
   }
 
   return (
