@@ -770,14 +770,14 @@
 
 .processed-roster-card h2 {
   margin-top: 7px;
-  overflow: hidden;
   font-family: 'SF Pro Text', sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 400;
   letter-spacing: -.1px;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  text-align: center;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .processed-rosters-feedback {
