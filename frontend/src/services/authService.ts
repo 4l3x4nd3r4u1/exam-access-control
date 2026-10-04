@@ -1,72 +1,146 @@
-import type { JwtPayload, LoginResponse, UserSession } from '../types/auth';
+import type {
+  AuthTokenClaims,
+  LoginResponse,
+  TokenSession,
+  UserSession,
+} from '../types/auth';
+
 import { apiRequest } from './apiClient';
+
 import {
   clearStoredSession,
   getStoredSession,
   storeSession,
 } from './sessionStorage';
 
-function decodeJwtPayload(token: string): JwtPayload {
-  const parts = token.split('.');
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
 
-  if (parts.length !== 3) {
-    throw new Error('Token inválido.');
+  return [
+    ...new Set(
+      value.filter(
+        (item): item is string =>
+          typeof item === 'string' && item.trim() !== '',
+      ),
+    ),
+  ];
+}
+
+function decodeTokenClaims(token: string): AuthTokenClaims {
+  const payloadSegment = token.split('.')[1];
+
+  if (!payloadSegment) {
+    throw new Error(
+      'El token recibido no tiene un formato válido.',
+    );
   }
 
-  const payload = parts[1]
+  const base64 = payloadSegment
     .replace(/-/g, '+')
     .replace(/_/g, '/');
 
-  const normalizedPayload = payload.padEnd(
-    payload.length + ((4 - (payload.length % 4)) % 4),
+  const paddedBase64 = base64.padEnd(
+    Math.ceil(base64.length / 4) * 4,
     '=',
   );
 
-  try {
-    return JSON.parse(atob(normalizedPayload)) as JwtPayload;
-  } catch {
-    throw new Error('No se pudo leer la información de la sesión.');
+  const bytes = Uint8Array.from(
+    atob(paddedBase64),
+    (character) => character.charCodeAt(0),
+  );
+
+  return JSON.parse(
+    new TextDecoder().decode(bytes),
+  ) as AuthTokenClaims;
+}
+
+function createUserSession(
+  tokenSession: TokenSession,
+): UserSession {
+  const claims = decodeTokenClaims(tokenSession.token);
+
+  const userId = Number(claims.sub);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new Error(
+      'El token no contiene un identificador de usuario válido.',
+    );
   }
+
+  if (claims.exp && claims.exp * 1000 <= Date.now()) {
+    throw new Error('La sesión ha expirado.');
+  }
+
+  return {
+    ...tokenSession,
+    user_id: userId,
+    full_name:
+      typeof claims.name === 'string'
+        ? claims.name
+        : '',
+    email:
+      typeof claims.email === 'string'
+        ? claims.email
+        : '',
+    ci:
+      typeof claims.ci === 'string'
+        ? claims.ci
+        : null,
+    roles: stringList(claims.roles),
+    functions: stringList(claims.functions),
+  };
+}
+
+export function hasFunction(
+  session: UserSession,
+  functionCode: string,
+): boolean {
+  return session.functions.includes(functionCode);
+}
+
+export function hasRole(
+  session: UserSession,
+  role: string,
+): boolean {
+  return session.roles.includes(role);
 }
 
 export const authService = {
   getStoredSession(): UserSession | null {
-    return getStoredSession();
+    const storedSession = getStoredSession();
+
+    if (!storedSession) return null;
+
+    try {
+      return createUserSession(storedSession);
+    } catch {
+      clearStoredSession();
+
+      return null;
+    }
   },
 
-  async login(email: string, password: string): Promise<UserSession> {
-    const response = await apiRequest<LoginResponse>('/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  async login(
+    email: string,
+    password: string,
+  ): Promise<UserSession> {
+    const response = await apiRequest<LoginResponse>(
+      '/auth/login',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        password,
-      }),
-    });
+    );
 
-    const payload = decodeJwtPayload(response.data.token);
-    const userId = Number(payload.sub);
+    const session = createUserSession(response.data);
 
-    if (!Number.isInteger(userId) || userId <= 0) {
-      throw new Error('El token no contiene un identificador de usuario válido.');
-    }
-
-    const session: UserSession = {
-      user_id: userId,
-      name: payload.name,
-      email: payload.email,
-      ci: payload.ci,
-      roles: Array.isArray(payload.roles) ? payload.roles : [],
-      functions: Array.isArray(payload.functions) ? payload.functions : [],
-      token: response.data.token,
-      is_active: response.data.is_active,
-      token_type: response.data.token_type,
-      expires_in: response.data.expires_in,
-    };
-
-    storeSession(session);
+    storeSession(response.data);
 
     return session;
   },

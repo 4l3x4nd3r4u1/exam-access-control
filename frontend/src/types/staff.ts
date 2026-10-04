@@ -2,7 +2,7 @@ export interface AcademicStaffMember {
   user_id: number;
   full_name: string;
   email: string;
-  role: string;
+  roles: string[];
   is_active: boolean;
 }
 

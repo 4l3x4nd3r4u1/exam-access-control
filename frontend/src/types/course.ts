@@ -6,6 +6,7 @@ export interface TeacherCourse {
   academic_term: string;
   total_enrolled: number;
   teacher_id: number;
+  can_interact: boolean;
 }
 
 export interface TeacherCoursesResponse {

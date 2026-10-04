@@ -2,8 +2,9 @@ import { apiRequest } from './apiClient';
 import type { EnrolledStudent, EnrolledStudentsResponse, TeacherCourse, TeacherCoursesResponse } from '../types/course';
 
 export const courseService = {
-  async getTeacherCourses(teacherId: number): Promise<TeacherCourse[]> {
-    const response = await apiRequest<TeacherCoursesResponse>(`/teachers/${teacherId}/courses`);
+  async getTeacherCourses(teacherId: number, academicTerm?: string): Promise<TeacherCourse[]> {
+    const query = academicTerm ? `?gestion=${encodeURIComponent(academicTerm)}` : '';
+    const response = await apiRequest<TeacherCoursesResponse>(`/teachers/${teacherId}/courses${query}`);
     return response.data;
   },
 
