@@ -1,20 +1,21 @@
-import type { UserSession } from '../types/auth';
+import type { TokenSession } from '../types/auth';
 
 const SESSION_STORAGE_KEY = 'exam_access_control_session';
 
-export function getStoredSession(): UserSession | null {
+export function getStoredSession(): TokenSession | null {
   const value = localStorage.getItem(SESSION_STORAGE_KEY);
   if (!value) return null;
 
   try {
-    return JSON.parse(value) as UserSession;
+    const session = JSON.parse(value) as Partial<TokenSession>;
+    return typeof session.token === 'string' ? session as TokenSession : null;
   } catch {
     localStorage.removeItem(SESSION_STORAGE_KEY);
     return null;
   }
 }
 
-export function storeSession(session: UserSession): void {
+export function storeSession(session: TokenSession): void {
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 

@@ -1,30 +1,32 @@
 import { useState } from 'react';
+import assignedCoursesIcon from './assets/icono_materia-2.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
-import { LoginView } from './views/LoginView';
-import { AcademicStaffView } from './views/AcademicStaffView';
-import { ProcessedRostersView } from './views/ProcessedRostersView';
-import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
-import { TeacherCoursesView } from './views/TeacherCoursesView';
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
-import { authService } from './services/authService';
+import { authService, hasFunction } from './services/authService';
+import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
 import type { ProcessedRoster } from './types/processedRoster';
+import { AcademicStaffView } from './views/AcademicStaffView';
+import { AssignedCoursesView } from './views/AssignedCoursesView';
+import { LoginView } from './views/LoginView';
+import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
+import { ProcessedRostersView } from './views/ProcessedRostersView';
 import './App.css';
 
-type AdminScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
+type ApplicationScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'ASSIGNED_COURSES' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
 
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
-  const [adminScreen, setAdminScreen] = useState<AdminScreen>('DASHBOARD');
+  const [screen, setScreen] = useState<ApplicationScreen>('DASHBOARD');
   const [selectedRoster, setSelectedRoster] = useState<ProcessedRoster | null>(null);
   const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
 
   const handleLogout = () => {
     authService.clearSession();
     setSession(null);
-    setAdminScreen('DASHBOARD');
+    setScreen('DASHBOARD');
     setSelectedRoster(null);
     setIsImportDrawerOpen(false);
   };
@@ -33,72 +35,104 @@ export default function App() {
     return <LoginView onLoginSuccess={setSession} />;
   }
 
-  // teacher view
-  if (session.role !== 'ADMIN') {
-    return <TeacherCoursesView teacherId={session.user_id} onLogout={handleLogout} />;
+  if (screen === 'ASSIGNED_COURSES') {
+    return <AssignedCoursesView session={session} onBack={() => setScreen('DASHBOARD')} onLogout={handleLogout} />;
   }
 
-  // admin view
-  if (adminScreen === 'ACADEMIC_STAFF') {
-    return <AcademicStaffView onBack={() => setAdminScreen('DASHBOARD')} />;
-  }
-
-  if (adminScreen === 'PROCESSED_ROSTERS') {
-    return <ProcessedRostersView onBack={() => setAdminScreen('DASHBOARD')} onLogout={handleLogout} onSelectRoster={(roster) => {
-      setSelectedRoster(roster);
-      setAdminScreen('PROCESSED_ROSTER_DETAIL');
-    }} />;
-  }
-
-  if (adminScreen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
-    return <ProcessedRosterDetailView roster={selectedRoster} onBack={() => setAdminScreen('PROCESSED_ROSTERS')} onLogout={handleLogout} />;
-  }
-
-  if (adminScreen === 'DASHBOARD') {
+  if (screen === 'ACADEMIC_STAFF') {
     return (
-      <main className="app-shell admin-dashboard">
-        <header className="admin-dashboard-header">
-          <div>
-            <h1 className="admin-dashboard-title">Panel</h1>
-            <p className="admin-dashboard-subtitle">Administrador</p>
-          </div>
-
-          <div className="admin-header-actions">
-            <button type="button" className="admin-icon-button" aria-label="Cambiar apariencia">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="3.25" />
-                <path d="M12 2v2.25M12 19.75V22M4.93 4.93l1.59 1.59M17.48 17.48l1.59 1.59M2 12h2.25M19.75 12H22M4.93 19.07l1.59-1.59M17.48 6.52l1.59-1.59" />
-              </svg>
-            </button>
-            <button type="button" className="admin-icon-button" onClick={handleLogout} aria-label="Cerrar sesión">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="8" r="4.25" />
-                <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
-              </svg>
-            </button>
-          </div>
-        </header>
-
-        <nav className="admin-menu-grid" aria-label="Opciones administrativas">
-          <button type="button" className="admin-menu-card" onClick={() => setIsImportDrawerOpen(true)}>
-            <img src={importRosterIcon} alt="" className="admin-menu-icon admin-import-icon" />
-            <span>Importar<br />planilla</span>
-          </button>
-
-          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('PROCESSED_ROSTERS')}>
-            <img src={processedRostersIcon} alt="" className="admin-menu-icon admin-rosters-icon" />
-            <span>Planillas<br />importadas</span>
-          </button>
-
-          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('ACADEMIC_STAFF')}>
-            <img src={academicStaffIcon} alt="" className="admin-menu-icon admin-staff-icon" />
-            <span>Personal<br />Académico</span>
-          </button>
-        </nav>
-        <ImportRosterDrawer isOpen={isImportDrawerOpen} onClose={() => setIsImportDrawerOpen(false)} />
-      </main>
+      <AcademicStaffView
+        onBack={() => setScreen('DASHBOARD')}
+        canRegister={hasFunction(session, FUNCTION_CODES.REGISTER_ACADEMIC_STAFF)}
+        canEditRoles={hasFunction(session, FUNCTION_CODES.EDIT_ROLES)}
+      />
     );
   }
 
-  return null;
+  if (screen === 'PROCESSED_ROSTERS') {
+    return (
+      <ProcessedRostersView
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+        onSelectRoster={(roster) => {
+          setSelectedRoster(roster);
+          setScreen('PROCESSED_ROSTER_DETAIL');
+        }}
+      />
+    );
+  }
+
+  if (screen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
+    return (
+      <ProcessedRosterDetailView
+        roster={selectedRoster}
+        onBack={() => setScreen('PROCESSED_ROSTERS')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  const menuItems = [
+    {
+      functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+      label: 'Visualizar materias',
+      icon: assignedCoursesIcon,
+      iconClass: 'app-courses-icon',
+      open: () => setScreen('ASSIGNED_COURSES'),
+    },
+    {
+      functionCode: FUNCTION_CODES.IMPORT_ROSTER,
+      label: 'Importar padrón',
+      icon: importRosterIcon,
+      iconClass: 'admin-import-icon',
+      open: () => setIsImportDrawerOpen(true),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+      label: 'Planillas importadas',
+      icon: processedRostersIcon,
+      iconClass: 'admin-rosters-icon',
+      open: () => setScreen('PROCESSED_ROSTERS'),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+      label: 'Personal académico',
+      icon: academicStaffIcon,
+      iconClass: 'admin-staff-icon',
+      open: () => setScreen('ACADEMIC_STAFF'),
+    },
+  ].filter((item) => hasFunction(session, item.functionCode));
+
+  return (
+    <main className="app-shell admin-dashboard app-dashboard">
+      <header className="admin-dashboard-header">
+        <div>
+          <h1 className="admin-dashboard-title">Panel</h1>
+          <p className="admin-dashboard-subtitle">{session.full_name}</p>
+        </div>
+
+        <button type="button" className="admin-icon-button" onClick={handleLogout} aria-label="Cerrar sesión">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4.25" />
+            <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
+          </svg>
+        </button>
+      </header>
+
+      {menuItems.length > 0 ? (
+        <nav className="admin-menu-grid" aria-label="Funciones disponibles">
+          {menuItems.map((item) => (
+            <button type="button" className="admin-menu-card" onClick={item.open} key={item.functionCode}>
+              <img src={item.icon} alt="" className={`admin-menu-icon ${item.iconClass}`} />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      ) : (
+        <p className="app-dashboard-empty">Tu cuenta no tiene funciones disponibles.</p>
+      )}
+
+      <ImportRosterDrawer isOpen={isImportDrawerOpen} onClose={() => setIsImportDrawerOpen(false)} />
+    </main>
+  );
 }
