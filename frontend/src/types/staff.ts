@@ -2,8 +2,12 @@ export interface AcademicStaffMember {
   user_id: number;
   full_name: string;
   email: string;
-  role: string;
+  role?: string;
+  roles?: string[];
   is_active: boolean;
+  _matchMeta?: {
+    highlightRanges: Array<[number, number]>;
+  };
 }
 
 export interface AcademicStaffResponse {
@@ -24,4 +28,9 @@ export interface AcademicUserUpdateData {
   email: string;
   role: 'DOCENTE' | 'AUXILIAR' | 'ADMIN';
   newPassword?: string;
+}
+
+export interface UpdateUserRolesPayload {
+  userId: number;
+  roles: string[];
 }

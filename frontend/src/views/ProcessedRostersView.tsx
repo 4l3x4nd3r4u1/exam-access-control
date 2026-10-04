@@ -73,7 +73,7 @@ export function ProcessedRostersView({ onBack, onLogout, onSelectRoster }: Proce
           {rosters.map((roster) => (
             <button type="button" className="processed-roster-card" key={roster.courseGroupId} onClick={() => onSelectRoster(roster)}>
               <img src={rosterPreviewIcon} alt="" />
-              <h2>{roster.subjectName} - G{roster.groupCode}</h2>
+              <h2>{roster.subjectName} - G{roster.groupCode}{roster.academicTerm ? ` - ${roster.academicTerm}` : ''}</h2>
             </button>
           ))}
         </section>

@@ -149,31 +149,57 @@
   width: 100%;
 }
 
-/* ADMIN DASHBOARD */
+/* UNIFIED PANEL / DASHBOARD (Figma iPhone 17 - 32) */
 .admin-dashboard {
-  width: 150%;
-  padding: 62px 26px 32px;
+  width: min(402px, 100dvw);
+  margin: 0 auto;
+  padding: 32px 18px 48px;
+  background: #ffffff;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  background: #1c1c1e;
+  color: #ffffff;
+  padding: 9px 16px;
+  border-radius: 20px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: toastFadeIn 0.2s ease-out;
 }
 
 .admin-dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  margin-bottom: 24px;
 }
 
 .admin-dashboard-title {
-  font-family: 'SF Pro Display', sans-serif;
-  font-size: 45px;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 32px;
   font-weight: 700;
-  letter-spacing: -1.2px;
-  line-height: .95;
+  letter-spacing: -0.8px;
+  line-height: 1.05;
+  color: #000000;
 }
 
 .admin-dashboard-subtitle {
-  margin-top: 8px;
-  font-family: 'SF Pro Text', sans-serif;
-  font-size: 17px;
-  line-height: 1.15;
+  margin-top: 4px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #666666;
+  line-height: 1.2;
 }
 
 .admin-dashboard-subtitle span {
@@ -183,17 +209,18 @@
 .admin-header-actions {
   display: flex;
   gap: 12px;
-  padding-top: 1px;
+  padding-top: 4px;
 }
 
 .admin-icon-button {
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   color: #000;
   background: none;
   border: 0;
   cursor: pointer;
+  transition: opacity 0.15s;
 }
 
 .admin-icon-button svg {
@@ -201,10 +228,78 @@
   height: 100%;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.8;
   stroke-linecap: round;
 }
 
+.unified-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.unified-panel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 122px;
+  padding: 14px 10px 12px;
+  background: #f2f2f7;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 18px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.unified-panel-card:hover {
+  background: #ebebf0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.unified-panel-card:active {
+  transform: scale(0.97);
+}
+
+.panel-card-icon-box {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+
+.panel-card-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.panel-card-svg {
+  width: 32px;
+  height: 32px;
+  color: #1c1c1e;
+}
+
+.panel-card-label {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1c1c1e;
+  text-align: center;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Legacy compatibility classes */
 .admin-menu-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -212,6 +307,7 @@
   row-gap: 62px;
   margin-top: 96px;
 }
+
 
 .admin-menu-card {
   display: flex;
@@ -2596,5 +2692,648 @@
 .schedule-exam-cancel-btn:active,
 .schedule-exam-submit-btn:active {
   transform: scale(0.98);
+}
+
+/* ==========================================================================
+   EDIT ROLES VIEW (Frames 168 y 170)
+   ========================================================================== */
+.edit-roles-screen {
+  width: min(402px, 100dvw);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 24px 18px 36px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.edit-roles-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1c1c1e;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  animation: toastFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.edit-roles-search-bar {
+  margin-bottom: 16px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f2f2f7;
+  border-radius: 12px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.search-input-wrapper:focus-within {
+  background: #ffffff;
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+}
+
+.search-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8e8e93;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.search-input-field {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  color: #000000;
+}
+
+.search-input-field::placeholder {
+  color: #8e8e93;
+}
+
+.clear-search-btn {
+  background: none;
+  border: none;
+  color: #007aff;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.clear-search-btn:hover {
+  text-decoration: underline;
+}
+
+.edit-roles-list-container {
+  flex: 1;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.edit-roles-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-roles-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 12px;
+  border: none;
+  background: #ffffff;
+  border-bottom: 1px solid #f2f2f7;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.edit-roles-row-btn:nth-child(even) {
+  background-color: #fafafc;
+}
+
+.edit-roles-row-btn:hover {
+  background-color: #f2f2f7;
+}
+
+.edit-roles-badges-col {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  max-width: 48%;
+  flex-shrink: 0;
+}
+
+.role-badge {
+  display: inline-block;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.role-badge-docente {
+  background: #e5e5ea;
+  color: #1c1c1e;
+}
+
+.role-badge-admin {
+  background: #d1d1d6;
+  color: #000000;
+}
+
+.role-badge-auxiliar {
+  background: #e5e5ea;
+  color: #3a3a3c;
+}
+
+.role-badge-estudiante {
+  background: #efeff4;
+  color: #636366;
+}
+
+.role-badge-default {
+  background: #f2f2f7;
+  color: #8e8e93;
+}
+
+.edit-roles-name-col {
+  flex: 1;
+  text-align: right;
+  padding-left: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-name-text {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.edit-roles-state-feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: #8e8e93;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  text-align: center;
+}
+
+.edit-roles-error-feedback {
+  color: #ff3b30;
+}
+
+.edit-roles-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e5e5ea;
+  border-top-color: #007aff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+.retry-btn {
+  margin-top: 10px;
+  padding: 6px 14px;
+  background: #007aff;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-roles-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.edit-roles-cancel-btn {
+  width: min(220px, 100%);
+  height: 44px;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.edit-roles-cancel-btn:hover {
+  opacity: 0.9;
+}
+
+.edit-roles-cancel-btn:active {
+  transform: scale(0.98);
+}
+
+/* Modal Frame 170 */
+.edit-roles-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.edit-roles-modal-card {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  animation: modalCardPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalCardPop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.edit-roles-modal-title {
+  margin: 0 0 18px;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.02em;
+}
+
+.edit-roles-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Tarjeta Nombre */
+.modal-input-card {
+  background-color: #dcdcdc;
+  border-radius: 10px;
+  padding: 6px 14px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-input-card-label {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  color: #666666;
+  line-height: 1.2;
+}
+
+.modal-input-card-value {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #000000;
+  line-height: 1.3;
+}
+
+/* Fila de Rol: Etiqueta y Select Múltiple */
+.modal-role-select-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.modal-role-label {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #3a3a3c;
+  padding-top: 6px;
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.modal-multi-select-box {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #d1d1d6;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.modal-select-item-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: none;
+  border-bottom: 1px solid #e5e5ea;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.modal-select-item-btn:last-child {
+  border-bottom: none;
+}
+
+.modal-select-item-btn:hover {
+  background-color: #f2f2f7;
+}
+
+.modal-select-item-label {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13.5px;
+  color: #000000;
+  font-weight: 400;
+}
+
+.modal-select-item-check {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-error-text {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12.5px;
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.modal-actions-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.modal-cancel-btn,
+.modal-save-btn {
+  flex: 1;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.modal-cancel-btn {
+  background: #000000;
+  color: #ffffff;
+}
+
+.modal-save-btn {
+  background: #007aff;
+  color: #ffffff;
+}
+
+.modal-cancel-btn:hover,
+.modal-save-btn:hover {
+  opacity: 0.9;
+}
+
+.modal-cancel-btn:active,
+.modal-save-btn:active {
+  transform: scale(0.98);
+}
+
+.modal-save-btn:disabled,
+.modal-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==========================================================================
+   VENTANAS EMERGENTES (MODALES FLOTANTES SEGÚN FIGMA)
+   ========================================================================== */
+.popup-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+.popup-modal-window {
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+  animation: modalCardPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+}
+
+.popup-search-staff-card {
+  max-width: 360px;
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 16px 16px;
+}
+
+.popup-edit-role-card {
+  max-width: 350px;
+  padding: 22px 18px;
+}
+
+.popup-modal-title {
+  margin: 0 0 16px;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.02em;
+}
+
+.popup-search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: #f2f2f7;
+  border-radius: 10px;
+  padding: 7px 10px;
+  margin-bottom: 12px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.popup-search-input-wrapper:focus-within {
+  background: #ffffff;
+  border-color: #007aff;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+}
+
+.popup-search-field {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  color: #000000;
+}
+
+.popup-search-field::placeholder {
+  color: #8e8e93;
+}
+
+.popup-staff-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 380px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+}
+
+.popup-staff-rows-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-staff-row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 8px;
+  border: none;
+  background: #ffffff;
+  border-bottom: 1px solid #f2f2f7;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.popup-staff-row-item:nth-child(even) {
+  background-color: #fafafc;
+}
+
+.popup-staff-row-item:hover {
+  background-color: #f2f2f7;
+}
+
+.member-name-text {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1c1c1e;
+}
+
+.search-match-highlight {
+  font-weight: 700;
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.1);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.popup-modal-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.popup-modal-cancel-btn {
+  width: 140px;
+  height: 38px;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.popup-modal-cancel-btn:hover {
+  opacity: 0.9;
+}
+
+.popup-modal-cancel-btn:active {
+  transform: scale(0.97);
+}
+
+.popup-toast-pill {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1300;
+  background: #1c1c1e;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  animation: toastFadeIn 0.2s ease-out;
 }
 
