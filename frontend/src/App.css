@@ -1935,6 +1935,320 @@
   text-align: center;
 }
 
+/* FUNCTION-DRIVEN DASHBOARD */
+.app-dashboard.admin-dashboard {
+  width: min(402px, 100dvw);
+  max-width: none;
+}
+
+.app-dashboard .admin-dashboard-subtitle {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-dashboard .admin-menu-grid {
+  margin-top: 72px;
+}
+
+.app-dashboard .admin-menu-card span {
+  max-width: 160px;
+}
+
+.app-courses-icon {
+  width: 112px;
+  height: 105px;
+  margin-bottom: 11px;
+}
+
+.app-dashboard-empty {
+  margin-top: 90px;
+  color: #666;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+  text-align: center;
+}
+
+/* ASSIGNED COURSES DIRECTORY */
+.assigned-courses-screen {
+  width: min(402px, 100dvw);
+  max-width: none;
+  padding: 28px 22px 32px;
+}
+
+.assigned-courses-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.assigned-courses-back,
+.assigned-courses-profile,
+.teacher-courses-back {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  padding: 0;
+  color: #000;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.assigned-courses-back svg,
+.assigned-courses-profile svg,
+.teacher-courses-back svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.assigned-courses-heading {
+  margin-top: 38px;
+}
+
+.assigned-courses-heading h1 {
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 39px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: .96;
+}
+
+.assigned-courses-heading p {
+  margin-top: 10px;
+  color: #767676;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+}
+
+.assigned-courses-own-button {
+  width: 100%;
+  min-height: 43px;
+  margin-top: 30px;
+  color: #fff;
+  background: #111;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.assigned-courses-search {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 0 13px;
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+.assigned-courses-search svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: #777;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.assigned-courses-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+}
+
+.assigned-courses-directory {
+  margin-top: 20px;
+}
+
+.assigned-courses-count {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 11px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+}
+
+.assigned-courses-count strong {
+  display: grid;
+  min-width: 21px;
+  height: 21px;
+  place-items: center;
+  padding: 0 5px;
+  background: #e2e2e2;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.assigned-courses-table-header,
+.assigned-courses-row {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  align-items: center;
+}
+
+.assigned-courses-table-header {
+  min-height: 25px;
+  padding: 0 10px;
+  color: #8a8a8a;
+  border-bottom: 1px solid #d9d9d9;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.assigned-courses-row {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  color: #171717;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  text-align: left;
+}
+
+.assigned-courses-row:nth-of-type(even) {
+  background: #ededed;
+}
+
+.assigned-courses-row span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assigned-courses-row:hover,
+.assigned-courses-row:focus-visible {
+  background: #dedede;
+}
+
+.assigned-courses-feedback {
+  padding: 35px 8px;
+  color: #666;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  text-align: center;
+}
+
+.assigned-courses-error {
+  color: #c72d2d;
+}
+
+.assigned-courses-close,
+.teacher-courses-close {
+  display: block;
+  min-width: 112px;
+  min-height: 34px;
+  margin: 34px auto 0;
+  padding: 0 18px;
+  color: #fff;
+  background: #050505;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* READ-ONLY COURSE LIST */
+.teacher-courses-screen {
+  padding-top: 30px;
+}
+
+.teacher-courses-heading-row {
+  justify-content: flex-start;
+  gap: 13px;
+}
+
+.teacher-courses-heading-row h1 {
+  font-size: 39px;
+}
+
+.teacher-courses-name {
+  max-width: 300px;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #666;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teacher-courses-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+}
+
+.teacher-courses-filters select {
+  padding: 5px 25px 5px 8px;
+  background: #f1f1f1;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.teacher-courses-list {
+  margin-top: 35px;
+}
+
+.teacher-course-card-readonly {
+  grid-template-columns: 100px minmax(0, 1fr);
+  cursor: default;
+}
+
+.teacher-course-card-readonly .teacher-course-content h2 {
+  text-transform: none;
+}
+
+@media (max-width: 360px) {
+  .assigned-courses-heading h1,
+  .teacher-courses-heading-row h1 {
+    font-size: 34px;
+  }
+
+  .teacher-course-card-readonly {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .teacher-course-card-readonly > img {
+    width: 76px;
+  }
+
+  .teacher-course-meta {
+    gap: 8px;
+    font-size: 9px;
+  }
+}
+
 /* TEACHER EXAMS VIEW */
 .teacher-exams-screen {
   width: min(402px, 100dvw);

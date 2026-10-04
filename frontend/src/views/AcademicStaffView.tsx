@@ -6,6 +6,8 @@ import type { AcademicStaffMember } from '../types/staff';
 
 interface AcademicStaffViewProps {
   onBack: () => void;
+  canRegister: boolean;
+  canEditRoles: boolean;
 }
 
 function formatRole(role: string): string {
@@ -20,7 +22,11 @@ function formatRole(role: string): string {
   return labels[role] ?? role;
 }
 
-export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
+function formatRoles(roles: string[]): string {
+  return roles.map(formatRole).join(', ');
+}
+
+export function AcademicStaffView({ onBack, canRegister, canEditRoles }: AcademicStaffViewProps) {
   const [staff, setStaff] = useState<AcademicStaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,12 +77,14 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
             <path d="M20 12H4M10 6l-6 6 6 6" />
           </svg>
         </button>
-        <button type="button" className="academic-staff-add" onClick={() => {
-          setSelectedUser(null);
-          setIsNewUserDrawerOpen(true);
-        }} aria-label="Crear usuario">
-          +
-        </button>
+        {canRegister && (
+          <button type="button" className="academic-staff-add" onClick={() => {
+            setSelectedUser(null);
+            setIsNewUserDrawerOpen(true);
+          }} aria-label="Crear usuario">
+            +
+          </button>
+        )}
       </header>
 
       <section className="academic-staff-hero">
@@ -96,17 +104,19 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
         {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
         {!isLoading && !error && staff.map((member) => (
           <div className="academic-staff-row" key={member.user_id}>
-            <span>{formatRole(member.role)}</span>
+            <span>{formatRoles(member.roles)}</span>
             <span title={member.full_name}>{member.full_name}</span>
-            <button type="button" className="academic-staff-edit" onClick={() => {
-              setSelectedUser(member);
-              setIsNewUserDrawerOpen(true);
-            }}>Editar</button>
+            {canEditRoles && (
+              <button type="button" className="academic-staff-edit" onClick={() => {
+                setSelectedUser(member);
+                setIsNewUserDrawerOpen(true);
+              }}>Editar</button>
+            )}
           </div>
         ))}
       </section>
 
-      {isNewUserDrawerOpen && (
+      {isNewUserDrawerOpen && (canRegister || canEditRoles) && (
         <AcademicUserDrawer
           isOpen
           user={selectedUser}
