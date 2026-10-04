@@ -44,6 +44,7 @@ export function TeacherCourseDetailView({
     onLogout,
     onOpenStudents,
     onOpenExams,
+    onOpenEligibilityStatus,
 }: TeacherCourseDetailViewProps) {
     const [isScheduleExamOpen, setIsScheduleExamOpen] = useState(false);
     const iconoMateria = course.subject_name?.toLowerCase().includes("program")
