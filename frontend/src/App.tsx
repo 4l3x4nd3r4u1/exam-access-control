@@ -26,6 +26,13 @@ type AppScreen =
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL'
   | 'TEACHER_COURSES';
+  
+   function formatRole(role: string): string {
+        return role
+             .toLowerCase()
+             .replace(/_/g, ' ')
+             .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    }
 
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(
@@ -105,7 +112,7 @@ export default function App() {
           </h1>
 
           <p className="admin-dashboard-subtitle">
-            {session.name}
+             {session.roles.map(formatRole).join(', ')}
           </p>
         </div>
 
