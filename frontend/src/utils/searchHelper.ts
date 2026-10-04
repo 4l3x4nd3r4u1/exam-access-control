@@ -168,5 +168,10 @@ export function filterAndRankStaff<T extends { full_name: string; email?: string
       }
       return a.full_name.localeCompare(b.full_name);
     })
-    .map(({ score, ...rest }) => rest as T & { _matchMeta?: { highlightRanges: Array<[number, number]> } });
+    .map((entry) => {
+      const copy = { ...entry };
+      delete (copy as { score?: number }).score;
+      return copy as T & { _matchMeta?: { highlightRanges: Array<[number, number]> } };
+    });
 }
+

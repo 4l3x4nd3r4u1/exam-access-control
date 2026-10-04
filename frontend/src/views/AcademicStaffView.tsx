@@ -96,7 +96,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
         {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
         {!isLoading && !error && staff.map((member) => (
           <div className="academic-staff-row" key={member.user_id}>
-            <span>{formatRole(member.role)}</span>
+            <span>{formatRole(member.role ?? '')}</span>
             <span title={member.full_name}>{member.full_name}</span>
             <button type="button" className="academic-staff-edit" onClick={() => {
               setSelectedUser(member);
