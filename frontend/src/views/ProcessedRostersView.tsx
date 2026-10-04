@@ -74,6 +74,7 @@ export function ProcessedRostersView({ onBack, onLogout, onSelectRoster }: Proce
             const courseGroupId = roster.course_group_id || roster.courseGroupId || '';
             const subjectName = roster.subject_name || roster.subjectName || '';
             const groupCode = roster.group_code || roster.groupCode || '';
+            const formattedGroup = groupCode ? (groupCode.startsWith('G') ? groupCode : `G${groupCode}`) : '';
             const academicTerm = roster.academic_term || roster.academicTerm || '';
             return (
               <button
@@ -83,7 +84,7 @@ export function ProcessedRostersView({ onBack, onLogout, onSelectRoster }: Proce
                 onClick={() => onSelectRoster(roster)}
               >
                 <img src={rosterPreviewIcon} alt="" />
-                <h2>{subjectName} - G{groupCode}{academicTerm ? ` - ${academicTerm}` : ''}</h2>
+                <h2>{subjectName}{formattedGroup ? ` - ${formattedGroup}` : ''}{academicTerm ? ` - ${academicTerm}` : ''}</h2>
               </button>
             );
           })}
