@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { staffService } from '../services/staffService';
 import { catalogService } from '../services/catalogService';
+import { authService } from '../services/authService';
 import { formatRoleLabel } from '../services/jwtHelper';
 import { filterAndRankStaff } from '../utils/searchHelper';
 import { HighlightedText } from './HighlightedText';
@@ -9,6 +10,7 @@ import type { AcademicStaffMember } from '../types/staff';
 interface EditRolesModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentUserId?: number;
 }
 
 export interface RoleOption {
@@ -26,13 +28,7 @@ function normalizeRoles(member: AcademicStaffMember): string[] {
   return [];
 }
 
-const defaultRoleOptions: RoleOption[] = [
-  { id: 'DOCENTE', label: 'Docente' },
-  { id: 'AUXILIAR', label: 'Auxiliar' },
-  { id: 'ADMIN', label: 'Administrador' },
-];
-
-export function EditRolesModal({ isOpen, onClose }: EditRolesModalProps) {
+export function EditRolesModal({ isOpen, onClose, currentUserId }: EditRolesModalProps) {
   const [staff, setStaff] = useState<AcademicStaffMember[]>([]);
   const [availableRoles, setAvailableRoles] = useState<RoleOption[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +40,13 @@ export function EditRolesModal({ isOpen, onClose }: EditRolesModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const activeUserId = currentUserId ?? authService.getStoredSession()?.user_id;
+
+  const isSelf = useMemo(() => {
+    if (!selectedUser || !activeUserId) return false;
+    return selectedUser.user_id === activeUserId;
+  }, [selectedUser, activeUserId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -108,7 +111,7 @@ export function EditRolesModal({ isOpen, onClose }: EditRolesModalProps) {
   const handleOpenEditRole = (member: AcademicStaffMember) => {
     setSelectedUser(member);
     const currentRoles = normalizeRoles(member);
-    setUserRoles(currentRoles.length > 0 ? currentRoles : ['DOCENTE']);
+    setUserRoles(currentRoles);
     setModalError(null);
   };
 
@@ -124,6 +127,11 @@ export function EditRolesModal({ isOpen, onClose }: EditRolesModalProps) {
   const handleSaveRoles = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedUser) return;
+
+    if (isSelf) {
+      setModalError('No puede cambiar sus propios roles.');
+      return;
+    }
 
     if (userRoles.length === 0) {
       setModalError('Debe seleccionar al menos un rol.');
@@ -155,7 +163,7 @@ export function EditRolesModal({ isOpen, onClose }: EditRolesModalProps) {
 
   if (!isOpen) return null;
 
-  const rolesToDisplay = availableRoles.length > 0 ? availableRoles : defaultRoleOptions;
+  const rolesToDisplay = availableRoles;
 
   return (
     <div className="popup-modal-backdrop" onClick={onClose}>
@@ -209,6 +217,12 @@ export function EditRolesModal({ isOpen, onClose }: EditRolesModalProps) {
               </div>
             </div>
 
+            {isSelf && (
+              <p className="modal-error-text" role="alert">
+                No puedes modificar tus propios roles.
+              </p>
+            )}
+
             {modalError && (
               <p className="modal-error-text" role="alert">
                 {modalError}
@@ -227,7 +241,7 @@ export function EditRolesModal({ isOpen, onClose }: EditRolesModalProps) {
               <button
                 type="submit"
                 className="modal-save-btn"
-                disabled={isSaving || userRoles.length === 0}
+                disabled={isSaving || userRoles.length === 0 || isSelf}
               >
                 {isSaving ? 'Guardando...' : 'Guardar cambios'}
               </button>

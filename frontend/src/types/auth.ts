@@ -1,8 +1,9 @@
-export type UserRole = 'ADMIN' | 'DOCENTE' | 'AUXILIAR';
+export type UserRole = 'ADMIN' | 'DOCENTE' | 'AUXILIAR' | 'ESTUDIANTE';
 
 export interface UserSession {
   user_id: number;
-  role: UserRole;
+  role: UserRole | string;
+  roles?: string[];
   full_name: string;
   email: string;
   token: string;

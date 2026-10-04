@@ -15,12 +15,6 @@ export interface CatalogResponse<T> {
 let rolesCache: CatalogItem[] | null = null;
 let inFlightRolesPromise: Promise<CatalogItem[]> | null = null;
 
-const fallbackRoles: CatalogItem[] = [
-  { value: 'DOCENTE', label: 'DOCENTE', description: 'Docente titular o interino' },
-  { value: 'AUXILIAR', label: 'AUXILIAR', description: 'Auxiliar de docencia' },
-  { value: 'ADMIN', label: 'ADMIN', description: 'Administrador del sistema' },
-];
-
 export const catalogService = {
   getCachedRoles(): CatalogItem[] | null {
     return rolesCache;
@@ -35,19 +29,14 @@ export const catalogService = {
       return inFlightRolesPromise;
     }
 
-    inFlightRolesPromise = (async () => {
-      try {
-        const response = await apiRequest<CatalogResponse<CatalogItem>>('/catalog/roles');
+    inFlightRolesPromise = apiRequest<CatalogResponse<CatalogItem>>('/catalog/roles')
+      .then((response) => {
         rolesCache = response.data;
         return response.data;
-      } catch (error) {
-        console.warn('Unable to load roles catalog, using fallback:', error);
-        rolesCache = fallbackRoles;
-        return fallbackRoles;
-      } finally {
+      })
+      .finally(() => {
         inFlightRolesPromise = null;
-      }
-    })();
+      });
 
     return inFlightRolesPromise;
   },

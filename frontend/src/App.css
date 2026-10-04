@@ -3091,6 +3091,12 @@
   background-color: #f2f2f7;
 }
 
+.modal-select-item-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background-color: #f9f9f9;
+}
+
 .modal-select-item-label {
   font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13.5px;

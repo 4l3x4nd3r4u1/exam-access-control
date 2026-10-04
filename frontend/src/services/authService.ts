@@ -15,7 +15,7 @@ export const authService = {
     });
 
     storeSession(response.data);
-    return response.data;
+    return getStoredSession() || response.data;
   },
 
   clearSession(): void {
