@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import { staffService } from '../services/staffService';
 import { catalogService } from '../services/catalogService';
 import { authService } from '../services/authService';
@@ -124,7 +124,7 @@ export function EditRolesView({ onBack }: EditRolesViewProps) {
     });
   };
 
-  const handleSaveRoles = async (event: React.FormEvent) => {
+  const handleSaveRoles = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedUser) return;
 
@@ -221,7 +221,7 @@ export function EditRolesView({ onBack }: EditRolesViewProps) {
 
         {!isLoading && !error && filteredStaff.length === 0 && (
           <div className="edit-roles-state-feedback">
-            <p>No se encontraron resultados para "{searchTerm}"</p>
+            <p>No se encontraron resultados para &quot;{searchTerm}&quot;</p>
           </div>
         )}
 

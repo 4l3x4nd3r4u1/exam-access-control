@@ -3,6 +3,7 @@ export interface AcademicStaffMember {
   full_name: string;
   email: string;
   roles: string[];
+  role?: string;
   is_active: boolean;
   _matchMeta?: {
     highlightRanges: Array<[number, number]>;

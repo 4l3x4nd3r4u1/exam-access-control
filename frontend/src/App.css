@@ -3481,9 +3481,6 @@
   transform: none;
 }
 
-/* ==========================================================================
-   VENTANAS EMERGENTES (MODALES FLOTANTES SEGÚN FIGMA)
-   ========================================================================== */
 .popup-modal-backdrop {
   position: fixed;
   inset: 0;

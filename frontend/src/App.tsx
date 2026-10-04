@@ -13,6 +13,7 @@ import { AssignedCoursesView } from './views/AssignedCoursesView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
+import { EditRolesModal } from './components/EditRolesModal';
 import './App.css';
 
 type ApplicationScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'ASSIGNED_COURSES' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
@@ -20,21 +21,17 @@ type ApplicationScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'ASSIGNED_COURSES' | '
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
   const [screen, setScreen] = useState<ApplicationScreen>('DASHBOARD');
+  const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
+  const [isEditRolesModalOpen, setIsEditRolesModalOpen] = useState(false);
   const [selectedRoster, setSelectedRoster] = useState<ProcessedRoster | null>(null);
-
-  useEffect(() => {
-    if (session) {
-      staffService.getAcademicStaff().catch(() => {});
-      catalogService.getRoles().catch(() => {});
-    }
-  }, [session]);
 
   const handleLogout = () => {
     authService.clearSession();
     setSession(null);
     setScreen('DASHBOARD');
     setSelectedRoster(null);
-    setActiveAdminScreen('ROSTERS');
+    setIsImportDrawerOpen(false);
+    setIsEditRolesModalOpen(false);
   };
 
   if (!session) {
@@ -107,6 +104,13 @@ export default function App() {
       iconClass: 'admin-staff-icon',
       open: () => setScreen('ACADEMIC_STAFF'),
     },
+    {
+      functionCode: FUNCTION_CODES.EDIT_ROLES,
+      label: 'Editar roles',
+      icon: academicStaffIcon,
+      iconClass: 'admin-roles-icon',
+      open: () => setIsEditRolesModalOpen(true),
+    },
   ].filter((item) => hasFunction(session, item.functionCode));
 
   return (
@@ -139,6 +143,11 @@ export default function App() {
       )}
 
       <ImportRosterDrawer isOpen={isImportDrawerOpen} onClose={() => setIsImportDrawerOpen(false)} />
+      <EditRolesModal
+        isOpen={isEditRolesModalOpen}
+        onClose={() => setIsEditRolesModalOpen(false)}
+        currentUserId={session.user_id}
+      />
     </main>
   );
 }
