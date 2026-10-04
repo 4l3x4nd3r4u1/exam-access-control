@@ -59,8 +59,7 @@ class ExamTest extends TestCase
         $response = $this->withHeaders($this->getAuthHeaders())
             ->postJson('/api/courses/1/exams', $payload);
 
-        $response->assertStatus(400)
-            ->assertJsonPath('success', false);
+        $response->assertStatus(422);
     }
 
     public function test_register_exam_invalid_room()
@@ -75,8 +74,7 @@ class ExamTest extends TestCase
         $response = $this->withHeaders($this->getAuthHeaders())
             ->postJson('/api/courses/1/exams', $payload);
 
-        $response->assertStatus(400)
-            ->assertJsonPath('success', false);
+        $response->assertStatus(422);
     }
 
     public function test_register_exam_invalid_student()

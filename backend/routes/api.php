@@ -40,9 +40,9 @@ Route::middleware('auth.jwt')->group(function () {
 
 Route::get('/academic-staff', [AcademicStaffController::class, 'list']);
 
-Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index']);
-
 Route::middleware('auth.jwt')->group(function () {
+    Route::get('/teachers/{teacherId}/courses', [TeacherCourseController::class, 'index'])
+        ->where('teacherId', '[0-9]+');
     Route::get('/processed-rosters', [ProcessedRosterController::class, 'index']);
     Route::get('/processed-rosters/{courseGroupId}', [ProcessedRosterController::class, 'show'])
         ->where('courseGroupId', '[0-9]+');
