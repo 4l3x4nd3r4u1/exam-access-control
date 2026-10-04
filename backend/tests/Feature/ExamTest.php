@@ -50,48 +50,64 @@ class ExamTest extends TestCase
     public function test_register_exam_invalid_exam_type()
     {
         $payload = [
-            'tipo_examen' => 'EXAMEN INEXISTENTE',
-            'fecha' => '2026-11-15',
-            'hora_inicio' => '08:00 am',
-            'hora_fin' => '09:30 am',
-            'aulas' => ['Aula 691A'],
-            'normas' => [],
+            'examTypeId' => 999,
+            'date' => '2026-11-15',
+            'startTime' => '08:00',
+            'rooms' => [['roomId' => 1, 'students' => [10]]],
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
             ->postJson('/api/courses/1/exams', $payload);
 
-        $response->assertStatus(404);
+        $response->assertStatus(422);
     }
 
     public function test_register_exam_invalid_room()
     {
         $payload = [
-            'tipo_examen' => 'PRIMER PARCIAL',
-            'fecha' => '2026-11-15',
-            'hora_inicio' => '08:00 am',
-            'hora_fin' => '09:30 am',
-            'aulas' => ['Aula Inexistente'],
-            'normas' => [],
+            'examTypeId' => 1,
+            'date' => '2026-11-15',
+            'startTime' => '08:00',
+            'rooms' => [['roomId' => 999, 'students' => [10]]],
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
             ->postJson('/api/courses/1/exams', $payload);
 
-        $response->assertStatus(404);
+        $response->assertStatus(422);
     }
 
     public function test_register_exam_invalid_student()
     {
-        // This test is no longer applicable with the new API format
-        // Students are assigned via room capacity, not directly
-        $this->assertTrue(true);
+        $payload = [
+            'examTypeId' => 1,
+            'date' => '2026-11-15',
+            'startTime' => '08:00',
+            'rooms' => [['roomId' => 1, 'students' => [99999]]],
+        ];
+
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson('/api/courses/1/exams', $payload);
+
+        $response->assertStatus(400)
+            ->assertJsonPath('success', false);
     }
 
     public function test_register_exam_duplicate_students_in_rooms()
     {
-        // This test is no longer applicable with the new API format
-        // Students are assigned via room capacity, not directly
-        $this->assertTrue(true);
+        $payload = [
+            'examTypeId' => 1,
+            'date' => '2026-11-15',
+            'startTime' => '08:00',
+            'rooms' => [
+                ['roomId' => 1, 'students' => [10, 11]],
+                ['roomId' => 2, 'students' => [11, 12]], // student 11 in both rooms
+            ],
+        ];
+
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson('/api/courses/1/exams', $payload);
+
+        $response->assertStatus(400);
     }
 }
