@@ -15,7 +15,8 @@ class Usuario extends Authenticatable implements JWTSubject
         "contrasena",
         "activo",
         "email",
-        "ci"
+        "ci",
+        "email_id"
     ];
 
 

@@ -334,6 +334,17 @@ class CoreDataStorage
                     throw new \Exception("El tipo de examen es requerido.");
                 }
 
+                // Check for duplicate exam (same course group, exam type, and date)
+                $existingExam = Exam::where('materia_grupo_id', $data->courseGroupId)
+                    ->where('tipo_examen_id', $data->examTypeId)
+                    ->where('fecha', $data->date)
+                    ->where('activo', true)
+                    ->first();
+
+                if ($existingExam) {
+                    throw new \Exception("Ya existe un examen programado para esta materia, tipo y fecha.");
+                }
+
                 // Calculate end time (start + 1:30h)
                 $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
 
@@ -663,6 +674,7 @@ class CoreDataStorage
                 fullName: (string) ($enrollment->user?->nombre ?? ''),
                 status: (string) ($enrollment->enrollmentStatus?->nombre ?? 'HABILITADO'),
                 ineligibilityReason: $enrollment->motivo_inhabilitacion,
+                userId: (int) ($enrollment->usuario_id ?? 0),
             ))
             ->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)
             ->values()
@@ -684,7 +696,7 @@ class CoreDataStorage
         if (!$student) {
             return [
                 'belongs' => false,
-                'message' => "Student with codigo_sis '{$codigoSis}' not found.",
+                'message' => "Estudiante con codigo_sis '{$codigoSis}' no encontrado.",
             ];
         }
 
@@ -704,8 +716,7 @@ class CoreDataStorage
             'belongs' => true,
             'message' => "Estudiante '{$codigoSis}' esta inscrito en la materia.",
             'enrollment' => [
-                'enrollment_id' => $enrollment->id ?? null,
-                'student_key' => $enrollment->studentKey ?? null,
+                'user_id' => $enrollment->usuario_id,
                 'status' => $enrollment->enrollmentStatus?->nombre ?? 'HABILITADO',
                 'ineligibility_reason' => $enrollment->motivo_inhabilitacion,
                 'enrollment_date' => $enrollment->fecha_inscripcion?->format('Y-m-d'),
