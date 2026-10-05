@@ -1361,8 +1361,31 @@
 }
 
 .student-status-actions {
-  gap: 20px;
+  display: flex;
+  gap: 16px;
   margin-top: 36px;
+  width: 100%;
+}
+
+.student-status-actions button {
+  min-width: 0;
+  height: 54px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 14px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.student-status-actions button:first-child {
+  flex: 1;
+}
+
+.student-status-actions button:last-child {
+  flex: 1.7;
 }
 
 .student-status-reason textarea::placeholder {
