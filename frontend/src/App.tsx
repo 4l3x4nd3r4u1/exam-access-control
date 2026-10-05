@@ -78,10 +78,6 @@ export default function App() {
           session,
           FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
         )}
-        canEditRoles={hasFunction(
-          session,
-          FUNCTION_CODES.EDIT_ROLES,
-        )}
       />
     );
   }
