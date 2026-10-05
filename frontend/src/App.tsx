@@ -6,6 +6,7 @@ import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
 
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
+import { EditRolesModal } from './components/EditRolesModal';
 
 import { authService, hasFunction } from './services/authService';
 
@@ -38,11 +39,14 @@ export default function App() {
   const [screen, setScreen] =
     useState<ApplicationScreen>('DASHBOARD');
 
-  const [selectedRoster, setSelectedRoster] =
-    useState<ProcessedRoster | null>(null);
-
   const [isImportDrawerOpen, setIsImportDrawerOpen] =
     useState(false);
+
+  const [isEditRolesModalOpen, setIsEditRolesModalOpen] =
+    useState(false);
+
+  const [selectedRoster, setSelectedRoster] =
+    useState<ProcessedRoster | null>(null);
 
   const handleLogout = () => {
     authService.clearSession();
@@ -51,6 +55,7 @@ export default function App() {
     setScreen('DASHBOARD');
     setSelectedRoster(null);
     setIsImportDrawerOpen(false);
+    setIsEditRolesModalOpen(false);
   };
 
   if (!session) {
@@ -68,15 +73,15 @@ export default function App() {
   }
 
   if (screen === 'TEACHER_COURSES') {
-  return (
-    <TeacherCoursesView
-      teacherId={session.user_id}
-      teacherName={session.full_name}
-      onBack={() => setScreen('DASHBOARD')}
-      onLogout={handleLogout}
-    />
-  );
-}
+    return (
+      <TeacherCoursesView
+        teacherId={session.user_id}
+        teacherName={session.full_name}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   if (screen === 'ACADEMIC_STAFF') {
     return (
@@ -121,26 +126,26 @@ export default function App() {
   }
 
   const canOpenTeacherCourses =
-  hasFunction(
-    session,
-    FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
-  ) ||
-  hasFunction(
-    session,
-    FUNCTION_CODES.LIST_COURSE_STUDENTS,
-  ) ||
-  hasFunction(
-    session,
-    FUNCTION_CODES.SCHEDULE_EXAM,
-  ) ||
-  hasFunction(
-    session,
-    FUNCTION_CODES.LIST_COURSE_EXAMS,
-  ) ||
-  hasFunction(
-    session,
-    FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
-  );
+    hasFunction(
+      session,
+      FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+    ) ||
+    hasFunction(
+      session,
+      FUNCTION_CODES.LIST_COURSE_STUDENTS,
+    ) ||
+    hasFunction(
+      session,
+      FUNCTION_CODES.SCHEDULE_EXAM,
+    ) ||
+    hasFunction(
+      session,
+      FUNCTION_CODES.LIST_COURSE_EXAMS,
+    ) ||
+    hasFunction(
+      session,
+      FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+    );
 
   const menuItems = [
     {
@@ -193,6 +198,17 @@ export default function App() {
       visible: hasFunction(
         session,
         FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.EDIT_ROLES,
+      label: 'Editar roles',
+      icon: academicStaffIcon,
+      iconClass: 'admin-roles-icon',
+      open: () => setIsEditRolesModalOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.EDIT_ROLES,
       ),
     },
   ].filter((item) => item.visible);
@@ -254,6 +270,12 @@ export default function App() {
       <ImportRosterDrawer
         isOpen={isImportDrawerOpen}
         onClose={() => setIsImportDrawerOpen(false)}
+      />
+
+      <EditRolesModal
+        isOpen={isEditRolesModalOpen}
+        onClose={() => setIsEditRolesModalOpen(false)}
+        currentUserId={session.user_id}
       />
     </main>
   );

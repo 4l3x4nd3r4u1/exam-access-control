@@ -3,7 +3,11 @@ export interface AcademicStaffMember {
   full_name: string;
   email: string;
   roles: string[];
+  role?: string;
   is_active: boolean;
+  _matchMeta?: {
+    highlightRanges: Array<[number, number]>;
+  };
 }
 
 export interface AcademicStaffResponse {
@@ -24,4 +28,9 @@ export interface AcademicUserUpdateData {
   email: string;
   role: 'DOCENTE' | 'AUXILIAR' | 'ADMIN';
   newPassword?: string;
+}
+
+export interface UpdateUserRolesPayload {
+  userId: number;
+  roles: string[];
 }

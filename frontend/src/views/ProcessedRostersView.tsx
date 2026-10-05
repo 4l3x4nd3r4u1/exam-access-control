@@ -70,12 +70,24 @@ export function ProcessedRostersView({ onBack, onLogout, onSelectRoster }: Proce
       {error && <p className="processed-rosters-feedback processed-rosters-error" role="alert">{error}</p>}
       {!isLoading && !error && (
         <section className="processed-rosters-grid" aria-label="Planillas importadas">
-          {rosters.map((roster) => (
-            <button type="button" className="processed-roster-card" key={roster.courseGroupId} onClick={() => onSelectRoster(roster)}>
-              <img src={rosterPreviewIcon} alt="" />
-              <h2>{roster.subjectName} - G{roster.groupCode}</h2>
-            </button>
-          ))}
+          {rosters.map((roster) => {
+            const courseGroupId = roster.course_group_id || roster.courseGroupId || '';
+            const subjectName = roster.subject_name || roster.subjectName || '';
+            const groupCode = roster.group_code || roster.groupCode || '';
+            const formattedGroup = groupCode ? (groupCode.startsWith('G') ? groupCode : `G${groupCode}`) : '';
+            const academicTerm = roster.academic_term || roster.academicTerm || '';
+            return (
+              <button
+                type="button"
+                className="processed-roster-card"
+                key={courseGroupId}
+                onClick={() => onSelectRoster(roster)}
+              >
+                <img src={rosterPreviewIcon} alt="" />
+                <h2>{subjectName}{formattedGroup ? ` - ${formattedGroup}` : ''}{academicTerm ? ` - ${academicTerm}` : ''}</h2>
+              </button>
+            );
+          })}
         </section>
       )}
     </main>
