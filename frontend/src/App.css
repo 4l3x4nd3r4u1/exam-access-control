@@ -452,7 +452,7 @@
 .academic-staff-table-header,
 .academic-staff-row {
   display: grid;
-  grid-template-columns: 114px minmax(0, 1fr) auto;
+  grid-template-columns: 150px minmax(0, 1fr);
   align-items: center;
 }
 
@@ -470,6 +470,27 @@
   font-family: 'SF Pro Text', sans-serif;
   font-size: 16px;
   line-height: 1;
+}
+
+.academic-staff-roles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.academic-staff-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 5px;
+  border: 1px solid #c8c8c8;
+  border-radius: 4px;
+  background: #f7f7f7;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .academic-staff-row:nth-of-type(odd) {
