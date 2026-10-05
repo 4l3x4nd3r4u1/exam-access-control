@@ -71,6 +71,7 @@ export function AssignedCoursesView({ session, onBack, onLogout }: AssignedCours
         teacherId={selectedTeacher.userId}
         teacherName={selectedTeacher.fullName}
         onBack={() => setSelectedTeacher(null)}
+        onLogout={onLogout}
       />
     );
   }

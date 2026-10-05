@@ -12,6 +12,7 @@ interface TeacherCourseDetailViewProps {
     onLogout: () => void;
     onOpenStudents: () => void;
     onOpenExams?: () => void;
+    onOpenEligibilityStatus: () => void;
 }
 
 function colorInscritos(total: number): string {
@@ -43,6 +44,7 @@ export function TeacherCourseDetailView({
     onLogout,
     onOpenStudents,
     onOpenExams,
+    onOpenEligibilityStatus,
 }: TeacherCourseDetailViewProps) {
     const [isScheduleExamOpen, setIsScheduleExamOpen] = useState(false);
     const iconoMateria = course.subject_name?.toLowerCase().includes("program")
@@ -92,6 +94,24 @@ export function TeacherCourseDetailView({
             </section>
 
             <section className="teacher-course-actions-grid" aria-label="Opciones de la materia">
+                
+                <button
+                    type="button"
+                    className="teacher-course-action-card"
+                    onClick={onOpenEligibilityStatus}
+                    aria-label="Estado de habilitación"
+                >
+                <span className="teacher-course-action-chevron" aria-hidden="true">
+                 ›
+                </span>
+
+                <img src={examDocumentIcon} alt="" />
+                    <span>
+                        Estado de
+                    <br />
+                        habilitación
+                    </span>
+                </button>
                 <button
                     type="button"
                     className="teacher-course-action-card"
@@ -123,15 +143,6 @@ export function TeacherCourseDetailView({
                     <span className="teacher-course-action-chevron" aria-hidden="true">›</span>
                     <img src={examDocumentIcon} alt="" />
                     <span>Examenes<br />Programados</span>
-                </button>
-
-                <button
-                    type="button"
-                    className="teacher-course-action-card disabled-action"
-                    aria-label="Estado de habilitación"
-                >
-                    <img src={examDocumentIcon} alt="" />
-                    <span>Estado de<br />habilitacion</span>
                 </button>
             </section>
 

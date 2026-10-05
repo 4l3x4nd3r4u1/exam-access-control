@@ -1259,8 +1259,65 @@
   line-height: .88;
 }
 
+.teacher-students-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 42px;
+  margin-top: 48px;
+  padding: 0 12px;
+  gap: 8px;
+  border: 1px solid #d7d7d7;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.teacher-students-search svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #777;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.teacher-students-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #000;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+}
+
+.teacher-students-search input::placeholder {
+  color: #9a9a9a;
+}
+
+.teacher-students-search button {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: #6c6c6c;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.teacher-students-search button:hover {
+  color: #000;
+}
+
+.teacher-students-search:focus-within {
+  border-color: #979797;
+}
+
 .teacher-students-table {
-  margin-top: 88px;
+  margin-top: 32px;
 }
 
 .teacher-students-table-header,
@@ -1326,13 +1383,9 @@
 }
 
 .student-status-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 30px;
-  font-family: 'SF Pro Text', sans-serif;
-  font-size: 16px;
-  line-height: 1;
+  gap: 10px;
+  margin-top: 28px;
+  line-height: 1.15;
 }
 
 .student-status-info div {
@@ -1403,10 +1456,41 @@
 }
 
 .student-status-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 26px;
-  margin-top: 46px;
+  display: flex;
+  gap: 16px;
+  margin-top: 36px;
+  width: 100%;
+}
+
+.student-status-actions button {
+  min-width: 0;
+  height: 54px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 14px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.student-status-actions button:first-child {
+  flex: 1;
+}
+
+.student-status-actions button:last-child {
+  flex: 1.7;
+}
+
+.student-status-reason textarea::placeholder {
+  color: #777;
+}
+
+.student-status-reason textarea:disabled {
+  color: #777;
+  cursor: not-allowed;
+  opacity: .8;
 }
 
 @media (max-height: 720px) {

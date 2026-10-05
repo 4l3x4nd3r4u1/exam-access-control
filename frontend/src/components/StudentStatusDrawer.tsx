@@ -33,7 +33,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
     setError(null);
     setIsSaving(true);
     try {
-      await courseService.updateStudentStatus(courseGroupId, student.studentKey, status, cleanReason);
+      await courseService.updateStudentStatus(courseGroupId, student.userId, status, cleanReason);
       onSaved({
         ...student,
         status,
@@ -74,6 +74,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
             onChange={(event) => setReason(event.target.value)}
             placeholder={status === 'INHABILITADO' ? 'Escriba el motivo' : 'Sin motivo'}
             disabled={status === 'HABILITADO'}
+            maxLength={500}
           />
         </label>
 

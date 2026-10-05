@@ -16,6 +16,7 @@ export interface TeacherCoursesResponse {
 }
 
 export interface EnrolledStudent {
+  userId: number;
   studentKey: string;
   ci: string;
   fullName: string;
