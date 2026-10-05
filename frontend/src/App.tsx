@@ -19,7 +19,6 @@ import { AssignedCoursesView } from './views/AssignedCoursesView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
-import { TeacherCoursesView } from './views/TeacherCoursesView';
 
 import './App.css';
 
@@ -28,8 +27,7 @@ type ApplicationScreen =
   | 'ACADEMIC_STAFF'
   | 'ASSIGNED_COURSES'
   | 'PROCESSED_ROSTERS'
-  | 'PROCESSED_ROSTER_DETAIL'
-  | 'TEACHER_COURSES';
+  | 'PROCESSED_ROSTER_DETAIL';
 
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(
@@ -66,17 +64,6 @@ export default function App() {
     return (
       <AssignedCoursesView
         session={session}
-        onBack={() => setScreen('DASHBOARD')}
-        onLogout={handleLogout}
-      />
-    );
-  }
-
-  if (screen === 'TEACHER_COURSES') {
-    return (
-      <TeacherCoursesView
-        teacherId={session.user_id}
-        teacherName={session.full_name}
         onBack={() => setScreen('DASHBOARD')}
         onLogout={handleLogout}
       />
@@ -125,28 +112,6 @@ export default function App() {
     );
   }
 
-  const canOpenTeacherCourses =
-    hasFunction(
-      session,
-      FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
-    ) ||
-    hasFunction(
-      session,
-      FUNCTION_CODES.LIST_COURSE_STUDENTS,
-    ) ||
-    hasFunction(
-      session,
-      FUNCTION_CODES.SCHEDULE_EXAM,
-    ) ||
-    hasFunction(
-      session,
-      FUNCTION_CODES.LIST_COURSE_EXAMS,
-    ) ||
-    hasFunction(
-      session,
-      FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
-    );
-
   const menuItems = [
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
@@ -158,14 +123,6 @@ export default function App() {
         session,
         FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
       ),
-    },
-    {
-      functionCode: 'TEACHER_COURSES',
-      label: 'Mis materias',
-      icon: assignedCoursesIcon,
-      iconClass: 'app-courses-icon',
-      open: () => setScreen('TEACHER_COURSES'),
-      visible: canOpenTeacherCourses,
     },
     {
       functionCode: FUNCTION_CODES.IMPORT_ROSTER,
@@ -234,6 +191,7 @@ export default function App() {
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="8" r="4.25" />
+
             <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
           </svg>
         </button>
@@ -257,7 +215,9 @@ export default function App() {
                 className={`admin-menu-icon ${item.iconClass}`}
               />
 
-              <span>{item.label}</span>
+              <span>
+                {item.label}
+              </span>
             </button>
           ))}
         </nav>
