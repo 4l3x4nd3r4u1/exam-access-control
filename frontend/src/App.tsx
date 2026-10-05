@@ -4,9 +4,11 @@ import assignedCoursesIcon from './assets/icono_materia-2.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
+import editPersonalDataIcon from './assets/editar_datos_personales.png';
 
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
 import { EditRolesModal } from './components/EditRolesModal';
+import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
 
 import { authService, hasFunction } from './services/authService';
 
@@ -43,6 +45,9 @@ export default function App() {
   const [isEditRolesModalOpen, setIsEditRolesModalOpen] =
     useState(false);
 
+  const [isEditPersonalDataDrawerOpen, setIsEditPersonalDataDrawerOpen] =
+    useState(false);
+
   const [selectedRoster, setSelectedRoster] =
     useState<ProcessedRoster | null>(null);
 
@@ -54,6 +59,7 @@ export default function App() {
     setSelectedRoster(null);
     setIsImportDrawerOpen(false);
     setIsEditRolesModalOpen(false);
+    setIsEditPersonalDataDrawerOpen(false);
   };
 
   if (!session) {
@@ -168,6 +174,17 @@ export default function App() {
         FUNCTION_CODES.EDIT_ROLES,
       ),
     },
+    {
+      functionCode: FUNCTION_CODES.EDIT_PERSONAL_DATA,
+      label: 'Editar datos Personales',
+      icon: editPersonalDataIcon,
+      iconClass: 'admin-personal-data-icon',
+      open: () => setIsEditPersonalDataDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.EDIT_PERSONAL_DATA,
+      ),
+    },
   ].filter((item) => item.visible);
 
   return (
@@ -237,6 +254,26 @@ export default function App() {
         onClose={() => setIsEditRolesModalOpen(false)}
         currentUserId={session.user_id}
       />
+
+      {isEditPersonalDataDrawerOpen && (
+        <EditPersonalDataDrawer
+          isOpen={isEditPersonalDataDrawerOpen}
+          onClose={() => setIsEditPersonalDataDrawerOpen(false)}
+          session={session}
+          onSuccess={(updated) => {
+            setSession((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    full_name: updated.fullName,
+                    ci: updated.ci !== undefined ? updated.ci : prev.ci,
+                  }
+                : null,
+            );
+            setIsEditPersonalDataDrawerOpen(false);
+          }}
+        />
+      )}
     </main>
   );
-}
+}

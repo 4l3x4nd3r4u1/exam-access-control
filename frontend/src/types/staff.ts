@@ -34,3 +34,9 @@ export interface UpdateUserRolesPayload {
   userId: number;
   roles: string[];
 }
+
+export interface PersonalDataUpdatePayload {
+  fullName: string;
+  ci?: string;
+  newPassword?: string;
+}

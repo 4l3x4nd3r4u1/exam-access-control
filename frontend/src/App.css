@@ -351,6 +351,13 @@
   margin-bottom: 19px;
 }
 
+.admin-personal-data-icon {
+  width: 112px;
+  height: 94px;
+  margin-bottom: 18px;
+  object-fit: contain;
+}
+
 .admin-menu-card:hover,
 .admin-menu-card:focus-visible,
 .admin-icon-button:hover,
@@ -569,6 +576,12 @@
 .drawer-input-card input::placeholder {
   color: #6f6f6f;
   font-size: 14px;
+}
+
+.drawer-input-card input:disabled,
+.drawer-input-card input:read-only {
+  color: #333;
+  cursor: default;
 }
 
 .drawer-password-field {
