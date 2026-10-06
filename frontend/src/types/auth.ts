@@ -12,7 +12,8 @@ export const FUNCTION_CODES = {
   MANAGE_STUDENT_ELIGIBILITY: 'GESTIONAR_HABILITACION_ESTUDIANTE',
 } as const;
 
-export type FunctionCode = typeof FUNCTION_CODES[keyof typeof FUNCTION_CODES];
+export type FunctionCode =
+  typeof FUNCTION_CODES[keyof typeof FUNCTION_CODES];
 
 export interface TokenSession {
   token: string;
@@ -46,4 +47,5 @@ export interface ApiResponse<T> {
   message: string;
 }
 
-export interface LoginResponse extends ApiResponse<TokenSession> {}
+export interface LoginResponse
+  extends ApiResponse<TokenSession> {}

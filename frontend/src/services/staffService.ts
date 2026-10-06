@@ -1,4 +1,4 @@
-import type { AcademicStaffMember, AcademicStaffResponse, AcademicUserRegistrationData, AcademicUserUpdateData } from '../types/staff';
+import type { AcademicStaffMember, AcademicStaffResponse, AcademicUserRegistrationData, AcademicUserUpdateData, PersonalDataUpdatePayload } from '../types/staff';
 import { apiRequest } from './apiClient';
 
 let staffCache: AcademicStaffMember[] | null = null;
@@ -34,8 +34,14 @@ export const staffService = {
     await apiRequest('/academic-users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        fullName: data.fullName,
+        email: data.email,
+        password: data.password,
+        roles: [data.role],
+      }),
     });
+
     staffCache = null;
   },
 
@@ -61,6 +67,17 @@ export const staffService = {
       );
     }
 
+    return result;
+  },
+
+  async updatePersonalData(data: PersonalDataUpdatePayload): Promise<{ success: boolean; message: string }> {
+    const result = await apiRequest<{ success: boolean; message: string }>('/academic-users/me', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    staffCache = null;
     return result;
   },
 

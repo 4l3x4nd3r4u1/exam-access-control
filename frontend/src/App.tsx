@@ -1,53 +1,119 @@
 import { useState } from 'react';
+
 import assignedCoursesIcon from './assets/icono_materia-2.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
+import editPersonalDataIcon from './assets/editar_datos_personales.png';
+
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
+import { EditRolesDrawer } from './components/EditRolesDrawer';
+import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
+
 import { authService, hasFunction } from './services/authService';
+
 import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
 import type { ProcessedRoster } from './types/processedRoster';
+
 import { AcademicStaffView } from './views/AcademicStaffView';
-import { AssignedCoursesView } from './views/AssignedCoursesView';
+import {
+  AssignedCoursesView,
+  type CourseFunctionMode,
+} from './views/AssignedCoursesView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
-import { EditRolesDrawer } from './components/EditRolesDrawer';
 import './App.css';
 
-type ApplicationScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'ASSIGNED_COURSES' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
+type ApplicationScreen =
+  | 'DASHBOARD'
+  | 'ACADEMIC_STAFF'
+  | 'ASSIGNED_COURSES'
+  | 'PROCESSED_ROSTERS'
+  | 'PROCESSED_ROSTER_DETAIL';
 
 export default function App() {
-  const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
-  const [screen, setScreen] = useState<ApplicationScreen>('DASHBOARD');
-  const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
-  const [isEditRolesDrawerOpen, setIsEditRolesDrawerOpen] = useState(false);
-  const [selectedRoster, setSelectedRoster] = useState<ProcessedRoster | null>(null);
+  const [courseFunctionMode, setCourseFunctionMode] =
+    useState<CourseFunctionMode>('VIEW');
+
+  const [session, setSession] =
+    useState<UserSession | null>(
+      () => authService.getStoredSession(),
+    );
+
+  const [screen, setScreen] =
+    useState<ApplicationScreen>('DASHBOARD');
+
+  const [
+    isImportDrawerOpen,
+    setIsImportDrawerOpen,
+  ] = useState(false);
+
+  const [
+    isEditRolesDrawerOpen,
+    setIsEditRolesDrawerOpen,
+  ] = useState(false);
+
+  const [
+    isEditPersonalDataDrawerOpen,
+    setIsEditPersonalDataDrawerOpen,
+  ] = useState(false);
+
+  const [
+    selectedRoster,
+    setSelectedRoster,
+  ] = useState<ProcessedRoster | null>(null);
 
   const handleLogout = () => {
     authService.clearSession();
+
     setSession(null);
     setScreen('DASHBOARD');
     setSelectedRoster(null);
+
     setIsImportDrawerOpen(false);
     setIsEditRolesDrawerOpen(false);
+    setIsEditPersonalDataDrawerOpen(false);
+
+    setCourseFunctionMode('VIEW');
   };
 
   if (!session) {
-    return <LoginView onLoginSuccess={setSession} />;
+    return (
+      <LoginView
+        onLoginSuccess={setSession}
+      />
+    );
   }
 
   if (screen === 'ASSIGNED_COURSES') {
-    return <AssignedCoursesView session={session} onBack={() => setScreen('DASHBOARD')} onLogout={handleLogout} />;
+    return (
+      <AssignedCoursesView
+        session={session}
+        mode={courseFunctionMode}
+        onBack={() =>
+          setScreen('DASHBOARD')
+        }
+        onLogout={handleLogout}
+      />
+    );
   }
 
   if (screen === 'ACADEMIC_STAFF') {
     return (
       <AcademicStaffView
-        onBack={() => setScreen('DASHBOARD')}
-        canRegister={hasFunction(session, FUNCTION_CODES.REGISTER_ACADEMIC_STAFF)}
-        canEditRoles={hasFunction(session, FUNCTION_CODES.EDIT_ROLES)}
+        onBack={() =>
+          setScreen('DASHBOARD')
+        }
+        canRegister={hasFunction(
+          session,
+          FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+        )}
+        canEditRoles={hasFunction(
+          session,
+          FUNCTION_CODES.EDIT_ROLES,
+        )}
       />
     );
   }
@@ -55,21 +121,31 @@ export default function App() {
   if (screen === 'PROCESSED_ROSTERS') {
     return (
       <ProcessedRostersView
-        onBack={() => setScreen('DASHBOARD')}
+        onBack={() =>
+          setScreen('DASHBOARD')
+        }
         onLogout={handleLogout}
         onSelectRoster={(roster) => {
           setSelectedRoster(roster);
-          setScreen('PROCESSED_ROSTER_DETAIL');
+          setScreen(
+            'PROCESSED_ROSTER_DETAIL',
+          );
         }}
       />
     );
   }
 
-  if (screen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
+  if (
+    screen ===
+      'PROCESSED_ROSTER_DETAIL' &&
+    selectedRoster
+  ) {
     return (
       <ProcessedRosterDetailView
         roster={selectedRoster}
-        onBack={() => setScreen('PROCESSED_ROSTERS')}
+        onBack={() =>
+          setScreen('PROCESSED_ROSTERS')
+        }
         onLogout={handleLogout}
       />
     );
@@ -77,79 +153,343 @@ export default function App() {
 
   const menuItems = [
     {
-      functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+      functionCode:
+        FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+
       label: 'Visualizar materias',
+
       icon: assignedCoursesIcon,
-      iconClass: 'app-courses-icon',
-      open: () => setScreen('ASSIGNED_COURSES'),
+
+      iconClass:
+        'app-courses-icon',
+
+      open: () => {
+        setCourseFunctionMode('VIEW');
+        setScreen('ASSIGNED_COURSES');
+      },
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+      ),
     },
+
     {
-      functionCode: FUNCTION_CODES.IMPORT_ROSTER,
+      functionCode:
+        FUNCTION_CODES.LIST_COURSE_STUDENTS,
+
+      label: 'Estudiantes inscritos',
+
+      icon: assignedCoursesIcon,
+
+      iconClass:
+        'app-courses-icon',
+
+      open: () => {
+        setCourseFunctionMode('STUDENTS');
+        setScreen('ASSIGNED_COURSES');
+      },
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_COURSE_STUDENTS,
+      ),
+    },
+
+    {
+      functionCode:
+        FUNCTION_CODES.SCHEDULE_EXAM,
+
+      label: 'Programar Examen',
+
+      icon: assignedCoursesIcon,
+
+      iconClass:
+        'app-courses-icon',
+
+      open: () => {
+        setCourseFunctionMode(
+          'SCHEDULE_EXAM',
+        );
+
+        setScreen('ASSIGNED_COURSES');
+      },
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.SCHEDULE_EXAM,
+      ),
+    },
+
+    {
+      functionCode:
+        FUNCTION_CODES.LIST_COURSE_EXAMS,
+
+      label: 'Exámenes programados',
+
+      icon: assignedCoursesIcon,
+
+      iconClass:
+        'app-courses-icon',
+
+      open: () => {
+        setCourseFunctionMode('EXAMS');
+        setScreen('ASSIGNED_COURSES');
+      },
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_COURSE_EXAMS,
+      ),
+    },
+
+    {
+      functionCode:
+        FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+
+      label:
+        'Estado de Habilitación',
+
+      icon: assignedCoursesIcon,
+
+      iconClass:
+        'app-courses-icon',
+
+      open: () => {
+        setCourseFunctionMode(
+          'ELIGIBILITY',
+        );
+
+        setScreen('ASSIGNED_COURSES');
+      },
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      ),
+    },
+
+    {
+      functionCode:
+        FUNCTION_CODES.IMPORT_ROSTER,
+
       label: 'Importar padrón',
+
       icon: importRosterIcon,
-      iconClass: 'admin-import-icon',
-      open: () => setIsImportDrawerOpen(true),
+
+      iconClass:
+        'admin-import-icon',
+
+      open: () =>
+        setIsImportDrawerOpen(true),
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.IMPORT_ROSTER,
+      ),
     },
+
     {
-      functionCode: FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+      functionCode:
+        FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+
       label: 'Planillas importadas',
+
       icon: processedRostersIcon,
-      iconClass: 'admin-rosters-icon',
-      open: () => setScreen('PROCESSED_ROSTERS'),
+
+      iconClass:
+        'admin-rosters-icon',
+
+      open: () =>
+        setScreen(
+          'PROCESSED_ROSTERS',
+        ),
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+      ),
     },
+
     {
-      functionCode: FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+      functionCode:
+        FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+
       label: 'Personal académico',
+
       icon: academicStaffIcon,
-      iconClass: 'admin-staff-icon',
-      open: () => setScreen('ACADEMIC_STAFF'),
+
+      iconClass:
+        'admin-staff-icon',
+
+      open: () =>
+        setScreen('ACADEMIC_STAFF'),
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+      ),
     },
+
     {
-      functionCode: FUNCTION_CODES.EDIT_ROLES,
+      functionCode:
+        FUNCTION_CODES.EDIT_ROLES,
+
       label: 'Editar roles',
+
       icon: academicStaffIcon,
-      iconClass: 'admin-roles-icon',
-      open: () => setIsEditRolesDrawerOpen(true),
+
+      iconClass:
+        'admin-roles-icon',
+
+      open: () =>
+        setIsEditRolesDrawerOpen(true),
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.EDIT_ROLES,
+      ),
     },
-  ].filter((item) => hasFunction(session, item.functionCode));
+
+    {
+      functionCode:
+        FUNCTION_CODES.EDIT_PERSONAL_DATA,
+
+      label:
+        'Editar datos Personales',
+
+      icon: editPersonalDataIcon,
+
+      iconClass:
+        'admin-personal-data-icon',
+
+      open: () =>
+        setIsEditPersonalDataDrawerOpen(
+          true,
+        ),
+
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.EDIT_PERSONAL_DATA,
+      ),
+    },
+  ].filter((item) => item.visible);
 
   return (
     <main className="app-shell admin-dashboard app-dashboard">
       <header className="admin-dashboard-header">
         <div>
-          <h1 className="admin-dashboard-title">Panel</h1>
-          <p className="admin-dashboard-subtitle">{session.full_name}</p>
+          <h1 className="admin-dashboard-title">
+            Panel
+          </h1>
+
+          <p className="admin-dashboard-subtitle">
+            {session.full_name}
+          </p>
         </div>
 
-        <button type="button" className="admin-icon-button" onClick={handleLogout} aria-label="Cerrar sesión">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="8" r="4.25" />
+        <button
+          type="button"
+          className="admin-icon-button"
+          onClick={handleLogout}
+          aria-label="Cerrar sesión"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle
+              cx="12"
+              cy="8"
+              r="4.25"
+            />
+
             <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
           </svg>
         </button>
       </header>
 
       {menuItems.length > 0 ? (
-        <nav className="admin-menu-grid" aria-label="Funciones disponibles">
+        <nav
+          className="admin-menu-grid"
+          aria-label="Funciones disponibles"
+        >
           {menuItems.map((item) => (
-            <button type="button" className="admin-menu-card" onClick={item.open} key={item.functionCode}>
-              <img src={item.icon} alt="" className={`admin-menu-icon ${item.iconClass}`} />
-              <span>{item.label}</span>
+            <button
+              type="button"
+              className="admin-menu-card"
+              onClick={item.open}
+              key={item.functionCode}
+            >
+              <img
+                src={item.icon}
+                alt=""
+                className={`admin-menu-icon ${item.iconClass}`}
+              />
+
+              <span>
+                {item.label}
+              </span>
             </button>
           ))}
         </nav>
       ) : (
-        <p className="app-dashboard-empty">Tu cuenta no tiene funciones disponibles.</p>
+        <p className="app-dashboard-empty">
+          Tu cuenta no tiene funciones
+          disponibles.
+        </p>
       )}
 
-      <ImportRosterDrawer isOpen={isImportDrawerOpen} onClose={() => setIsImportDrawerOpen(false)} />
+      <ImportRosterDrawer
+        isOpen={isImportDrawerOpen}
+        onClose={() =>
+          setIsImportDrawerOpen(false)
+        }
+      />
+
       <EditRolesDrawer
         isOpen={isEditRolesDrawerOpen}
-        onClose={() => setIsEditRolesDrawerOpen(false)}
+        onClose={() =>
+          setIsEditRolesDrawerOpen(false)
+        }
         currentUserId={session.user_id}
       />
+
+      {isEditPersonalDataDrawerOpen && (
+        <EditPersonalDataDrawer
+          isOpen={
+            isEditPersonalDataDrawerOpen
+          }
+          onClose={() =>
+            setIsEditPersonalDataDrawerOpen(
+              false,
+            )
+          }
+          session={session}
+          onSuccess={(updated) => {
+            setSession((prev) =>
+              prev
+                ? {
+                    ...prev,
+
+                    full_name:
+                      updated.fullName,
+
+                    ci:
+                      updated.ci !==
+                      undefined
+                        ? updated.ci
+                        : prev.ci,
+                  }
+                : null,
+            );
+
+            setIsEditPersonalDataDrawerOpen(
+              false,
+            );
+          }}
+        />
+      )}
     </main>
   );
 }
-
-

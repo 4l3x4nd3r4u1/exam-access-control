@@ -15,11 +15,11 @@ export const courseService = {
 
   async updateStudentStatus(
     courseGroupId: string,
-    studentKey: string,
+    userId: number,
     status: EnrolledStudent['status'],
     reason: string,
   ): Promise<void> {
-    await apiRequest(`/courses/${courseGroupId}/students/${studentKey}/status`, {
+    await apiRequest(`/courses/${courseGroupId}/students/${userId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

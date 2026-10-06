@@ -351,6 +351,20 @@
   margin-bottom: 19px;
 }
 
+.admin-personal-data-icon {
+  width: 112px;
+  height: 94px;
+  margin-bottom: 18px;
+  object-fit: contain;
+}
+
+.admin-schedule-exam-icon {
+  width: 112px;
+  height: 94px;
+  margin-bottom: 18px;
+  object-fit: contain;
+}
+
 .admin-menu-card:hover,
 .admin-menu-card:focus-visible,
 .admin-icon-button:hover,
@@ -522,6 +536,11 @@
   padding: 20px 24px 10px;
   background: #fff;
   border-radius: 20px 20px 0 0;
+  max-height: calc(100dvh - 20px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .new-user-drawer-content {
@@ -569,6 +588,12 @@
 .drawer-input-card input::placeholder {
   color: #6f6f6f;
   font-size: 14px;
+}
+
+.drawer-input-card input:disabled,
+.drawer-input-card input:read-only {
+  color: #333;
+  cursor: default;
 }
 
 .drawer-password-field {
@@ -1259,8 +1284,65 @@
   line-height: .88;
 }
 
+.teacher-students-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 42px;
+  margin-top: 48px;
+  padding: 0 12px;
+  gap: 8px;
+  border: 1px solid #d7d7d7;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.teacher-students-search svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #777;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.teacher-students-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #000;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 15px;
+}
+
+.teacher-students-search input::placeholder {
+  color: #9a9a9a;
+}
+
+.teacher-students-search button {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: #6c6c6c;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.teacher-students-search button:hover {
+  color: #000;
+}
+
+.teacher-students-search:focus-within {
+  border-color: #979797;
+}
+
 .teacher-students-table {
-  margin-top: 88px;
+  margin-top: 32px;
 }
 
 .teacher-students-table-header,
@@ -1326,13 +1408,9 @@
 }
 
 .student-status-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 30px;
-  font-family: 'SF Pro Text', sans-serif;
-  font-size: 16px;
-  line-height: 1;
+  gap: 10px;
+  margin-top: 28px;
+  line-height: 1.15;
 }
 
 .student-status-info div {
@@ -1403,10 +1481,41 @@
 }
 
 .student-status-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 26px;
-  margin-top: 46px;
+  display: flex;
+  gap: 16px;
+  margin-top: 36px;
+  width: 100%;
+}
+
+.student-status-actions button {
+  min-width: 0;
+  height: 54px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 14px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.student-status-actions button:first-child {
+  flex: 1;
+}
+
+.student-status-actions button:last-child {
+  flex: 1.7;
+}
+
+.student-status-reason textarea::placeholder {
+  color: #777;
+}
+
+.student-status-reason textarea:disabled {
+  color: #777;
+  cursor: not-allowed;
+  opacity: .8;
 }
 
 @media (max-height: 720px) {
@@ -2536,12 +2645,45 @@
 }
 
 /* SCHEDULE EXAM DRAWER (Figma Frame 115) */
+.bottom-drawer.schedule-exam-bottom-drawer {
+  padding: 20px 0 10px;
+}
+
 .schedule-exam-drawer-content {
   display: flex;
   flex-direction: column;
-  padding: 4px 0 10px;
+  padding: 4px 18px 20px 24px;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #000000;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  max-height: 100%;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+.schedule-exam-drawer-content::-webkit-scrollbar {
+  width: 3.5px;
+}
+
+.schedule-exam-drawer-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.schedule-exam-drawer-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+}
+
+.schedule-exam-drawer-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.schedule-exam-drawer-content::-webkit-scrollbar-horizontal {
+  display: none;
+  height: 0;
 }
 
 .schedule-exam-title {
@@ -2620,6 +2762,7 @@
 
 /* Interactive Date box with calendar */
 .schedule-exam-date-box {
+  width: 100%;
   position: relative;
   display: flex;
   flex-direction: row;
@@ -2628,8 +2771,10 @@
   margin-top: 8px;
   padding: 8px 12px;
   background: #ededed;
+  border: none;
   border-radius: 4px;
   cursor: pointer;
+  text-align: left;
   transition: background-color 0.15s ease;
 }
 
@@ -2675,16 +2820,110 @@
   stroke: #ffffff;
   fill: none;
   stroke-width: 3;
+  transition: transform 0.2s ease;
 }
 
-.schedule-exam-hidden-date-input {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  pointer-events: none;
+.schedule-exam-chevron-icon.open {
+  transform: rotate(180deg);
+}
+
+/* Custom Interactive Calendar Popover (Compact) */
+.schedule-exam-calendar-popover {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  animation: fadeInDown 0.18s ease;
+}
+
+.schedule-exam-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.schedule-exam-calendar-month-title {
+  font-family: 'SF Pro Display', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.schedule-exam-calendar-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  transition: background-color 0.15s ease;
+}
+
+.schedule-exam-calendar-nav-btn:hover {
+  background: #e5e7eb;
+}
+
+.schedule-exam-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 3px;
+}
+
+.schedule-exam-calendar-weekday {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  padding: 2px 0;
+}
+
+.schedule-exam-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.schedule-exam-calendar-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  width: 26px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.schedule-exam-calendar-day:hover {
+  background: #f3f4f6;
+}
+
+.schedule-exam-calendar-day.selected {
+  background: #2873ed;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.schedule-exam-calendar-day.empty {
+  cursor: default;
+  background: transparent;
 }
 
 /* Times block */
@@ -2749,6 +2988,15 @@
   font-weight: 400;
   letter-spacing: -0.02em;
   color: #000000;
+}
+
+.schedule-exam-distribution-text {
+  margin: 4px 0 2px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2873ed;
+  letter-spacing: -0.02em;
 }
 
 .schedule-exam-capacity-warning {
@@ -2962,6 +3210,144 @@
 .schedule-exam-rule-delete:hover {
   opacity: 1;
   color: #dc2626;
+}
+
+.schedule-exam-bold-label {
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.schedule-exam-info-row {
+  margin-bottom: 12px;
+}
+
+/* Particular Rules Inputs (Figma Frames 39, 40, 74, 218) */
+.schedule-exam-particular-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+  animation: fadeInDown 0.18s ease;
+}
+
+.schedule-exam-input-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 56px;
+  padding: 8px 14px;
+  background: #dddddd;
+  border-radius: 14px;
+  box-sizing: border-box;
+}
+
+.schedule-exam-input-card-label {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #000000;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.schedule-exam-input-card-input {
+  width: 100%;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #000000;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+.schedule-exam-input-card-input::placeholder {
+  color: #888888;
+}
+
+.schedule-exam-particular-error-msg {
+  margin: 2px 0 0;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #dc2626;
+  line-height: 1.3;
+}
+
+.schedule-exam-particular-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.schedule-exam-particular-cancel-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid #c9c9c9;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.schedule-exam-particular-submit-btn {
+  padding: 6px 18px;
+  border-radius: 8px;
+  background: #2873ed;
+  color: #ffffff;
+  border: none;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.schedule-exam-particular-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.schedule-exam-particular-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.schedule-exam-particular-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f1f1f3;
+  border-radius: 12px;
+  border: 1px solid #e5e5ea;
+}
+
+.schedule-exam-particular-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.schedule-exam-particular-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-exam-particular-val {
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #000000;
+  word-break: break-word;
 }
 
 /* Actions */

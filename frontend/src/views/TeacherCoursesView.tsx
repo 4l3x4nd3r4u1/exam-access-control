@@ -1,47 +1,96 @@
 import { useEffect, useMemo, useState } from 'react';
+
 import subjectIconOne from '../assets/icono_materia-1.svg';
 import subjectIconTwo from '../assets/icono_materia-2.svg';
+
+import { ScheduleExamDrawer } from '../components/ScheduleExamDrawer';
+
 import { courseService } from '../services/courseService';
+
 import type { TeacherCourse } from '../types/course';
+import type { CourseFunctionMode } from './AssignedCoursesView';
+
+import { TeacherCourseDetailView } from './TeacherCourseDetailView';
+import { TeacherStudentsView } from './TeacherStudentsView';
+import { TeacherExamsView } from './TeacherExamsView';
 
 interface TeacherCoursesViewProps {
   teacherId: number;
   teacherName: string;
+  mode: CourseFunctionMode;
   onBack: () => void;
+  onLogout: () => void;
 }
 
 const courseIcons = [subjectIconOne, subjectIconTwo];
 
 function courseIcon(subjectCode: string): string {
-  const index = [...subjectCode].reduce((total, character) => total + character.charCodeAt(0), 0) % courseIcons.length;
+  const index =
+    [...subjectCode].reduce(
+      (total, character) =>
+        total + character.charCodeAt(0),
+      0,
+    ) % courseIcons.length;
+
   return courseIcons[index];
 }
 
 function enrollmentColor(total: number): string {
-  if (total >= 400) return '#e32929';
+  if (total >= 400) {
+    return '#e32929';
+  }
+
   return '#f29e00';
 }
 
-export function TeacherCoursesView({ teacherId, teacherName, onBack }: TeacherCoursesViewProps) {
-  const [courses, setCourses] = useState<TeacherCourse[]>([]);
-  const [selectedTerm, setSelectedTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function TeacherCoursesView({
+  teacherId,
+  teacherName,
+  mode,
+  onBack,
+  onLogout,
+}: TeacherCoursesViewProps) {
+  const [courses, setCourses] =
+    useState<TeacherCourse[]>([]);
+
+  const [selectedTerm, setSelectedTerm] =
+    useState('');
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [selectedCourse, setSelectedCourse] =
+    useState<{
+      course: TeacherCourse;
+      icon: string;
+    } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    courseService.getTeacherCourses(teacherId)
+    courseService
+      .getTeacherCourses(teacherId)
       .then((items) => {
-        if (isMounted) setCourses(items);
+        if (isMounted) {
+          setCourses(items);
+        }
       })
       .catch((requestError: unknown) => {
         if (isMounted) {
-          setError(requestError instanceof Error ? requestError.message : 'No se pudieron cargar las materias.');
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : 'No se pudieron cargar las materias.',
+          );
         }
       })
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -49,68 +98,268 @@ export function TeacherCoursesView({ teacherId, teacherName, onBack }: TeacherCo
     };
   }, [teacherId]);
 
-  const academicTerms = useMemo(() => (
-    [...new Set(courses.map((course) => course.academic_term))]
-      .sort((first, second) => second.localeCompare(first, 'es', { numeric: true }))
-  ), [courses]);
+  const academicTerms = useMemo(
+    () =>
+      [
+        ...new Set(
+          courses.map(
+            (course) => course.academic_term,
+          ),
+        ),
+      ].sort((first, second) =>
+        second.localeCompare(first, 'es', {
+          numeric: true,
+        }),
+      ),
+    [courses],
+  );
 
   const visibleCourses = selectedTerm
-    ? courses.filter((course) => course.academic_term === selectedTerm)
+    ? courses.filter(
+        (course) =>
+          course.academic_term === selectedTerm,
+      )
     : courses;
-  const totalStudents = visibleCourses.reduce((total, course) => total + course.total_enrolled, 0);
+
+  const totalStudents = visibleCourses.reduce(
+    (total, course) =>
+      total + course.total_enrolled,
+    0,
+  );
+
+  if (selectedCourse) {
+    if (mode === 'STUDENTS') {
+      return (
+        <TeacherStudentsView
+          course={selectedCourse.course}
+          allowStatusEdit={false}
+          onBack={() => setSelectedCourse(null)}
+          onLogout={onLogout}
+        />
+      );
+    }
+
+    if (mode === 'ELIGIBILITY') {
+      return (
+        <TeacherStudentsView
+          course={selectedCourse.course}
+          allowStatusEdit
+          onBack={() => setSelectedCourse(null)}
+          onLogout={onLogout}
+        />
+      );
+    }
+
+    if (mode === 'EXAMS') {
+      return (
+        <TeacherExamsView
+          course={selectedCourse.course}
+          onBack={() => setSelectedCourse(null)}
+          onLogout={onLogout}
+        />
+      );
+    }
+
+    if (mode === 'SCHEDULE_EXAM') {
+      return (
+        <main className="app-shell teacher-course-detail-screen">
+          <ScheduleExamDrawer
+            isOpen
+            course={selectedCourse.course}
+            onClose={() =>
+              setSelectedCourse(null)
+            }
+          />
+        </main>
+      );
+    }
+
+    return (
+      <TeacherCourseDetailView
+        course={selectedCourse.course}
+        subjectIcon={selectedCourse.icon}
+        onBack={() => setSelectedCourse(null)}
+        onLogout={onLogout}
+      />
+    );
+  }
 
   return (
     <main className="app-shell teacher-courses-screen">
       <header className="teacher-courses-heading-row">
-        <button type="button" className="teacher-courses-back" onClick={onBack} aria-label="Volver a docentes">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4M10 6l-6 6 6 6" /></svg>
+        <button
+          type="button"
+          className="teacher-courses-back"
+          onClick={onBack}
+          aria-label="Volver"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M20 12H4M10 6l-6 6 6 6" />
+          </svg>
         </button>
+
         <div>
           <h1>Materias</h1>
-          <p className="teacher-courses-name">{teacherName}</p>
+
+          <p className="teacher-courses-name">
+            {teacherName}
+          </p>
         </div>
       </header>
 
       <div className="teacher-courses-filters">
-        <label htmlFor="academic-term">Gestión</label>
-        <select id="academic-term" value={selectedTerm} onChange={(event) => setSelectedTerm(event.target.value)}>
-          <option value="">Todas</option>
-          {academicTerms.map((term) => <option value={term} key={term}>{term}</option>)}
+        <label htmlFor="academic-term">
+          Gestión
+        </label>
+
+        <select
+          id="academic-term"
+          value={selectedTerm}
+          onChange={(event) =>
+            setSelectedTerm(
+              event.target.value,
+            )
+          }
+        >
+          <option value="">
+            Todas
+          </option>
+
+          {academicTerms.map((term) => (
+            <option
+              value={term}
+              key={term}
+            >
+              {term}
+            </option>
+          ))}
         </select>
       </div>
 
       <div className="teacher-courses-summary">
-        <span>{totalStudents} estudiantes</span>
-        <span>Asignadas <b>{visibleCourses.length}</b></span>
+        <span>
+          {totalStudents} estudiantes
+        </span>
+
+        <span>
+          Asignadas{' '}
+          <b>{visibleCourses.length}</b>
+        </span>
       </div>
 
-      {isLoading && <p className="teacher-courses-feedback">Cargando materias...</p>}
-      {error && <p className="teacher-courses-feedback teacher-courses-error" role="alert">{error}</p>}
-      {!isLoading && !error && visibleCourses.length === 0 && (
-        <p className="teacher-courses-feedback">No hay materias asignadas para la gestión seleccionada.</p>
-      )}
-      {!isLoading && !error && visibleCourses.length > 0 && (
-        <section className="teacher-courses-list" aria-label="Materias asignadas">
-          {visibleCourses.map((course) => (
-            <article className="teacher-course-card teacher-course-card-readonly" key={course.course_group_id}>
-              <img src={courseIcon(course.subject_code)} alt="" />
-              <div className="teacher-course-content">
-                <h2>{course.subject_name}</h2>
-                <div className="teacher-course-meta">
-                  <span>Grupo {course.group_code}</span>
-                  <span><i style={{ background: enrollmentColor(course.total_enrolled) }} />{course.total_enrolled} inscritos</span>
-                  <span className="teacher-course-term">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1.5" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>
-                    {course.academic_term}
-                  </span>
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
+      {isLoading && (
+        <p className="teacher-courses-feedback">
+          Cargando materias...
+        </p>
       )}
 
-      <button type="button" className="teacher-courses-close" onClick={onBack}>Cerrar</button>
+      {error && (
+        <p
+          className="teacher-courses-feedback teacher-courses-error"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+
+      {!isLoading &&
+        !error &&
+        visibleCourses.length === 0 && (
+          <p className="teacher-courses-feedback">
+            No hay materias asignadas para la gestión
+            seleccionada.
+          </p>
+        )}
+
+      {!isLoading &&
+        !error &&
+        visibleCourses.length > 0 && (
+          <section
+            className="teacher-courses-list"
+            aria-label="Materias asignadas"
+          >
+            {visibleCourses.map((course) => {
+              const icon = courseIcon(
+                course.subject_code,
+              );
+
+              return (
+                <button
+                  type="button"
+                  className="teacher-course-card"
+                  key={course.course_group_id}
+                  onClick={() =>
+                    setSelectedCourse({
+                      course,
+                      icon,
+                    })
+                  }
+                >
+                  <img
+                    src={icon}
+                    alt=""
+                  />
+
+                  <div className="teacher-course-content">
+                    <h2>
+                      {course.subject_name}
+                    </h2>
+
+                    <div className="teacher-course-meta">
+                      <span>
+                        Grupo {course.group_code}
+                      </span>
+
+                      <span>
+                        <i
+                          style={{
+                            background:
+                              enrollmentColor(
+                                course.total_enrolled,
+                              ),
+                          }}
+                        />
+
+                        {course.total_enrolled}{' '}
+                        inscritos
+                      </span>
+
+                      <span className="teacher-course-term">
+                        <svg
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <rect
+                            x="4"
+                            y="5"
+                            width="16"
+                            height="15"
+                            rx="1.5"
+                          />
+
+                          <path d="M8 3v4M16 3v4M4 10h16" />
+                        </svg>
+
+                        {course.academic_term}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </section>
+        )}
+
+      <button
+        type="button"
+        className="teacher-courses-close"
+        onClick={onBack}
+      >
+        Cerrar
+      </button>
     </main>
   );
 }
