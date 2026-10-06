@@ -13,7 +13,7 @@ import { EditRolesDrawer } from './components/EditRolesDrawer';
 import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
 import { CourseGroupSearchDrawer } from './components/CourseGroupSearchDrawer';
 
-import { authService, hasFunction, hasRole } from './services/authService';
+import { authService, hasFunction } from './services/authService';
 
 import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
@@ -341,8 +341,7 @@ export default function App() {
         // "Mis materias" solo se ofrece en el flujo de estudiantes y solo
         // si el usuario autenticado tiene el rol DOCENTE.
         showMyCourses={
-          courseSearchTarget === 'ENROLLED_STUDENTS' &&
-          hasRole(session, 'DOCENTE')
+            courseSearchTarget === 'ENROLLED_STUDENTS'
         }
         ariaLabel={
           courseSearchTarget === 'ENROLLED_STUDENTS'
