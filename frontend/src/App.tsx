@@ -33,7 +33,7 @@ import { ScheduledExamsView } from './views/ScheduledExamsView';
 import './App.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
 import editRolesIcon from './assets/editar_roles.svg';
-import viewCoursesIcon from './assets/Icono-visualizar.svg';
+import viewCoursesIcon from './assets/icono-visualizar.svg';
 import eligibilityIcon from './assets/estado_habilitacion.svg';
 import registerAcademicIcon from './assets/registrar_personal_academico.svg';
 
