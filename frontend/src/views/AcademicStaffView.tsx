@@ -7,7 +7,6 @@ import type { AcademicStaffMember } from '../types/staff';
 interface AcademicStaffViewProps {
   onBack: () => void;
   canRegister: boolean;
-  canEditRoles: boolean;
 }
 
 function formatRole(role: string): string {
@@ -22,11 +21,19 @@ function formatRole(role: string): string {
   return labels[role] ?? role;
 }
 
-function formatRoles(roles: string[]): string {
-  return roles.map(formatRole).join(', ');
+function formatRoles(roles: string[]) {
+  return (
+    <span className="academic-staff-roles">
+      {roles.map((role) => (
+        <span className="academic-staff-role-badge" key={role}>
+          {formatRole(role)}
+        </span>
+      ))}
+    </span>
+  );
 }
 
-export function AcademicStaffView({ onBack, canRegister, canEditRoles }: AcademicStaffViewProps) {
+export function AcademicStaffView({ onBack, canRegister}: AcademicStaffViewProps) {
   const [staff, setStaff] = useState<AcademicStaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +104,6 @@ export function AcademicStaffView({ onBack, canRegister, canEditRoles }: Academi
         <div className="academic-staff-table-header">
           <span>rol</span>
           <span>nombre</span>
-          <span aria-hidden="true" />
         </div>
 
         {isLoading && <p className="academic-staff-feedback">Cargando personal académico...</p>}
@@ -106,17 +112,11 @@ export function AcademicStaffView({ onBack, canRegister, canEditRoles }: Academi
           <div className="academic-staff-row" key={member.user_id}>
             <span>{formatRoles(member.roles)}</span>
             <span title={member.full_name}>{member.full_name}</span>
-            {canEditRoles && (
-              <button type="button" className="academic-staff-edit" onClick={() => {
-                setSelectedUser(member);
-                setIsNewUserDrawerOpen(true);
-              }}>Editar</button>
-            )}
           </div>
         ))}
       </section>
 
-      {isNewUserDrawerOpen && (canRegister || canEditRoles) && (
+      {isNewUserDrawerOpen && canRegister && (
         <AcademicUserDrawer
           isOpen
           user={selectedUser}
