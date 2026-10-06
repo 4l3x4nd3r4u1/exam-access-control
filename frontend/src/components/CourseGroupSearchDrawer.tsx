@@ -10,14 +10,15 @@ interface CourseGroupSearchDrawerProps {
   onClose: () => void;
   /** Se invoca con el grupo elegido; el padre guarda su course_group_id. */
   onSelect: (courseGroup: CourseGroup) => void;
-  /**
-   * Muestra el botón "Mis materias" (solo si el usuario autenticado tiene el
-   * rol DOCENTE). Filtra la lista con GET /teachers/{user_id}/courses.
-   */
+/**
+ * Permite mostrar el filtro "Mis materias".
+ * Las materias del usuario se obtienen mediante
+ * GET /teachers/{user_id}/courses.
+ */
   showMyCourses?: boolean;
   currentUserId: number;
   ariaLabel?: string;
-}
+}  
 
 const ALL_TERMS = '';
 
