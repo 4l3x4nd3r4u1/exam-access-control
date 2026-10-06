@@ -5,10 +5,12 @@ import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
 import editPersonalDataIcon from './assets/editar_datos_personales.png';
+import scheduleExamIcon from './assets/programar_examen.png';
 
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
 import { EditRolesModal } from './components/EditRolesModal';
 import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
+import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
 
 import { authService, hasFunction } from './services/authService';
 
@@ -48,6 +50,9 @@ export default function App() {
   const [isEditPersonalDataDrawerOpen, setIsEditPersonalDataDrawerOpen] =
     useState(false);
 
+  const [isScheduleExamDrawerOpen, setIsScheduleExamDrawerOpen] =
+    useState(false);
+
   const [selectedRoster, setSelectedRoster] =
     useState<ProcessedRoster | null>(null);
 
@@ -60,6 +65,7 @@ export default function App() {
     setIsImportDrawerOpen(false);
     setIsEditRolesModalOpen(false);
     setIsEditPersonalDataDrawerOpen(false);
+    setIsScheduleExamDrawerOpen(false);
   };
 
   if (!session) {
@@ -185,6 +191,17 @@ export default function App() {
         FUNCTION_CODES.EDIT_PERSONAL_DATA,
       ),
     },
+    {
+      functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
+      label: 'Programar Examen',
+      icon: scheduleExamIcon,
+      iconClass: 'admin-schedule-exam-icon',
+      open: () => setIsScheduleExamDrawerOpen(true),
+      visible:
+        hasFunction(session, FUNCTION_CODES.SCHEDULE_EXAM) ||
+        session.roles.includes('ADMIN') ||
+        session.roles.includes('DOCENTE'),
+    },
   ].filter((item) => item.visible);
 
   return (
@@ -274,6 +291,12 @@ export default function App() {
           }}
         />
       )}
+
+      <ScheduleExamDrawer
+        isOpen={isScheduleExamDrawerOpen}
+        onClose={() => setIsScheduleExamDrawerOpen(false)}
+        session={session}
+      />
     </main>
   );
 }

@@ -30,11 +30,46 @@ export interface CourseExamsResponse {
 
 export type RespuestaExamenesCurso = CourseExamsResponse;
 
+export interface ScheduleExamRoomData {
+    roomId: number;
+    students: number[];
+    auxiliarId?: number | null;
+}
+
+export interface ScheduleExamStudentRuleData {
+    studentId: number;
+    rule: string;
+    codigoSis?: string;
+}
+
 export interface ScheduleExamPayload {
-    tipo_examen: string;
-    fecha: string;
-    hora_inicio: string;
-    hora_fin: string;
-    aulas: string[];
-    normas: string[];
+    examTypeId: number;
+    date: string;
+    startTime: string;
+    rooms: ScheduleExamRoomData[];
+    generalRules: string[];
+    studentRules: Array<{ studentId: number; rule: string }>;
+}
+
+export interface AvailableRoom {
+    room_id: string | number;
+    room_name: string;
+    capacity: number;
+}
+
+export interface AvailableRoomsResponse {
+    success: boolean;
+    data: AvailableRoom[];
+    message: string;
+}
+
+export interface StudentEnrollmentCheckResponse {
+    success: boolean;
+    message: string;
+    data: {
+        user_id: number;
+        status: string;
+        ineligibility_reason: string | null;
+        enrollment_date?: string;
+    } | null;
 }

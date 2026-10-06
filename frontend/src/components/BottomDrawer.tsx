@@ -5,15 +5,16 @@ interface BottomDrawerProps {
   onClose: () => void;
   children: ReactNode;
   ariaLabel: string;
+  className?: string;
 }
 
-export function BottomDrawer({ isOpen, onClose, children, ariaLabel }: BottomDrawerProps) {
+export function BottomDrawer({ isOpen, onClose, children, ariaLabel, className }: BottomDrawerProps) {
   if (!isOpen) return null;
 
   return (
     <div className="bottom-drawer-overlay" role="presentation" onMouseDown={onClose}>
       <section
-        className="bottom-drawer"
+        className={`bottom-drawer ${className ? className : ''}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
