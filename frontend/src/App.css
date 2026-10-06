@@ -3750,3 +3750,374 @@
   animation: toastFadeIn 0.2s ease-out;
 }
 
+
+/* ===================================================================
+   COURSE GROUP FLOWS: Exámenes programados / Estudiantes inscritos
+   =================================================================== */
+.admin-exams-icon,
+.admin-enrolled-icon {
+  width: 112px;
+  height: 94px;
+  margin-bottom: 14px;
+}
+
+/* Drawer de búsqueda de materia */
+.cg-drawer {
+  display: flex;
+  max-height: 82dvh;
+  flex-direction: column;
+  padding-bottom: 14px;
+  font-family: 'SF Pro Text', sans-serif;
+}
+
+.cg-search {
+  display: flex;
+  align-items: center;
+  min-height: 43px;
+  padding: 0 4px;
+  gap: 8px;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.cg-search svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #333;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.cg-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.cg-search input::placeholder {
+  color: #a3a3a3;
+}
+
+.cg-search button {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: #000;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cg-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cg-term-select select {
+  height: 30px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: #000;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cg-mine-chip {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid #cfcfcf;
+  border-radius: 8px;
+  background: #fff;
+  color: #000;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cg-mine-chip.is-active {
+  border-color: #050505;
+  background: #050505;
+  color: #fff;
+}
+
+.cg-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cg-count strong {
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #e4e4e4;
+  font-size: 10px;
+  text-align: center;
+}
+
+.cg-list {
+  min-height: 120px;
+  margin-top: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cg-row {
+  display: flex;
+  width: 100%;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border: 0;
+  background: transparent;
+  color: #000;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cg-row:nth-of-type(even) {
+  background: #ebebeb;
+}
+
+.cg-row:hover,
+.cg-row:focus-visible {
+  background: #dcdcdc;
+  outline: none;
+}
+
+.cg-row-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cg-chip {
+  padding: 1px 5px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.cg-cancel {
+  display: block;
+  min-width: 112px;
+  min-height: 34px;
+  margin: 16px auto 0;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #050505;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cg-feedback {
+  padding: 18px 0;
+  color: #555;
+  font-size: 14px;
+  text-align: center;
+}
+
+.cg-error {
+  color: #c72d2d;
+}
+
+.cg-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Vistas */
+.cg-screen {
+  width: min(402px, 100dvw);
+  max-width: none;
+  padding: 33px 22px 28px;
+  font-family: 'SF Pro Text', sans-serif;
+}
+
+.cg-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cg-icon-button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #000;
+  cursor: pointer;
+}
+
+.cg-icon-button svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cg-hero-icon {
+  display: block;
+  width: 118px;
+  height: 83px;
+  margin: 10px auto 0;
+  object-fit: contain;
+}
+
+.cg-title {
+  margin-top: 18px;
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: -1px;
+  line-height: .98;
+  text-align: center;
+}
+
+.cg-info {
+  display: grid;
+  gap: 2px;
+  margin-top: 30px;
+  font-size: 12px;
+}
+
+.cg-info div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cg-info dt {
+  font-weight: 700;
+}
+
+.cg-info dd {
+  margin: 0;
+  text-align: right;
+}
+
+/* Lista de exámenes */
+.cg-exam-list {
+  margin-top: 28px;
+}
+
+.cg-exam {
+  padding: 12px 0;
+  border-bottom: 1px solid #d5d5d5;
+}
+
+.cg-exam h2 {
+  margin-bottom: 6px;
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.cg-exam dl {
+  display: grid;
+  gap: 1px;
+  font-size: 11px;
+}
+
+.cg-exam dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cg-exam dt {
+  font-weight: 600;
+}
+
+.cg-exam dd {
+  margin: 0;
+  text-align: right;
+}
+
+/* Tabla de estudiantes */
+.cg-students {
+  margin-top: 28px;
+}
+
+.cg-students-header,
+.cg-students-row {
+  display: grid;
+  grid-template-columns: 93px minmax(0, 1fr) 92px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.cg-students-header {
+  min-height: 32px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cg-students-header span + span {
+  padding-left: 13px;
+  border-left: 1px solid #d5d5d5;
+}
+
+.cg-students-row {
+  min-height: 26px;
+  padding: 0 3px;
+}
+
+.cg-students-row:nth-of-type(odd) {
+  border-radius: 3px;
+  background: #e9e9e9;
+}
+
+.cg-students-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cg-students-row span:nth-child(2) {
+  padding-left: 13px;
+}
+
+.cg-students-row span:last-child {
+  text-align: right;
+}
+
+.cg-students-row .is-disabled {
+  color: #c72d2d;
+}

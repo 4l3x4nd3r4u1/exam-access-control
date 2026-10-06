@@ -5,22 +5,28 @@ import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
 import editPersonalDataIcon from './assets/editar_datos_personales.png';
+import scheduledExamsIcon from './assets/examenes_programados.png';
+import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
 
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
 import { EditRolesModal } from './components/EditRolesModal';
 import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
+import { CourseGroupSearchDrawer } from './components/CourseGroupSearchDrawer';
 
-import { authService, hasFunction } from './services/authService';
+import { authService, hasFunction, hasRole } from './services/authService';
 
 import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
+import type { CourseGroup } from './types/course';
 import type { ProcessedRoster } from './types/processedRoster';
 
 import { AcademicStaffView } from './views/AcademicStaffView';
 import { AssignedCoursesView } from './views/AssignedCoursesView';
+import { EnrolledStudentsView } from './views/EnrolledStudentsView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
+import { ScheduledExamsView } from './views/ScheduledExamsView';
 
 import './App.css';
 
@@ -29,7 +35,12 @@ type ApplicationScreen =
   | 'ACADEMIC_STAFF'
   | 'ASSIGNED_COURSES'
   | 'PROCESSED_ROSTERS'
-  | 'PROCESSED_ROSTER_DETAIL';
+  | 'PROCESSED_ROSTER_DETAIL'
+  | 'SCHEDULED_EXAMS'
+  | 'ENROLLED_STUDENTS';
+
+/** Drawer de búsqueda de materia abierto desde el panel. */
+type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS';
 
 export default function App() {
   const [session, setSession] = useState<UserSession | null>(
@@ -51,12 +62,21 @@ export default function App() {
   const [selectedRoster, setSelectedRoster] =
     useState<ProcessedRoster | null>(null);
 
+  const [courseSearchTarget, setCourseSearchTarget] =
+    useState<CourseSearchTarget | null>(null);
+
+  // Se guarda el grupo elegido (incluye course_group_id) para la vista destino.
+  const [selectedCourseGroup, setSelectedCourseGroup] =
+    useState<CourseGroup | null>(null);
+
   const handleLogout = () => {
     authService.clearSession();
 
     setSession(null);
     setScreen('DASHBOARD');
     setSelectedRoster(null);
+    setSelectedCourseGroup(null);
+    setCourseSearchTarget(null);
     setIsImportDrawerOpen(false);
     setIsEditRolesModalOpen(false);
     setIsEditPersonalDataDrawerOpen(false);
@@ -118,6 +138,26 @@ export default function App() {
     );
   }
 
+  if (screen === 'SCHEDULED_EXAMS' && selectedCourseGroup) {
+    return (
+      <ScheduledExamsView
+        courseGroup={selectedCourseGroup}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (screen === 'ENROLLED_STUDENTS' && selectedCourseGroup) {
+    return (
+      <EnrolledStudentsView
+        courseGroup={selectedCourseGroup}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   const menuItems = [
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
@@ -128,6 +168,28 @@ export default function App() {
       visible: hasFunction(
         session,
         FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_COURSE_EXAMS,
+      label: 'Exámenes programados',
+      icon: scheduledExamsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setCourseSearchTarget('SCHEDULED_EXAMS'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_COURSE_EXAMS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_COURSE_STUDENTS,
+      label: 'Estudiantes inscritos en una materia',
+      icon: enrolledStudentsIcon,
+      iconClass: 'admin-enrolled-icon',
+      open: () => setCourseSearchTarget('ENROLLED_STUDENTS'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_COURSE_STUDENTS,
       ),
     },
     {
@@ -244,6 +306,30 @@ export default function App() {
         </p>
       )}
 
+      <CourseGroupSearchDrawer
+        isOpen={courseSearchTarget !== null}
+        onClose={() => setCourseSearchTarget(null)}
+        currentUserId={session.user_id}
+        // "Mis materias" solo se ofrece en el flujo de estudiantes y solo
+        // si el usuario autenticado tiene el rol DOCENTE.
+        showMyCourses={
+          courseSearchTarget === 'ENROLLED_STUDENTS' &&
+          hasRole(session, 'DOCENTE')
+        }
+        ariaLabel={
+          courseSearchTarget === 'ENROLLED_STUDENTS'
+            ? 'Buscar materia para ver estudiantes inscritos'
+            : 'Buscar materia para ver exámenes programados'
+        }
+        onSelect={(courseGroup) => {
+          if (!courseSearchTarget) return;
+
+          setSelectedCourseGroup(courseGroup);
+          setScreen(courseSearchTarget);
+          setCourseSearchTarget(null);
+        }}
+      />
+
       <ImportRosterDrawer
         isOpen={isImportDrawerOpen}
         onClose={() => setIsImportDrawerOpen(false)}
@@ -276,4 +362,4 @@ export default function App() {
       )}
     </main>
   );
-}
+}
