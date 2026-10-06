@@ -13,7 +13,7 @@ import { AssignedCoursesView } from './views/AssignedCoursesView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
-import { EditRolesModal } from './components/EditRolesModal';
+import { EditRolesDrawer } from './components/EditRolesDrawer';
 import './App.css';
 
 type ApplicationScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'ASSIGNED_COURSES' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
@@ -22,7 +22,7 @@ export default function App() {
   const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
   const [screen, setScreen] = useState<ApplicationScreen>('DASHBOARD');
   const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
-  const [isEditRolesModalOpen, setIsEditRolesModalOpen] = useState(false);
+  const [isEditRolesDrawerOpen, setIsEditRolesDrawerOpen] = useState(false);
   const [selectedRoster, setSelectedRoster] = useState<ProcessedRoster | null>(null);
 
   const handleLogout = () => {
@@ -31,7 +31,7 @@ export default function App() {
     setScreen('DASHBOARD');
     setSelectedRoster(null);
     setIsImportDrawerOpen(false);
-    setIsEditRolesModalOpen(false);
+    setIsEditRolesDrawerOpen(false);
   };
 
   if (!session) {
@@ -109,7 +109,7 @@ export default function App() {
       label: 'Editar roles',
       icon: academicStaffIcon,
       iconClass: 'admin-roles-icon',
-      open: () => setIsEditRolesModalOpen(true),
+      open: () => setIsEditRolesDrawerOpen(true),
     },
   ].filter((item) => hasFunction(session, item.functionCode));
 
@@ -143,9 +143,9 @@ export default function App() {
       )}
 
       <ImportRosterDrawer isOpen={isImportDrawerOpen} onClose={() => setIsImportDrawerOpen(false)} />
-      <EditRolesModal
-        isOpen={isEditRolesModalOpen}
-        onClose={() => setIsEditRolesModalOpen(false)}
+      <EditRolesDrawer
+        isOpen={isEditRolesDrawerOpen}
+        onClose={() => setIsEditRolesDrawerOpen(false)}
         currentUserId={session.user_id}
       />
     </main>
