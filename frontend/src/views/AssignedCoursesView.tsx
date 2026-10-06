@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { courseService } from '../services/courseService';
 import { staffService } from '../services/staffService';
+import { BottomDrawer } from '../components/BottomDrawer';
 
 import type { UserSession } from '../types/auth';
 import type { AcademicStaffMember } from '../types/staff';
@@ -16,6 +17,7 @@ export type CourseFunctionMode =
 interface AssignedCoursesViewProps {
   session: UserSession;
   mode: CourseFunctionMode;
+  presentation?: 'screen' | 'drawer';
   onBack: () => void;
   onLogout: () => void;
 }
@@ -37,6 +39,7 @@ function normalizeSearchText(value: string): string {
 export function AssignedCoursesView({
   session,
   mode,
+  presentation = 'screen',
   onBack,
   onLogout,
 }: AssignedCoursesViewProps) {
@@ -140,20 +143,44 @@ export function AssignedCoursesView({
   }, [search, staff]);
 
   if (selectedTeacher) {
-    return (
+    const teacherCourses = (
       <TeacherCoursesView
         teacherId={selectedTeacher.userId}
         teacherName={selectedTeacher.fullName}
         mode={mode}
-        onBack={() => setSelectedTeacher(null)}
+        presentation={presentation}
+        onBack={
+          presentation === 'drawer'
+            ? onBack
+            : () => setSelectedTeacher(null)
+        }
         onLogout={onLogout}
       />
     );
+
+    if (presentation === 'drawer') {
+      return (
+        <BottomDrawer
+          isOpen
+          onClose={onBack}
+          ariaLabel="Materias asignadas al docente"
+          className="assigned-courses-bottom-drawer"
+        >
+          {teacherCourses}
+        </BottomDrawer>
+      );
+    }
+
+    return teacherCourses;
   }
 
-  return (
-    <main className="app-shell assigned-courses-screen">
-      <header className="assigned-courses-topbar">
+  const Container = presentation === 'drawer' ? 'div' : 'main';
+
+  const directory = (
+    <Container
+      className={`${presentation === 'drawer' ? '' : 'app-shell '}assigned-courses-screen${presentation === 'drawer' ? ' assigned-courses-drawer-content' : ''}`}
+    >
+      {presentation === 'screen' && <header className="assigned-courses-topbar">
         <button
           type="button"
           className="assigned-courses-back"
@@ -187,7 +214,7 @@ export function AssignedCoursesView({
             <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
           </svg>
         </button>
-      </header>
+      </header>}
 
       <section className="assigned-courses-heading">
         <h1>
@@ -309,6 +336,21 @@ export function AssignedCoursesView({
       >
         Cancelar
       </button>
-    </main>
+    </Container>
   );
+
+  if (presentation === 'drawer') {
+    return (
+      <BottomDrawer
+        isOpen
+        onClose={onBack}
+        ariaLabel="Visualizar materias asignadas"
+        className="assigned-courses-bottom-drawer"
+      >
+        {directory}
+      </BottomDrawer>
+    );
+  }
+
+  return directory;
 }

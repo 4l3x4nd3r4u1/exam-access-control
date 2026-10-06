@@ -18,6 +18,7 @@ interface TeacherCoursesViewProps {
   teacherId: number;
   teacherName: string;
   mode: CourseFunctionMode;
+  presentation?: 'screen' | 'drawer';
   onBack: () => void;
   onLogout: () => void;
 }
@@ -47,6 +48,7 @@ export function TeacherCoursesView({
   teacherId,
   teacherName,
   mode,
+  presentation = 'screen',
   onBack,
   onLogout,
 }: TeacherCoursesViewProps) {
@@ -164,22 +166,28 @@ export function TeacherCoursesView({
     );
   }
 
+  const Container = presentation === 'drawer' ? 'div' : 'main';
+
   return (
-    <main className="app-shell teacher-courses-screen">
+    <Container
+      className={`${presentation === 'drawer' ? '' : 'app-shell '}teacher-courses-screen${presentation === 'drawer' ? ' teacher-courses-drawer-content' : ''}`}
+    >
       <header className="teacher-courses-heading-row">
-        <button
-          type="button"
-          className="teacher-courses-back"
-          onClick={onBack}
-          aria-label="Volver"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+        {presentation === 'screen' && (
+          <button
+            type="button"
+            className="teacher-courses-back"
+            onClick={onBack}
+            aria-label="Volver"
           >
-            <path d="M20 12H4M10 6l-6 6 6 6" />
-          </svg>
-        </button>
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M20 12H4M10 6l-6 6 6 6" />
+            </svg>
+          </button>
+        )}
 
         <div>
           <h1>Materias</h1>
@@ -266,18 +274,8 @@ export function TeacherCoursesView({
                 course.subject_code,
               );
 
-              return (
-                <button
-                  type="button"
-                  className="teacher-course-card"
-                  key={course.course_group_id}
-                  onClick={() =>
-                    setSelectedCourse({
-                      course,
-                      icon,
-                    })
-                  }
-                >
+              const cardContent = (
+                <>
                   <img
                     src={icon}
                     alt=""
@@ -327,6 +325,33 @@ export function TeacherCoursesView({
                       </span>
                     </div>
                   </div>
+                </>
+              );
+
+              if (mode === 'VIEW') {
+                return (
+                  <article
+                    className="teacher-course-card teacher-course-card-readonly"
+                    key={course.course_group_id}
+                  >
+                    {cardContent}
+                  </article>
+                );
+              }
+
+              return (
+                <button
+                  type="button"
+                  className="teacher-course-card"
+                  key={course.course_group_id}
+                  onClick={() =>
+                    setSelectedCourse({
+                      course,
+                      icon,
+                    })
+                  }
+                >
+                  {cardContent}
                 </button>
               );
             })}
@@ -340,6 +365,6 @@ export function TeacherCoursesView({
       >
         Cerrar
       </button>
-    </main>
+    </Container>
   );
 }
