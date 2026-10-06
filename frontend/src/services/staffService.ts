@@ -30,21 +30,25 @@ export const staffService = {
     return inFlightPromise;
   },
 
-  async registerAcademicUser(data: AcademicUserRegistrationData): Promise<void> {
-    await apiRequest('/academic-users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fullName: data.fullName,
-        ci: data.ci,
-        email: data.email,
-        password: data.password,
-        roles: [data.role],
-      }),
-    });
+  async registerAcademicUser(
+  data: AcademicUserRegistrationData,
+): Promise<void> {
+  await apiRequest('/academic-users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fullName: data.fullName,
+      ci: data.ci,
+      email: data.email,
+      password: data.password,
+      roles: data.roles,
+    }),
+  });
 
-    staffCache = null;
-  },
+  staffCache = null;
+},
 
   async updateAcademicUser(userId: number, data: AcademicUserUpdateData): Promise<void> {
     await apiRequest(`/academic-users/${userId}`, {

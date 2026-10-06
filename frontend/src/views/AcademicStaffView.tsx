@@ -11,15 +11,12 @@ interface AcademicStaffViewProps {
 }
 
 function formatRole(role: string): string {
-  const labels: Record<string, string> = {
-    ADMIN: 'Administrador',
-    AUXILIAR: 'Auxiliar',
-    ASSISTANT: 'Auxiliar',
-    DOCENTE: 'Docente',
-    TEACHER: 'Docente',
-  };
-
-  return labels[role] ?? role;
+  return role
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\p{L}/gu, (letter) =>
+      letter.toUpperCase(),
+    );
 }
 
 function formatRoles(roles: string[]) {
@@ -126,8 +123,8 @@ export function AcademicStaffView({
         aria-label="Listado de personal académico"
       >
         <div className="academic-staff-table-header">
-          <span>rol</span>
-          <span>nombre</span>
+          <span>Rol</span>
+          <span>Nombre</span>
         </div>
 
         {isLoading && (

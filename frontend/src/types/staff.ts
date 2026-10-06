@@ -21,7 +21,7 @@ export interface AcademicUserRegistrationData {
   ci: string;
   email: string;
   password: string;
-  role: string;
+  roles: string[];
 }
 
 export interface AcademicUserUpdateData {

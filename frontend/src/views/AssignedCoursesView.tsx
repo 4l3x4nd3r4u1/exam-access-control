@@ -138,6 +138,18 @@ export function AssignedCoursesView({
       ).includes(query),
     );
   }, [search, staff]);
+  
+  if (mode === 'SCHEDULE_EXAM') {
+    return (
+      <TeacherCoursesView
+        teacherId={session.user_id}
+        teacherName={session.full_name}
+        mode={mode}
+        onBack={onBack}
+        onLogout={onLogout}
+      />
+    );
+  }
 
   if (selectedTeacher) {
     return (

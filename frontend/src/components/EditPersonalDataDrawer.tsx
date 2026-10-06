@@ -24,24 +24,31 @@ export function EditPersonalDataDrawer({
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const closeDrawer = () => {
     if (isSaving) return;
+
     setError(null);
+    setSuccess(false);
     onClose();
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     setError(null);
+    setSuccess(false);
 
     const trimmedName = fullName.trim();
+
     if (!trimmedName) {
       setError('El nombre es obligatorio.');
       return;
     }
 
     const trimmedPassword = password.trim();
+
     if (trimmedPassword && trimmedPassword.length < 8) {
       setError('La nueva contraseña debe tener mínimo 8 caracteres.');
       return;
@@ -56,6 +63,7 @@ export function EditPersonalDataDrawer({
 
       const initialCi = (session.ci ?? '').trim();
       const currentCi = ci.trim();
+
       if (currentCi !== initialCi) {
         payload.ci = currentCi;
       }
@@ -66,11 +74,20 @@ export function EditPersonalDataDrawer({
 
       await staffService.updatePersonalData(payload);
 
+      setSuccess(true);
+
       onSuccess({
         fullName: payload.fullName,
-        ci: payload.ci !== undefined ? payload.ci : (session.ci ?? undefined),
+        ci:
+          payload.ci !== undefined
+            ? payload.ci
+            : (session.ci ?? undefined),
       });
-      onClose();
+
+      setTimeout(() => {
+        setSuccess(false);
+        onClose();
+      }, 800);
     } catch (requestError: unknown) {
       setError(
         requestError instanceof Error
@@ -83,12 +100,23 @@ export function EditPersonalDataDrawer({
   };
 
   return (
-    <BottomDrawer isOpen={isOpen} onClose={closeDrawer} ariaLabel="Editar datos personales">
-      <form className="new-user-drawer-content edit-personal-drawer-content" onSubmit={handleSubmit}>
+    <BottomDrawer
+      isOpen={isOpen}
+      onClose={closeDrawer}
+      ariaLabel="Editar datos personales"
+    >
+      <form
+        className="new-user-drawer-content edit-personal-drawer-content"
+        onSubmit={handleSubmit}
+      >
         <h2>Editar datos personales</h2>
 
-        <label className="drawer-input-card" htmlFor="edit-personal-name">
+        <label
+          className="drawer-input-card"
+          htmlFor="edit-personal-name"
+        >
           <span>Nombre</span>
+
           <input
             id="edit-personal-name"
             type="text"
@@ -99,8 +127,12 @@ export function EditPersonalDataDrawer({
           />
         </label>
 
-        <label className="drawer-input-card" htmlFor="edit-personal-ci">
-          <span>ci</span>
+        <label
+          className="drawer-input-card"
+          htmlFor="edit-personal-ci"
+        >
+          <span>CI</span>
+
           <input
             id="edit-personal-ci"
             type="text"
@@ -110,8 +142,12 @@ export function EditPersonalDataDrawer({
           />
         </label>
 
-        <label className="drawer-input-card" htmlFor="edit-personal-email">
+        <label
+          className="drawer-input-card"
+          htmlFor="edit-personal-email"
+        >
           <span>Correo Institucional</span>
+
           <input
             id="edit-personal-email"
             type="email"
@@ -121,8 +157,12 @@ export function EditPersonalDataDrawer({
           />
         </label>
 
-        <label className="drawer-input-card" htmlFor="edit-personal-password">
-          <span>Contrasena</span>
+        <label
+          className="drawer-input-card"
+          htmlFor="edit-personal-password"
+        >
+          <span>Contraseña</span>
+
           <span className="drawer-password-field">
             <input
               id="edit-personal-password"
@@ -132,22 +172,48 @@ export function EditPersonalDataDrawer({
               placeholder="••••••••••••••••••••"
               autoComplete="new-password"
             />
+
             <button
               type="button"
-              onClick={() => setShowPassword((visible) => !visible)}
-              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              onClick={() =>
+                setShowPassword((visible) => !visible)
+              }
+              aria-label={
+                showPassword
+                  ? 'Ocultar contraseña'
+                  : 'Mostrar contraseña'
+              }
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6Z" />
-                <circle cx="12" cy="12" r="2.75" />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="2.75"
+                />
               </svg>
             </button>
           </span>
         </label>
 
         {error && (
-          <p className="drawer-error" role="alert">
+          <p
+            className="drawer-error"
+            role="alert"
+          >
             {error}
+          </p>
+        )}
+
+        {success && (
+          <p
+            className="drawer-success"
+            role="status"
+          >
+            Datos personales actualizados correctamente.
           </p>
         )}
 
@@ -160,12 +226,17 @@ export function EditPersonalDataDrawer({
           >
             Cancelar
           </button>
+
           <button
             type="submit"
             className="drawer-submit-button"
-            disabled={isSaving}
+            disabled={isSaving || success}
           >
-            {isSaving ? 'Guardando...' : 'Guardar cambios'}
+            {isSaving
+              ? 'Guardando...'
+              : success
+                ? '¡Guardado!'
+                : 'Guardar cambios'}
           </button>
         </div>
       </form>

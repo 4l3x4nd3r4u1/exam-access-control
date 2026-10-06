@@ -1,0 +1,20 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Persona -->
+      <circle cx="50" cy="46" r="14" stroke="#2C2C2C" stroke-width="5"/>
+      <path d="M27 88C27 73.6406 38.6406 62 53 62H55C69.3594 62 81 73.6406 81 88"
+            stroke="#2C2C2C" stroke-width="5" stroke-linecap="round"/>
+
+      <!-- Círculo secundario -->
+      <circle cx="88" cy="78" r="17" fill="#F3F3F3" stroke="#2C2C2C" stroke-width="4"/>
+
+      <!-- Engranaje simple -->
+      <circle cx="88" cy="78" r="5.5" stroke="#2C2C2C" stroke-width="3"/>
+      <path d="M88 67V70" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M88 86V89" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M77 78H80" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M96 78H99" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M80.7 70.7L82.8 72.8" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M93.2 83.2L95.3 85.3" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M80.7 85.3L82.8 83.2" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M93.2 72.8L95.3 70.7" stroke="#2C2C2C" stroke-width="3" stroke-linecap="round"/>
+</svg>

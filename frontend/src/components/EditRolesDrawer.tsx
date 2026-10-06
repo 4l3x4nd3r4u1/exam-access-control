@@ -359,9 +359,10 @@ export function EditRolesDrawer({
                         <div className="edit-roles-badges-col">
                           {roles.length > 0 ? (
                             roles.map((role) => (
-                              <span key={role} className={`role-badge role-badge-${role.toLowerCase()}`}>
-                                {role}
-                              </span>
+                              <span
+                                key={role} className={`role-badge role-badge-${role.toLowerCase()}`}>
+                                {formatRoleLabel(role)}
+                              </span> 
                             ))
                           ) : (
                             <span className="role-badge role-badge-default">SIN ROL</span>

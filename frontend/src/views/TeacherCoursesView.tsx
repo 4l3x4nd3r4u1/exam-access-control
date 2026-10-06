@@ -10,7 +10,6 @@ import { courseService } from '../services/courseService';
 import type { TeacherCourse } from '../types/course';
 import type { CourseFunctionMode } from './AssignedCoursesView';
 
-import { TeacherCourseDetailView } from './TeacherCourseDetailView';
 import { TeacherStudentsView } from './TeacherStudentsView';
 
 
@@ -127,42 +126,30 @@ export function TeacherCoursesView({
     0,
   );
 
-  if (selectedCourse) {
+  if (selectedCourse && mode === 'ELIGIBILITY') {
+  return (
+    <TeacherStudentsView
+      course={selectedCourse.course}
+      allowStatusEdit
+      onBack={() => setSelectedCourse(null)}
+      onLogout={onLogout}
+    />
+  );
+}
 
-    if (mode === 'ELIGIBILITY') {
-      return (
-        <TeacherStudentsView
-          course={selectedCourse.course}
-          allowStatusEdit
-          onBack={() => setSelectedCourse(null)}
-          onLogout={onLogout}
-        />
-      );
-    }
-
-    if (mode === 'SCHEDULE_EXAM') {
-      return (
-        <main className="app-shell teacher-course-detail-screen">
-          <ScheduleExamDrawer
-            isOpen
-            course={selectedCourse.course}
-            onClose={() =>
-              setSelectedCourse(null)
-            }
-          />
-        </main>
-      );
-    }
-
-    return (
-      <TeacherCourseDetailView
+if (selectedCourse && mode === 'SCHEDULE_EXAM') {
+  return (
+    <main className="app-shell teacher-course-detail-screen">
+      <ScheduleExamDrawer
+        isOpen
         course={selectedCourse.course}
-        subjectIcon={selectedCourse.icon}
-        onBack={() => setSelectedCourse(null)}
-        onLogout={onLogout}
+        onClose={() =>
+          setSelectedCourse(null)
+        }
       />
-    );
-  }
+    </main>
+  );
+}
 
   return (
     <main className="app-shell teacher-courses-screen">
@@ -268,20 +255,24 @@ export function TeacherCoursesView({
 
               return (
                 <button
-                  type="button"
-                  className="teacher-course-card"
+                   type="button"
+                   className={`teacher-course-card ${
+                     mode === 'VIEW'
+                     ? 'teacher-course-card-readonly'
+                   : ''
+                   }`}
                   key={course.course_group_id}
-                  onClick={() =>
-                    setSelectedCourse({
-                      course,
-                      icon,
-                    })
+                 disabled={mode === 'VIEW'}
+                 onClick={
+                 mode === 'VIEW'
+                 ? undefined
+                 : () =>
+                   setSelectedCourse({
+                   course,
+                   icon,
+                   })
                   }
-                >
-                  <img
-                    src={icon}
-                    alt=""
-                  />
+               >
 
                   <div className="teacher-course-content">
                     <h2>

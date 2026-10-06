@@ -4,7 +4,7 @@ import assignedCoursesIcon from './assets/icono_materia-2.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
-import editPersonalDataIcon from './assets/editar_datos_personales.png';
+import editPersonalDataIcon from './assets/editar_datos_personales.svg';
 import scheduledExamsIcon from './assets/examenes_programados.png';
 import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
 
@@ -32,7 +32,10 @@ import { ProcessedRostersView } from './views/ProcessedRostersView';
 import { ScheduledExamsView } from './views/ScheduledExamsView';
 import './App.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
-
+import editRolesIcon from './assets/editar_roles.svg';
+import viewCoursesIcon from './assets/Icono-visualizar.svg';
+import eligibilityIcon from './assets/estado_habilitacion.svg';
+import registerAcademicIcon from './assets/registrar_personal_academico.svg';
 
 type ApplicationScreen =
   | 'DASHBOARD'
@@ -164,18 +167,18 @@ export default function App() {
 
   const menuItems = [
     {
-      functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
-      label: 'Visualizar materias',
-      icon: assignedCoursesIcon,
-      iconClass: 'app-courses-icon',
-      open: () => {
-        setCourseFunctionMode('VIEW');
-        setScreen('ASSIGNED_COURSES');
+     functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+     label: 'Visualizar materias',
+     icon: viewCoursesIcon,
+     iconClass: 'app-courses-icon',
+     open: () => {
+       setCourseFunctionMode('VIEW');
+       setScreen('ASSIGNED_COURSES');
       },
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
-      ),
+         visible: hasFunction(
+         session,
+         FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+        ),
     },
     {
       functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
@@ -215,14 +218,14 @@ export default function App() {
     },
     {
       functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
-      label: 'Estado de Habilitación',
-      icon: assignedCoursesIcon,
-      iconClass: 'app-courses-icon',
-      open: () => {
+       label: 'Estado de Habilitación',
+       icon: eligibilityIcon,
+       iconClass: 'app-courses-icon',
+       open: () => {
         setCourseFunctionMode('ELIGIBILITY');
         setScreen('ASSIGNED_COURSES');
-      },
-      visible: hasFunction(
+       },
+       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
       ),
@@ -261,26 +264,26 @@ export default function App() {
       ),
     },
     {
-    functionCode: FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
-    label: 'Registrar personal académico',
-    icon: academicStaffIcon,
-    iconClass: 'admin-staff-icon',
-    open: () => setIsAcademicUserDrawerOpen(true),
-    visible: hasFunction(
-      session,
-      FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
-     ),
-   },
+      functionCode: FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+      label: 'Registrar personal académico',
+      icon: registerAcademicIcon,
+      iconClass: 'admin-staff-icon',
+      open: () => setIsAcademicUserDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+      ),
+    },
     {
       functionCode: FUNCTION_CODES.EDIT_ROLES,
       label: 'Editar roles',
-      icon: academicStaffIcon,
+      icon: editRolesIcon,
       iconClass: 'admin-roles-icon',
       open: () => setIsEditRolesDrawerOpen(true),
       visible: hasFunction(
         session,
         FUNCTION_CODES.EDIT_ROLES,
-      ),
+        ),
     },
     {
       functionCode: FUNCTION_CODES.EDIT_PERSONAL_DATA,
@@ -323,18 +326,21 @@ export default function App() {
         >
           {menuItems.map((item) => (
             <button
-              type="button"
-              className="admin-menu-card"
-              onClick={item.open}
-              key={item.functionCode}
-            >
+               type="button"
+               className="admin-menu-card"
+               onClick={item.open}
+               key={item.functionCode}
+               >
+              <div className="admin-menu-card-frame">
               <img
-                src={item.icon}
-                alt=""
+               src={item.icon}
+               alt=""
                 className={`admin-menu-icon ${item.iconClass}`}
-              />
-              <span>{item.label}</span>
-            </button>
+             />
+
+           <span>{item.label}</span>
+          </div>
+        </button>
           ))}
         </nav>
       ) : (

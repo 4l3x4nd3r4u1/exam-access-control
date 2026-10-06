@@ -32,10 +32,8 @@ export function AcademicUserDrawer({
   const [password, setPassword] =
     useState('');
 
-  const [role, setRole] =
-    useState<string>(
-      user?.roles[0] ?? '',
-    );
+  const [selectedRoles, setSelectedRoles] =
+    useState<string[]>(user?.roles ?? []);
 
   const [roles, setRoles] =
     useState<CatalogItem[]>([]);
@@ -52,6 +50,9 @@ export function AcademicUserDrawer({
   const [error, setError] =
     useState<string | null>(null);
 
+  const [success, setSuccess] =
+    useState(false);
+
   const isEditing = user !== null;
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export function AcademicUserDrawer({
 
     setIsLoadingRoles(true);
     setError(null);
+    setSuccess(false);
 
     catalogService
       .getRoles()
@@ -72,18 +74,6 @@ export function AcademicUserDrawer({
         }
 
         setRoles(availableRoles);
-
-        if (
-          !user &&
-          !role &&
-          availableRoles.length > 0
-        ) {
-          setRole(
-            String(
-              availableRoles[0].value,
-            ),
-          );
-        }
       })
       .catch((requestError: unknown) => {
         if (!isMounted) {
@@ -105,7 +95,7 @@ export function AcademicUserDrawer({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, user, role]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -116,9 +106,10 @@ export function AcademicUserDrawer({
     setCi('');
     setEmail(user?.email ?? '');
     setPassword('');
-    setRole(user?.roles[0] ?? '');
+    setSelectedRoles(user?.roles ?? []);
     setShowPassword(false);
     setError(null);
+    setSuccess(false);
   }, [isOpen, user]);
 
   const closeDrawer = () => {
@@ -127,7 +118,30 @@ export function AcademicUserDrawer({
     }
 
     setError(null);
+    setSuccess(false);
     onClose();
+  };
+
+  const handleToggleRole = (
+    roleValue: string,
+  ) => {
+    setSelectedRoles((currentRoles) => {
+      if (
+        currentRoles.includes(roleValue)
+      ) {
+        return currentRoles.filter(
+          (currentRole) =>
+            currentRole !== roleValue,
+        );
+      }
+
+      return [
+        ...currentRoles,
+        roleValue,
+      ];
+    });
+
+    setError(null);
   };
 
   const handleSubmit = async (
@@ -135,22 +149,31 @@ export function AcademicUserDrawer({
   ) => {
     event.preventDefault();
 
-    if (!role) {
-      setError('Seleccione un rol.');
+    setError(null);
+    setSuccess(false);
+
+    if (selectedRoles.length === 0) {
+      setError(
+        'Seleccione al menos un rol.',
+      );
       return;
     }
 
-    setError(null);
     setIsSaving(true);
 
     try {
       if (user) {
+        /*
+         * La edición general mantiene el contrato
+         * existente. La edición de múltiples roles
+         * se realiza desde EditRolesDrawer.
+         */
         await staffService.updateAcademicUser(
           user.user_id,
           {
             fullName,
             email,
-            role,
+            role: selectedRoles[0],
             ...(password
               ? {
                   newPassword:
@@ -165,18 +188,24 @@ export function AcademicUserDrawer({
           ci,
           email,
           password,
-          role,
+          roles: selectedRoles,
         });
       }
 
-      setFullName('');
-      setCi('');
-      setEmail('');
-      setPassword('');
-      setRole('');
+      setSuccess(true);
 
       onSaved();
-      onClose();
+
+      setTimeout(() => {
+        setFullName('');
+        setCi('');
+        setEmail('');
+        setPassword('');
+        setSelectedRoles([]);
+        setSuccess(false);
+
+        onClose();
+      }, 900);
     } catch (requestError: unknown) {
       setError(
         requestError instanceof Error
@@ -250,7 +279,9 @@ export function AcademicUserDrawer({
           className="drawer-input-card"
           htmlFor="new-user-email"
         >
-          <span>Correo Institucional</span>
+          <span>
+            Correo Institucional
+          </span>
 
           <input
             id="new-user-email"
@@ -312,6 +343,7 @@ export function AcademicUserDrawer({
                 aria-hidden="true"
               >
                 <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+
                 <circle
                   cx="12"
                   cy="12"
@@ -322,49 +354,74 @@ export function AcademicUserDrawer({
           </span>
         </label>
 
-        <label
-          className="drawer-role-field"
-          htmlFor="new-user-role"
-        >
-          <span>Rol</span>
+        <div className="drawer-role-field">
+          <span>Roles</span>
 
-          <select
-            id="new-user-role"
-            value={role}
-            onChange={(event) =>
-              setRole(
-                event.target.value,
+          <div className="modal-multi-select-box">
+            {isLoadingRoles ? (
+              <p>
+                Cargando roles...
+              </p>
+            ) : (
+              roles.map(
+                (availableRole) => {
+                  const roleValue =
+                    String(
+                      availableRole.value,
+                    );
+
+                  const isSelected =
+                    selectedRoles.includes(
+                      roleValue,
+                    );
+
+                  return (
+                    <button
+                      key={roleValue}
+                      type="button"
+                      className={`modal-select-item-btn ${
+                        isSelected
+                          ? 'is-selected'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        handleToggleRole(
+                          roleValue,
+                        )
+                      }
+                    >
+                      <span className="modal-select-item-label">
+                        {
+                          availableRole.label
+                        }
+                      </span>
+
+                      <span
+                        className="modal-select-item-check"
+                        aria-hidden="true"
+                      >
+                        {isSelected && (
+                          <svg
+                            viewBox="0 0 12 10"
+                            width="12"
+                            height="10"
+                            fill="none"
+                            stroke="#007aff"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="1.5 5.5 4.5 8 10.5 1.5" />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
+                  );
+                },
               )
-            }
-            disabled={
-              isLoadingRoles
-            }
-            required
-          >
-            <option value="">
-              {isLoadingRoles
-                ? 'Cargando roles...'
-                : 'Seleccione un rol'}
-            </option>
-
-            {roles.map(
-              (availableRole) => (
-                <option
-                  key={
-                    availableRole.value
-                  }
-                  value={String(
-                    availableRole.value,
-                  )}
-                >
-                  {
-                    availableRole.label
-                  }
-                </option>
-              ),
             )}
-          </select>
-        </label>
+          </div>
+        </div>
 
         {error && (
           <p
@@ -372,6 +429,17 @@ export function AcademicUserDrawer({
             role="alert"
           >
             {error}
+          </p>
+        )}
+
+        {success && (
+          <p
+            className="drawer-success"
+            role="status"
+          >
+            {isEditing
+              ? 'Usuario actualizado correctamente.'
+              : 'Usuario registrado correctamente.'}
           </p>
         )}
 
@@ -391,14 +459,17 @@ export function AcademicUserDrawer({
             disabled={
               isSaving ||
               isLoadingRoles ||
-              !role
+              selectedRoles.length === 0 ||
+              success
             }
           >
             {isSaving
               ? 'Guardando...'
-              : isEditing
-                ? 'Guardar cambios'
-                : 'Crear usuario'}
+              : success
+                ? '¡Guardado!'
+                : isEditing
+                  ? 'Guardar cambios'
+                  : 'Crear usuario'}
           </button>
         </div>
       </form>

@@ -1,0 +1,15 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Persona -->
+  <circle cx="50" cy="46" r="14" stroke="#2C2C2C" stroke-width="5"/>
+  <path d="M27 88C27 73.6406 38.6406 62 53 62H55C69.3594 62 81 73.6406 81 88"
+        stroke="#2C2C2C" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Círculo secundario -->
+  <circle cx="88" cy="78" r="17" fill="#F3F3F3" stroke="#2C2C2C" stroke-width="4"/>
+
+  <!-- Símbolo + -->
+  <path d="M88 69V87"
+        stroke="#2C2C2C" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M79 78H97"
+        stroke="#2C2C2C" stroke-width="4.5" stroke-linecap="round"/>
+</svg>
