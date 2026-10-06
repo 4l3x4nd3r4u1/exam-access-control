@@ -60,6 +60,9 @@ export default function App() {
   const [isImportDrawerOpen, setIsImportDrawerOpen] =
     useState(false);
 
+  const [isAssignedCoursesDrawerOpen, setIsAssignedCoursesDrawerOpen] =
+    useState(false);
+
   const [isEditRolesDrawerOpen, setIsEditRolesDrawerOpen] =
     useState(false);
 
@@ -89,6 +92,7 @@ export default function App() {
     setCourseSearchTarget(null);
 
     setIsImportDrawerOpen(false);
+    setIsAssignedCoursesDrawerOpen(false);
     setIsEditRolesDrawerOpen(false);
     setIsEditPersonalDataDrawerOpen(false);
     setIsAcademicUserDrawerOpen(false);
@@ -168,10 +172,7 @@ export default function App() {
       label: 'Visualizar materias',
       icon: assignedCoursesIcon,
       iconClass: 'app-courses-icon',
-      open: () => {
-        setCourseFunctionMode('VIEW');
-        setScreen('ASSIGNED_COURSES');
-      },
+      open: () => setIsAssignedCoursesDrawerOpen(true),
       visible: hasFunction(
         session,
         FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
@@ -365,6 +366,16 @@ export default function App() {
           setCourseSearchTarget(null);
         }}
       />
+
+      {isAssignedCoursesDrawerOpen && (
+        <AssignedCoursesView
+          session={session}
+          mode="VIEW"
+          presentation="drawer"
+          onBack={() => setIsAssignedCoursesDrawerOpen(false)}
+          onLogout={handleLogout}
+        />
+      )}
 
       <ImportRosterDrawer
         isOpen={isImportDrawerOpen}
