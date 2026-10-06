@@ -1,10 +1,11 @@
-import { useEffect, useState, useMemo, type FormEvent } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { staffService } from '../services/staffService';
 import { catalogService } from '../services/catalogService';
 import { authService } from '../services/authService';
 import { formatRoleLabel } from '../services/jwtHelper';
 import { filterAndRankStaff } from '../utils/searchHelper';
 import { HighlightedText } from '../components/HighlightedText';
+import { EditRolesDrawer } from '../components/EditRolesDrawer';
 import type { AcademicStaffMember } from '../types/staff';
 
 interface EditRolesViewProps {
@@ -34,17 +35,9 @@ export function EditRolesView({ onBack }: EditRolesViewProps) {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedUser, setSelectedUser] = useState<AcademicStaffMember | null>(null);
-  const [userRoles, setUserRoles] = useState<string[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [modalError, setModalError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const activeUserId = authService.getStoredSession()?.user_id;
-
-  const isSelf = useMemo(() => {
-    if (!selectedUser || !activeUserId) return false;
-    return selectedUser.user_id === activeUserId;
-  }, [selectedUser, activeUserId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -104,61 +97,6 @@ export function EditRolesView({ onBack }: EditRolesViewProps) {
 
   const handleOpenEditModal = (member: AcademicStaffMember) => {
     setSelectedUser(member);
-    const currentRoles = normalizeRoles(member);
-    setUserRoles(currentRoles);
-    setModalError(null);
-  };
-
-  const handleCloseModal = () => {
-    if (isSaving) return;
-    setSelectedUser(null);
-    setModalError(null);
-  };
-
-  const handleToggleRole = (roleId: string) => {
-    setUserRoles((prev) => {
-      if (prev.includes(roleId)) {
-        return prev.filter((role) => role !== roleId);
-      }
-      return [...prev, roleId];
-    });
-  };
-
-  const handleSaveRoles = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!selectedUser) return;
-
-    if (isSelf) {
-      setModalError('No puede cambiar sus propios roles.');
-      return;
-    }
-
-    if (userRoles.length === 0) {
-      setModalError('Debe seleccionar al menos un rol.');
-      return;
-    }
-
-    setIsSaving(true);
-    setModalError(null);
-
-    try {
-      const response = await staffService.updateUserRoles(selectedUser.user_id, userRoles);
-      setStaff((prev) =>
-        prev.map((member) =>
-          member.user_id === selectedUser.user_id
-            ? { ...member, roles: userRoles, role: userRoles.join(', ') }
-            : member
-        )
-      );
-
-      setSuccessToast(response.message || 'Roles actualizados correctamente.');
-      setTimeout(() => setSuccessToast(null), 3500);
-      setSelectedUser(null);
-    } catch (err: unknown) {
-      setModalError(err instanceof Error ? err.message : 'Error al actualizar roles.');
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const rolesToDisplay = availableRoles;
@@ -267,84 +205,25 @@ export function EditRolesView({ onBack }: EditRolesViewProps) {
         </button>
       </footer>
 
-      {selectedUser && (
-        <div className="edit-roles-modal-backdrop" onClick={handleCloseModal}>
-          <div
-            className="edit-roles-modal-card"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="edit-role-modal-title"
-          >
-            <h2 id="edit-role-modal-title" className="edit-roles-modal-title">
-              Editar rol
-            </h2>
-
-            <form onSubmit={handleSaveRoles} className="edit-roles-form">
-              <div className="modal-input-card">
-                <span className="modal-input-card-label">Nombre</span>
-                <span className="modal-input-card-value">{selectedUser.full_name}</span>
-              </div>
-
-              <div className="modal-role-select-row">
-                <label className="modal-role-label">Rol</label>
-                <div className="modal-multi-select-box">
-                  {rolesToDisplay.map((role) => {
-                    const isChecked = userRoles.includes(role.id);
-                    return (
-                      <button
-                        type="button"
-                        key={role.id}
-                        className={`modal-select-item-btn ${isChecked ? 'is-selected' : ''}`}
-                        onClick={() => handleToggleRole(role.id)}
-                      >
-                        <span className="modal-select-item-label">{role.label}</span>
-                        <span className="modal-select-item-check" aria-hidden="true">
-                          {isChecked ? (
-                            <svg viewBox="0 0 12 10" width="12" height="10" fill="none" stroke="#007aff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="1.5 5.5 4.5 8 10.5 1.5" />
-                            </svg>
-                          ) : null}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {isSelf && (
-                <p className="modal-error-text" role="alert">
-                  No puedes modificar tus propios roles.
-                </p>
-              )}
-
-              {modalError && (
-                <p className="modal-error-text" role="alert">
-                  {modalError}
-                </p>
-              )}
-
-              <div className="modal-actions-row">
-                <button
-                  type="button"
-                  className="modal-cancel-btn"
-                  onClick={handleCloseModal}
-                  disabled={isSaving}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="modal-save-btn"
-                  disabled={isSaving || userRoles.length === 0 || isSelf}
-                >
-                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EditRolesDrawer
+        isOpen={Boolean(selectedUser)}
+        user={selectedUser}
+        availableRoles={rolesToDisplay}
+        onClose={() => setSelectedUser(null)}
+        onSaved={(updatedUser, updatedRoles) => {
+          setStaff((prev) =>
+            prev.map((member) =>
+              member.user_id === updatedUser.user_id
+                ? { ...member, roles: updatedRoles, role: updatedRoles.join(', ') }
+                : member
+            )
+          );
+          setSuccessToast('Roles actualizados correctamente.');
+          setTimeout(() => setSuccessToast(null), 3500);
+          setSelectedUser(null);
+        }}
+        currentUserId={activeUserId}
+      />
     </main>
   );
 }

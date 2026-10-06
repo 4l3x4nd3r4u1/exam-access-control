@@ -6,6 +6,7 @@ import { StudentStatusDrawer } from '../components/StudentStatusDrawer';
 
 interface TeacherStudentsViewProps {
   course: TeacherCourse;
+  allowStatusEdit: boolean;
   onBack: () => void;
   onLogout: () => void;
 }
@@ -14,7 +15,7 @@ function displayStatus(status: EnrolledStudent['status']): string {
   return status === 'INHABILITADO' ? 'Inhabilitado' : 'Habilitado';
 }
 
-export function TeacherStudentsView({ course, onBack, onLogout }: TeacherStudentsViewProps) {
+export function TeacherStudentsView({ course, allowStatusEdit, onBack, onLogout }: TeacherStudentsViewProps) {
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +116,7 @@ export function TeacherStudentsView({ course, onBack, onLogout }: TeacherStudent
         {isLoading && <p className="teacher-courses-feedback">Cargando estudiantes...</p>}
         {error && <p className="teacher-courses-feedback teacher-courses-error" role="alert">{error}</p>}
         {!isLoading && !error && filteredStudents.map((student) => (
-          <button type="button" className="teacher-students-table-row" key={student.studentKey} onClick={() => setSelectedStudent(student)}>
+          <button type="button" className="teacher-students-table-row" key={student.studentKey} onClick={() => { if (allowStatusEdit) { setSelectedStudent(student); } }}>
             <span>{student.studentKey}</span><span>{student.fullName}</span><span>{displayStatus(student.status)}</span>
           </button>
         ))}
@@ -126,7 +127,7 @@ export function TeacherStudentsView({ course, onBack, onLogout }: TeacherStudent
         )}
       </section>
 
-      {selectedStudent && (
+      {allowStatusEdit && selectedStudent && (
         <StudentStatusDrawer
           isOpen
           courseGroupId={course.course_group_id}

@@ -8,8 +8,14 @@ import type { AcademicStaffMember } from '../types/staff';
 
 import { TeacherCoursesView } from './TeacherCoursesView';
 
+export type CourseFunctionMode =
+  | 'VIEW'
+  | 'SCHEDULE_EXAM'
+  | 'ELIGIBILITY';
+
 interface AssignedCoursesViewProps {
   session: UserSession;
+  mode: CourseFunctionMode;
   onBack: () => void;
   onLogout: () => void;
 }
@@ -27,12 +33,10 @@ function normalizeSearchText(value: string): string {
     .trim();
 }
 
-function isTeacher(member: AcademicStaffMember): boolean {
-  return member.roles.includes('DOCENTE');
-}
 
 export function AssignedCoursesView({
   session,
+  mode,
   onBack,
   onLogout,
 }: AssignedCoursesViewProps) {
@@ -51,35 +55,55 @@ export function AssignedCoursesView({
     useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+  let isMounted = true;
 
-    staffService
-      .getAcademicStaff()
-      .then((members) => {
-        if (isMounted) {
-          setStaff(members.filter(isTeacher));
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isMounted) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : 'No se pudo cargar la lista de docentes.',
-          );
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
+  setIsLoading(true);
+  setError(null);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  Promise.all([
+    staffService.getAcademicStaff(),
+    courseService.getCourseGroups(),
+  ])
+    .then(([members, courseGroups]) => {
+      if (!isMounted) {
+        return;
+      }
 
+      const teacherIds = new Set(
+        courseGroups.map(
+          (courseGroup) => courseGroup.teacher_id,
+        ),
+      );
+
+      setStaff(
+        members.filter((member) =>
+          teacherIds.has(member.user_id),
+        ),
+      );
+    })
+    .catch((requestError: unknown) => {
+      if (!isMounted) {
+        return;
+      }
+
+      setStaff([]);
+
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'No se pudo cargar la lista de docentes.',
+      );
+    })
+    .finally(() => {
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    });
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
   useEffect(() => {
     let isMounted = true;
 
@@ -120,6 +144,7 @@ export function AssignedCoursesView({
       <TeacherCoursesView
         teacherId={selectedTeacher.userId}
         teacherName={selectedTeacher.fullName}
+        mode={mode}
         onBack={() => setSelectedTeacher(null)}
         onLogout={onLogout}
       />

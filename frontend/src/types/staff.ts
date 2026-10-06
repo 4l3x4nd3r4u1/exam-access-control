@@ -18,15 +18,16 @@ export interface AcademicStaffResponse {
 
 export interface AcademicUserRegistrationData {
   fullName: string;
+  ci: string;
   email: string;
   password: string;
-  role: 'DOCENTE' | 'AUXILIAR' | 'ADMIN';
+  role: string;
 }
 
 export interface AcademicUserUpdateData {
   fullName: string;
   email: string;
-  role: 'DOCENTE' | 'AUXILIAR' | 'ADMIN';
+  role: string;
   newPassword?: string;
 }
 

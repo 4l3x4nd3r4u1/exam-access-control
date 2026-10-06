@@ -3,17 +3,21 @@ import { useEffect, useMemo, useState } from 'react';
 import subjectIconOne from '../assets/icono_materia-1.svg';
 import subjectIconTwo from '../assets/icono_materia-2.svg';
 
+import { ScheduleExamDrawer } from '../components/ScheduleExamDrawer';
+
 import { courseService } from '../services/courseService';
 
 import type { TeacherCourse } from '../types/course';
+import type { CourseFunctionMode } from './AssignedCoursesView';
 
 import { TeacherCourseDetailView } from './TeacherCourseDetailView';
 import { TeacherStudentsView } from './TeacherStudentsView';
-import { TeacherExamsView } from './TeacherExamsView';
+
 
 interface TeacherCoursesViewProps {
   teacherId: number;
   teacherName: string;
+  mode: CourseFunctionMode;
   onBack: () => void;
   onLogout: () => void;
 }
@@ -23,7 +27,8 @@ const courseIcons = [subjectIconOne, subjectIconTwo];
 function courseIcon(subjectCode: string): string {
   const index =
     [...subjectCode].reduce(
-      (total, character) => total + character.charCodeAt(0),
+      (total, character) =>
+        total + character.charCodeAt(0),
       0,
     ) % courseIcons.length;
 
@@ -31,7 +36,9 @@ function courseIcon(subjectCode: string): string {
 }
 
 function enrollmentColor(total: number): string {
-  if (total >= 400) return '#e32929';
+  if (total >= 400) {
+    return '#e32929';
+  }
 
   return '#f29e00';
 }
@@ -39,29 +46,27 @@ function enrollmentColor(total: number): string {
 export function TeacherCoursesView({
   teacherId,
   teacherName,
+  mode,
   onBack,
   onLogout,
 }: TeacherCoursesViewProps) {
-  const [courses, setCourses] = useState<TeacherCourse[]>([]);
-  const [selectedTerm, setSelectedTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [courses, setCourses] =
+    useState<TeacherCourse[]>([]);
 
-  const [selectedCourse, setSelectedCourse] = useState<{
-    course: TeacherCourse;
-    icon: string;
-  } | null>(null);
+  const [selectedTerm, setSelectedTerm] =
+    useState('');
 
-  const [isStudentsViewOpen, setIsStudentsViewOpen] =
-    useState(false);
+  const [isLoading, setIsLoading] =
+    useState(true);
 
-  const [isExamsViewOpen, setIsExamsViewOpen] =
-    useState(false);
+  const [error, setError] =
+    useState<string | null>(null);
 
-  const [
-    isEligibilityStatusViewOpen,
-    setIsEligibilityStatusViewOpen,
-  ] = useState(false);
+  const [selectedCourse, setSelectedCourse] =
+    useState<{
+      course: TeacherCourse;
+      icon: string;
+    } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,56 +100,57 @@ export function TeacherCoursesView({
 
   const academicTerms = useMemo(
     () =>
-      [...new Set(courses.map((course) => course.academic_term))]
-        .sort((first, second) =>
-          second.localeCompare(first, 'es', {
-            numeric: true,
-          }),
+      [
+        ...new Set(
+          courses.map(
+            (course) => course.academic_term,
+          ),
         ),
+      ].sort((first, second) =>
+        second.localeCompare(first, 'es', {
+          numeric: true,
+        }),
+      ),
     [courses],
   );
 
   const visibleCourses = selectedTerm
     ? courses.filter(
-        (course) => course.academic_term === selectedTerm,
+        (course) =>
+          course.academic_term === selectedTerm,
       )
     : courses;
 
   const totalStudents = visibleCourses.reduce(
-    (total, course) => total + course.total_enrolled,
+    (total, course) =>
+      total + course.total_enrolled,
     0,
   );
 
   if (selectedCourse) {
-    if (isEligibilityStatusViewOpen) {
+
+    if (mode === 'ELIGIBILITY') {
       return (
         <TeacherStudentsView
           course={selectedCourse.course}
-          onBack={() =>
-            setIsEligibilityStatusViewOpen(false)
-          }
+          allowStatusEdit
+          onBack={() => setSelectedCourse(null)}
           onLogout={onLogout}
         />
       );
     }
 
-    if (isStudentsViewOpen) {
+    if (mode === 'SCHEDULE_EXAM') {
       return (
-        <TeacherStudentsView
-          course={selectedCourse.course}
-          onBack={() => setIsStudentsViewOpen(false)}
-          onLogout={onLogout}
-        />
-      );
-    }
-
-    if (isExamsViewOpen) {
-      return (
-        <TeacherExamsView
-          course={selectedCourse.course}
-          onBack={() => setIsExamsViewOpen(false)}
-          onLogout={onLogout}
-        />
+        <main className="app-shell teacher-course-detail-screen">
+          <ScheduleExamDrawer
+            isOpen
+            course={selectedCourse.course}
+            onClose={() =>
+              setSelectedCourse(null)
+            }
+          />
+        </main>
       );
     }
 
@@ -152,28 +158,8 @@ export function TeacherCoursesView({
       <TeacherCourseDetailView
         course={selectedCourse.course}
         subjectIcon={selectedCourse.icon}
-        onBack={() => {
-          setSelectedCourse(null);
-          setIsEligibilityStatusViewOpen(false);
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(false);
-        }}
+        onBack={() => setSelectedCourse(null)}
         onLogout={onLogout}
-        onOpenEligibilityStatus={() => {
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(false);
-          setIsEligibilityStatusViewOpen(true);
-        }}
-        onOpenStudents={() => {
-          setIsEligibilityStatusViewOpen(false);
-          setIsExamsViewOpen(false);
-          setIsStudentsViewOpen(true);
-        }}
-        onOpenExams={() => {
-          setIsEligibilityStatusViewOpen(false);
-          setIsStudentsViewOpen(false);
-          setIsExamsViewOpen(true);
-        }}
       />
     );
   }
@@ -187,7 +173,10 @@ export function TeacherCoursesView({
           onClick={onBack}
           aria-label="Volver"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path d="M20 12H4M10 6l-6 6 6 6" />
           </svg>
         </button>
@@ -210,7 +199,9 @@ export function TeacherCoursesView({
           id="academic-term"
           value={selectedTerm}
           onChange={(event) =>
-            setSelectedTerm(event.target.value)
+            setSelectedTerm(
+              event.target.value,
+            )
           }
         >
           <option value="">
@@ -234,7 +225,8 @@ export function TeacherCoursesView({
         </span>
 
         <span>
-          Asignadas <b>{visibleCourses.length}</b>
+          Asignadas{' '}
+          <b>{visibleCourses.length}</b>
         </span>
       </div>
 
@@ -279,18 +271,12 @@ export function TeacherCoursesView({
                   type="button"
                   className="teacher-course-card"
                   key={course.course_group_id}
-                  onClick={() => {
-                    setIsStudentsViewOpen(false);
-                    setIsExamsViewOpen(false);
-                    setIsEligibilityStatusViewOpen(
-                      false,
-                    );
-
+                  onClick={() =>
                     setSelectedCourse({
                       course,
                       icon,
-                    });
-                  }}
+                    })
+                  }
                 >
                   <img
                     src={icon}
@@ -316,6 +302,7 @@ export function TeacherCoursesView({
                               ),
                           }}
                         />
+
                         {course.total_enrolled}{' '}
                         inscritos
                       </span>
@@ -332,6 +319,7 @@ export function TeacherCoursesView({
                             height="15"
                             rx="1.5"
                           />
+
                           <path d="M8 3v4M16 3v4M4 10h16" />
                         </svg>
 
