@@ -10,9 +10,7 @@ import { TeacherCoursesView } from './TeacherCoursesView';
 
 export type CourseFunctionMode =
   | 'VIEW'
-  | 'STUDENTS'
   | 'SCHEDULE_EXAM'
-  | 'EXAMS'
   | 'ELIGIBILITY';
 
 interface AssignedCoursesViewProps {

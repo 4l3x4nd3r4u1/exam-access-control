@@ -31,6 +31,8 @@ import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
 import { ScheduledExamsView } from './views/ScheduledExamsView';
 import './App.css';
+import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
+
 
 type ApplicationScreen =
   | 'DASHBOARD'
@@ -69,14 +71,17 @@ export default function App() {
 
   const [courseSearchTarget, setCourseSearchTarget] =
     useState<CourseSearchTarget | null>(null);
-
+  
+  const [isAcademicUserDrawerOpen, setIsAcademicUserDrawerOpen] =
+  useState(false);
+  
   // Se guarda el grupo elegido (incluye course_group_id) para la vista destino.
   const [selectedCourseGroup, setSelectedCourseGroup] =
     useState<CourseGroup | null>(null);
 
   const handleLogout = () => {
     authService.clearSession();
-
+    
     setSession(null);
     setScreen('DASHBOARD');
     setSelectedRoster(null);
@@ -86,6 +91,7 @@ export default function App() {
     setIsImportDrawerOpen(false);
     setIsEditRolesDrawerOpen(false);
     setIsEditPersonalDataDrawerOpen(false);
+    setIsAcademicUserDrawerOpen(false);
 
     setCourseFunctionMode('VIEW');
   };
@@ -106,16 +112,12 @@ export default function App() {
   }
 
   if (screen === 'ACADEMIC_STAFF') {
-    return (
-      <AcademicStaffView
-        onBack={() => setScreen('DASHBOARD')}
-        canRegister={hasFunction(
-          session,
-          FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
-        )}
-      />
-    );
-  }
+  return (
+    <AcademicStaffView
+      onBack={() => setScreen('DASHBOARD')}
+    />
+  );
+}
 
   if (screen === 'PROCESSED_ROSTERS') {
     return (
@@ -259,6 +261,17 @@ export default function App() {
       ),
     },
     {
+    functionCode: FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+    label: 'Registrar personal académico',
+    icon: academicStaffIcon,
+    iconClass: 'admin-staff-icon',
+    open: () => setIsAcademicUserDrawerOpen(true),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+     ),
+   },
+    {
       functionCode: FUNCTION_CODES.EDIT_ROLES,
       label: 'Editar roles',
       icon: academicStaffIcon,
@@ -329,7 +342,7 @@ export default function App() {
           Tu cuenta no tiene funciones disponibles.
         </p>
       )}
-
+      
       <CourseGroupSearchDrawer
         isOpen={courseSearchTarget !== null}
         onClose={() => setCourseSearchTarget(null)}
@@ -383,6 +396,12 @@ export default function App() {
           }}
         />
       )}
+
+      <AcademicUserDrawer
+            isOpen={isAcademicUserDrawerOpen}
+            onClose={() => setIsAcademicUserDrawerOpen(false)}
+            onSaved={() => setIsAcademicUserDrawerOpen(false)}
+            />
     </main>
   );
 }

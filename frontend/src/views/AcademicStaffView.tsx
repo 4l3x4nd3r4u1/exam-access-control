@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+
 import academicStaffIcon from '../assets/personal_academico.svg';
-import { AcademicUserDrawer } from '../components/NewAcademicUserDrawer';
+
 import { staffService } from '../services/staffService';
+
 import type { AcademicStaffMember } from '../types/staff';
 
 interface AcademicStaffViewProps {
   onBack: () => void;
-  canRegister: boolean;
 }
 
 function formatRole(role: string): string {
@@ -25,7 +26,10 @@ function formatRoles(roles: string[]) {
   return (
     <span className="academic-staff-roles">
       {roles.map((role) => (
-        <span className="academic-staff-role-badge" key={role}>
+        <span
+          className="academic-staff-role-badge"
+          key={role}
+        >
           {formatRole(role)}
         </span>
       ))}
@@ -33,42 +37,46 @@ function formatRoles(roles: string[]) {
   );
 }
 
-export function AcademicStaffView({ onBack, canRegister}: AcademicStaffViewProps) {
-  const [staff, setStaff] = useState<AcademicStaffMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isNewUserDrawerOpen, setIsNewUserDrawerOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AcademicStaffMember | null>(null);
+export function AcademicStaffView({
+  onBack,
+}: AcademicStaffViewProps) {
+  const [staff, setStaff] =
+    useState<AcademicStaffMember[]>([]);
 
-  const loadStaff = useCallback(async (showLoading = true) => {
-    if (showLoading) {
-      setIsLoading(true);
-      setError(null);
-    }
-    try {
-      const members = await staffService.getAcademicStaff();
-      setStaff(members);
-    } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar el personal académico.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    staffService.getAcademicStaff()
+    setIsLoading(true);
+    setError(null);
+
+    staffService
+      .getAcademicStaff()
       .then((members) => {
-        if (isMounted) setStaff(members);
-      })
-      .catch((requestError: unknown) => {
         if (isMounted) {
-          setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar el personal académico.');
+          setStaff(members);
         }
       })
+      .catch((requestError: unknown) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'No se pudo cargar el personal académico.',
+        );
+      })
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -79,54 +87,95 @@ export function AcademicStaffView({ onBack, canRegister}: AcademicStaffViewProps
   return (
     <main className="app-shell academic-staff-screen">
       <header className="academic-staff-topbar">
-        <button type="button" className="academic-staff-back" onClick={onBack} aria-label="Volver al panel">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
+        <button
+          type="button"
+          className="academic-staff-back"
+          onClick={onBack}
+          aria-label="Volver al panel"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path d="M20 12H4M10 6l-6 6 6 6" />
           </svg>
         </button>
-        {canRegister && (
-          <button type="button" className="academic-staff-add" onClick={() => {
-            setSelectedUser(null);
-            setIsNewUserDrawerOpen(true);
-          }} aria-label="Crear usuario">
-            +
-          </button>
-        )}
       </header>
 
       <section className="academic-staff-hero">
-        <img src={academicStaffIcon} alt="" className="academic-staff-hero-icon" />
-        <h1>Personal Académico</h1>
-        <p>{staff.length} {staff.length === 1 ? 'usuario' : 'usuarios'}</p>
+        <img
+          src={academicStaffIcon}
+          alt=""
+          className="academic-staff-hero-icon"
+        />
+
+        <h1>
+          Personal Académico
+        </h1>
+
+        <p>
+          {staff.length}{' '}
+          {staff.length === 1
+            ? 'usuario'
+            : 'usuarios'}
+        </p>
       </section>
 
-      <section className="academic-staff-list" aria-label="Listado de personal académico">
+      <section
+        className="academic-staff-list"
+        aria-label="Listado de personal académico"
+      >
         <div className="academic-staff-table-header">
           <span>rol</span>
           <span>nombre</span>
         </div>
 
-        {isLoading && <p className="academic-staff-feedback">Cargando personal académico...</p>}
-        {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
-        {!isLoading && !error && staff.map((member) => (
-          <div className="academic-staff-row" key={member.user_id}>
-            <span>{formatRoles(member.roles)}</span>
-            <span title={member.full_name}>{member.full_name}</span>
-          </div>
-        ))}
-      </section>
+        {isLoading && (
+          <p className="academic-staff-feedback">
+            Cargando personal académico...
+          </p>
+        )}
 
-      {isNewUserDrawerOpen && canRegister && (
-        <AcademicUserDrawer
-          isOpen
-          user={selectedUser}
-          onClose={() => {
-            setIsNewUserDrawerOpen(false);
-            setSelectedUser(null);
-          }}
-          onSaved={() => void loadStaff()}
-        />
-      )}
+        {error && (
+          <p
+            className="academic-staff-feedback academic-staff-error"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {!isLoading &&
+          !error &&
+          staff.map((member) => (
+            <div
+              className="academic-staff-row"
+              key={member.user_id}
+            >
+              <span>
+                {formatRoles(
+                  member.roles,
+                )}
+              </span>
+
+              <span
+                title={
+                  member.full_name
+                }
+              >
+                {member.full_name}
+              </span>
+            </div>
+          ))}
+
+        {!isLoading &&
+          !error &&
+          staff.length === 0 && (
+            <p className="academic-staff-feedback">
+              No hay personal académico registrado.
+            </p>
+          )}
+      </section>
     </main>
   );
 }

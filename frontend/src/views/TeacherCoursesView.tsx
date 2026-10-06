@@ -12,7 +12,7 @@ import type { CourseFunctionMode } from './AssignedCoursesView';
 
 import { TeacherCourseDetailView } from './TeacherCourseDetailView';
 import { TeacherStudentsView } from './TeacherStudentsView';
-import { TeacherExamsView } from './TeacherExamsView';
+
 
 interface TeacherCoursesViewProps {
   teacherId: number;
@@ -128,32 +128,12 @@ export function TeacherCoursesView({
   );
 
   if (selectedCourse) {
-    if (mode === 'STUDENTS') {
-      return (
-        <TeacherStudentsView
-          course={selectedCourse.course}
-          allowStatusEdit={false}
-          onBack={() => setSelectedCourse(null)}
-          onLogout={onLogout}
-        />
-      );
-    }
 
     if (mode === 'ELIGIBILITY') {
       return (
         <TeacherStudentsView
           course={selectedCourse.course}
           allowStatusEdit
-          onBack={() => setSelectedCourse(null)}
-          onLogout={onLogout}
-        />
-      );
-    }
-
-    if (mode === 'EXAMS') {
-      return (
-        <TeacherExamsView
-          course={selectedCourse.course}
           onBack={() => setSelectedCourse(null)}
           onLogout={onLogout}
         />
