@@ -8,8 +8,16 @@ import type { AcademicStaffMember } from '../types/staff';
 
 import { TeacherCoursesView } from './TeacherCoursesView';
 
+export type CourseFunctionMode =
+  | 'VIEW'
+  | 'STUDENTS'
+  | 'SCHEDULE_EXAM'
+  | 'EXAMS'
+  | 'ELIGIBILITY';
+
 interface AssignedCoursesViewProps {
   session: UserSession;
+  mode: CourseFunctionMode;
   onBack: () => void;
   onLogout: () => void;
 }
@@ -33,6 +41,7 @@ function isTeacher(member: AcademicStaffMember): boolean {
 
 export function AssignedCoursesView({
   session,
+  mode,
   onBack,
   onLogout,
 }: AssignedCoursesViewProps) {
@@ -120,6 +129,7 @@ export function AssignedCoursesView({
       <TeacherCoursesView
         teacherId={selectedTeacher.userId}
         teacherName={selectedTeacher.fullName}
+        mode={mode}
         onBack={() => setSelectedTeacher(null)}
         onLogout={onLogout}
       />

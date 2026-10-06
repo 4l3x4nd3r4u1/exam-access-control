@@ -17,7 +17,7 @@ import type { UserSession } from './types/auth';
 import type { ProcessedRoster } from './types/processedRoster';
 
 import { AcademicStaffView } from './views/AcademicStaffView';
-import { AssignedCoursesView } from './views/AssignedCoursesView';
+import {AssignedCoursesView,type CourseFunctionMode,} from './views/AssignedCoursesView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
@@ -31,7 +31,9 @@ type ApplicationScreen =
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL';
 
+
 export default function App() {
+  const [courseFunctionMode, setCourseFunctionMode] = useState<CourseFunctionMode>('VIEW');
   const [session, setSession] = useState<UserSession | null>(
     () => authService.getStoredSession(),
   );
@@ -67,14 +69,15 @@ export default function App() {
   }
 
   if (screen === 'ASSIGNED_COURSES') {
-    return (
-      <AssignedCoursesView
-        session={session}
-        onBack={() => setScreen('DASHBOARD')}
-        onLogout={handleLogout}
-      />
-    );
-  }
+  return (
+    <AssignedCoursesView
+      session={session}
+      mode={courseFunctionMode}
+      onBack={() => setScreen('DASHBOARD')}
+      onLogout={handleLogout}
+    />
+  );
+}
 
   if (screen === 'ACADEMIC_STAFF') {
     return (
@@ -119,73 +122,132 @@ export default function App() {
   }
 
   const menuItems = [
-    {
-      functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
-      label: 'Visualizar materias',
-      icon: assignedCoursesIcon,
-      iconClass: 'app-courses-icon',
-      open: () => setScreen('ASSIGNED_COURSES'),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
-      ),
+  {
+    functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+    label: 'Visualizar materias',
+    icon: assignedCoursesIcon,
+    iconClass: 'app-courses-icon',
+    open: () => {
+      setCourseFunctionMode('VIEW');
+      setScreen('ASSIGNED_COURSES');
     },
-    {
-      functionCode: FUNCTION_CODES.IMPORT_ROSTER,
-      label: 'Importar padrón',
-      icon: importRosterIcon,
-      iconClass: 'admin-import-icon',
-      open: () => setIsImportDrawerOpen(true),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.IMPORT_ROSTER,
-      ),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.LIST_COURSE_STUDENTS,
+    label: 'Estudiantes inscritos',
+    icon: assignedCoursesIcon,
+    iconClass: 'app-courses-icon',
+    open: () => {
+      setCourseFunctionMode('STUDENTS');
+      setScreen('ASSIGNED_COURSES');
     },
-    {
-      functionCode: FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
-      label: 'Planillas importadas',
-      icon: processedRostersIcon,
-      iconClass: 'admin-rosters-icon',
-      open: () => setScreen('PROCESSED_ROSTERS'),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
-      ),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.LIST_COURSE_STUDENTS,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
+    label: 'Programar Examen',
+    icon: assignedCoursesIcon,
+    iconClass: 'app-courses-icon',
+    open: () => {
+      setCourseFunctionMode('SCHEDULE_EXAM');
+      setScreen('ASSIGNED_COURSES');
     },
-    {
-      functionCode: FUNCTION_CODES.LIST_ACADEMIC_STAFF,
-      label: 'Personal académico',
-      icon: academicStaffIcon,
-      iconClass: 'admin-staff-icon',
-      open: () => setScreen('ACADEMIC_STAFF'),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.LIST_ACADEMIC_STAFF,
-      ),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.SCHEDULE_EXAM,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.LIST_COURSE_EXAMS,
+    label: 'Exámenes programados',
+    icon: assignedCoursesIcon,
+    iconClass: 'app-courses-icon',
+    open: () => {
+      setCourseFunctionMode('EXAMS');
+      setScreen('ASSIGNED_COURSES');
     },
-    {
-      functionCode: FUNCTION_CODES.EDIT_ROLES,
-      label: 'Editar roles',
-      icon: academicStaffIcon,
-      iconClass: 'admin-roles-icon',
-      open: () => setIsEditRolesModalOpen(true),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.EDIT_ROLES,
-      ),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.LIST_COURSE_EXAMS,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+    label: 'Estado de Habilitación',
+    icon: assignedCoursesIcon,
+    iconClass: 'app-courses-icon',
+    open: () => {
+      setCourseFunctionMode('ELIGIBILITY');
+      setScreen('ASSIGNED_COURSES');
     },
-    {
-      functionCode: FUNCTION_CODES.EDIT_PERSONAL_DATA,
-      label: 'Editar datos Personales',
-      icon: editPersonalDataIcon,
-      iconClass: 'admin-personal-data-icon',
-      open: () => setIsEditPersonalDataDrawerOpen(true),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.EDIT_PERSONAL_DATA,
-      ),
-    },
-  ].filter((item) => item.visible);
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.IMPORT_ROSTER,
+    label: 'Importar padrón',
+    icon: importRosterIcon,
+    iconClass: 'admin-import-icon',
+    open: () => setIsImportDrawerOpen(true),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.IMPORT_ROSTER,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+    label: 'Planillas importadas',
+    icon: processedRostersIcon,
+    iconClass: 'admin-rosters-icon',
+    open: () => setScreen('PROCESSED_ROSTERS'),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+    label: 'Personal académico',
+    icon: academicStaffIcon,
+    iconClass: 'admin-staff-icon',
+    open: () => setScreen('ACADEMIC_STAFF'),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.EDIT_ROLES,
+    label: 'Editar roles',
+    icon: academicStaffIcon,
+    iconClass: 'admin-roles-icon',
+    open: () => setIsEditRolesModalOpen(true),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.EDIT_ROLES,
+    ),
+  },
+  {
+    functionCode: FUNCTION_CODES.EDIT_PERSONAL_DATA,
+    label: 'Editar datos Personales',
+    icon: editPersonalDataIcon,
+    iconClass: 'admin-personal-data-icon',
+    open: () => setIsEditPersonalDataDrawerOpen(true),
+    visible: hasFunction(
+      session,
+      FUNCTION_CODES.EDIT_PERSONAL_DATA,
+    ),
+  },
+].filter((item) => item.visible);
 
   return (
     <main className="app-shell admin-dashboard app-dashboard">
@@ -276,4 +338,4 @@ export default function App() {
       )}
     </main>
   );
-}
+}

@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import {useEffect,useRef,useState,} from 'react';
 import { BottomDrawer } from './BottomDrawer';
 import { examService } from '../services/examService';
 import type { TeacherCourse } from '../types/course';
+import type {AvailableRoom,ExamType,} from '../types/exam';
 
 interface TimeSlot {
   start: string;
@@ -21,22 +22,6 @@ const TIME_SLOTS: TimeSlot[] = [
   { start: '08:15 pm', end: '09:45 pm' },
 ];
 
-interface ClassroomOption {
-  id: string;
-  nombre: string;
-  capacidad: number;
-}
-
-const AULAS_DISPONIBLES: ClassroomOption[] = [
-  { id: '691A', nombre: 'Aula 691A', capacidad: 80 },
-  { id: '691B', nombre: 'Aula 691B', capacidad: 80 },
-  { id: '691C', nombre: 'Aula 691C', capacidad: 80 },
-  { id: '691D', nombre: 'Aula 691D', capacidad: 80 },
-  { id: '691E', nombre: 'Aula 691E', capacidad: 80 },
-  { id: '691F', nombre: 'Aula 691F', capacidad: 80 },
-  { id: 'Auditorio', nombre: 'Auditorio', capacidad: 120 },
-];
-
 export interface ScheduledExamData {
   tipoExamen: string;
   fecha: string;
@@ -54,6 +39,41 @@ interface ScheduleExamDrawerProps {
   onSaved?: (data: ScheduledExamData) => void;
 }
 
+function getLocalToday(): string {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function to24Hour(time: string): string {
+  const match = time
+    .trim()
+    .toLowerCase()
+    .match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/);
+
+  if (!match) {
+    return time;
+  }
+
+  let hour = Number(match[1]);
+  const minute = match[2];
+  const period = match[3];
+
+  if (period === 'am' && hour === 12) {
+    hour = 0;
+  }
+
+  if (period === 'pm' && hour !== 12) {
+    hour += 12;
+  }
+
+  return `${String(hour).padStart(2, '0')}:${minute}`;
+}
+
 function formatDateToSpanish(dateString: string): string {
   if (!dateString) return '';
   const [year, month, day] = dateString.split('-').map(Number);
@@ -69,33 +89,234 @@ function formatDateToSpanish(dateString: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: ScheduleExamDrawerProps) {
-  const [examType, setExamType] = useState('Primer Parcial');
-  const [rawDate, setRawDate] = useState('2026-09-24');
-  const [startTimeIndex, setStartTimeIndex] = useState(0);
-  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
-  const [isRoomsOpen, setIsRoomsOpen] = useState(false);
-  const [rules, setRules] = useState<string[]>([]);
-  const [isAddingRule, setIsAddingRule] = useState(false);
-  const [newRuleText, setNewRuleText] = useState('');
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  export function ScheduleExamDrawer({
+  isOpen,
+  onClose,
+  course,
+  onSaved,
+}: ScheduleExamDrawerProps) {
+  const [examTypes, setExamTypes] =
+    useState<ExamType[]>([]);
 
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  const [
+    selectedExamTypeId,
+    setSelectedExamTypeId,
+  ] = useState<number | null>(null);
 
-  const currentSlot = TIME_SLOTS[startTimeIndex] || TIME_SLOTS[0];
-  const enrolledCount = course?.total_enrolled ?? 184;
+  const [
+    isLoadingExamTypes,
+    setIsLoadingExamTypes,
+  ] = useState(false);
 
-  const totalCapacity = selectedRoomIds.reduce((sum, id) => {
-    const room = AULAS_DISPONIBLES.find((r) => r.id === id);
-    return sum + (room?.capacidad ?? 0);
-  }, 0);
+  const [rawDate, setRawDate] =
+    useState(getLocalToday);
 
-  const roomsSummary = selectedRoomIds
-    .map((id) => AULAS_DISPONIBLES.find((r) => r.id === id)?.nombre ?? id)
-    .join(', ');
+  const [
+    startTimeIndex,
+    setStartTimeIndex,
+  ] = useState(0);
 
+  const [
+    selectedRoomIds,
+    setSelectedRoomIds,
+  ] = useState<string[]>([]);
+
+  const [
+    availableRooms,
+    setAvailableRooms,
+  ] = useState<AvailableRoom[]>([]);
+
+  const [
+    isLoadingRooms,
+    setIsLoadingRooms,
+  ] = useState(false);
+
+  const [
+    isRoomsOpen,
+    setIsRoomsOpen,
+  ] = useState(false);
+
+  const [rules, setRules] =
+    useState<string[]>([]);
+
+  const [
+    isAddingRule,
+    setIsAddingRule,
+  ] = useState(false);
+
+  const [
+    newRuleText,
+    setNewRuleText,
+  ] = useState('');
+
+  const [
+    saveSuccess,
+    setSaveSuccess,
+  ] = useState(false);
+
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState<string | null>(null);
+
+  const dateInputRef =
+    useRef<HTMLInputElement>(null);
+
+  const currentSlot =
+    TIME_SLOTS[startTimeIndex] ||
+    TIME_SLOTS[0];
+
+  const apiStartTime =
+    to24Hour(currentSlot.start);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isMounted = true;
+
+    setIsLoadingExamTypes(true);
+
+    examService
+      .getExamTypes()
+      .then((items) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setExamTypes(items);
+
+        if (items.length > 0) {
+          setSelectedExamTypeId(
+            (current) =>
+              current ?? items[0].value,
+          );
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'No se pudieron cargar los tipos de examen.',
+        );
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingExamTypes(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !rawDate ||
+      !apiStartTime
+    ) {
+      return;
+    }
+
+    let isMounted = true;
+
+    setIsLoadingRooms(true);
+
+    examService
+      .getAvailableRooms(
+        rawDate,
+        apiStartTime,
+      )
+      .then((rooms) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableRooms(rooms);
+
+        setSelectedRoomIds(
+          (current) =>
+            current.filter((roomId) =>
+              rooms.some(
+                (room) =>
+                  room.room_id ===
+                  roomId,
+              ),
+            ),
+        );
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableRooms([]);
+        setSelectedRoomIds([]);
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'No se pudieron cargar las aulas disponibles.',
+        );
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingRooms(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    isOpen,
+    rawDate,
+    apiStartTime,
+  ]);
+
+  const enrolledCount =
+    course?.total_enrolled ?? 0;
+
+  const totalCapacity =
+    selectedRoomIds.reduce(
+      (sum, id) => {
+        const room =
+          availableRooms.find(
+            (item) =>
+              item.room_id === id,
+          );
+
+        return (
+          sum +
+          (room?.capacity ?? 0)
+        );
+      },
+      0,
+    );
+
+  const roomsSummary =
+    selectedRoomIds
+      .map(
+        (id) =>
+          availableRooms.find(
+            (room) =>
+              room.room_id === id,
+          )?.room_name ?? id,
+      )
+      .join(', ');
+//////////////////////////////////////////
   const handleToggleRoom = (roomId: string) => {
     setSelectedRoomIds((prev) =>
       prev.includes(roomId)
@@ -115,13 +336,32 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
   const handleDeleteRule = (index: number) => {
     setRules((prev) => prev.filter((_, idx) => idx !== index));
   };
-
-  const handleSave = async () => {
+ 
+  const handleSave = async () => { 
+    if (selectedExamTypeId === null) {
+       setErrorMessage(
+       'Debes seleccionar un tipo de examen.',
+       );
+         setIsSubmitting(false);
+       return;
+    }
+    if (selectedRoomIds.length === 0) {
+       setErrorMessage(
+       'Debes seleccionar al menos un aula.',
+       );
+       return;
+      }
     setIsSubmitting(true);
     setErrorMessage(null);
+    
+    const selectedExamType =
+        examTypes.find(
+      (item) =>
+       item.value === selectedExamTypeId,
+   );
 
     const examData: ScheduledExamData = {
-      tipoExamen: examType,
+      tipoExamen:selectedExamType?.label ?? '',
       fecha: rawDate,
       horaInicio: currentSlot.start,
       duracion: '1h 30min',
@@ -131,14 +371,20 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
     };
 
     try {
-      await examService.scheduleExam(course.course_group_id, {
-        tipo_examen: examType,
-        fecha: rawDate,
-        hora_inicio: currentSlot.start,
-        hora_fin: currentSlot.end,
-        aulas: selectedRoomIds,
-        normas: rules,
-      });
+      await examService.scheduleExam(
+  course.course_group_id,
+  {
+    examTypeId: selectedExamTypeId,
+    date: rawDate,
+    startTime: apiStartTime,
+    rooms: selectedRoomIds.map((roomId) => ({
+      roomId: Number(roomId),
+      students: [],
+    })),
+    generalRules: rules,
+    studentRules: [],
+  },
+);
 
       setSaveSuccess(true);
       if (onSaved) {
@@ -171,13 +417,39 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
             <select
               id="schedule-exam-type"
               className="schedule-exam-select"
-              value={examType}
-              onChange={(e) => setExamType(e.target.value)}
+              value={selectedExamTypeId ?? ''}
+              onChange={(event) =>
+              setSelectedExamTypeId(
+                Number(event.target.value),
+              )
+              }
+              disabled={
+                isLoadingExamTypes ||
+                examTypes.length === 0
+              }
             >
-              <option value="Primer Parcial">Primer Parcial</option>
-              <option value="Segundo Parcial">Segundo Parcial</option>
-              <option value="Examen Final">Examen Final</option>
-            </select>
+               {isLoadingExamTypes && (
+              <option value="">
+              Cargando tipos...
+              </option>
+            )}
+
+            {!isLoadingExamTypes &&
+              examTypes.length === 0 && (
+              <option value="">
+              Sin tipos disponibles
+             </option>
+            )}
+
+       {examTypes.map((examType) => (
+          <option
+              key={examType.value}
+              value={examType.value}
+           >
+           {examType.label}
+           </option>
+))}
+</select>
           </div>
         </div>
 
@@ -218,8 +490,9 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
               type="date"
               className="schedule-exam-hidden-date-input"
               value={rawDate}
+              min={getLocalToday()}
               onChange={(e) => setRawDate(e.target.value)}
-            />
+             />
           </div>
         </div>
 
@@ -286,27 +559,51 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
             )}
           </p>
 
-          {isRoomsOpen && (
-            <div className="schedule-exam-dropdown-panel" role="region" aria-label="Selección de aulas">
-              <span className="schedule-exam-panel-tip">Selecciona las aulas para este examen:</span>
-              <div className="schedule-exam-classrooms-grid">
-                {AULAS_DISPONIBLES.map((room) => {
-                  const isChecked = selectedRoomIds.includes(room.id);
-                  return (
-                    <button
-                      key={room.id}
-                      type="button"
-                      className={`schedule-exam-room-pill ${isChecked ? 'selected' : ''}`}
-                      onClick={() => handleToggleRoom(room.id)}
-                    >
-                      <span className="schedule-exam-room-check">{isChecked ? '✓' : '+'}</span>
-                      <span className="schedule-exam-room-name">{room.nombre}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+         {isRoomsOpen && (
+  <div
+    className="schedule-exam-dropdown-panel"
+    role="region"
+    aria-label="Selección de aulas"
+  >
+    {isLoadingRooms ? (
+      <p className="schedule-exam-empty-rules">
+        Cargando aulas disponibles...
+      </p>
+    ) : availableRooms.length === 0 ? (
+      <p className="schedule-exam-empty-rules">
+        No hay aulas disponibles para la fecha y hora seleccionadas.
+      </p>
+    ) : (
+      <div className="schedule-exam-classrooms-grid">
+        {availableRooms.map((room) => {
+          const isChecked =
+            selectedRoomIds.includes(room.room_id);
+
+          return (
+            <button
+              key={room.room_id}
+              type="button"
+              className={`schedule-exam-room-pill ${
+                isChecked ? 'selected' : ''
+              }`}
+              onClick={() =>
+                handleToggleRoom(room.room_id)
+              }
+            >
+              <span className="schedule-exam-room-check">
+                {isChecked ? '✓' : '+'}
+              </span>
+
+              <span className="schedule-exam-room-name">
+                {room.room_name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
         </div>
 
         {/* 5. Normas con botón (+) para insertar nuevas normas (ninguna por defecto) */}
@@ -408,7 +705,7 @@ export function ScheduleExamDrawer({ isOpen, onClose, course, onSaved }: Schedul
           <button
             type="button"
             className="schedule-exam-submit-btn"
-            onClick={handleSave}
+            onClick={handleSave }          
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Guardando...' : saveSuccess ? '¡Guardado!' : 'Guardar cambios'}
