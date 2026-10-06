@@ -45,4 +45,20 @@ export const catalogService = {
     const response = await apiRequest<CatalogResponse<CatalogItem>>('/catalog/functions');
     return response.data;
   },
+
+  async getCourseGroups(): Promise<CourseGroupCatalogItem[]> {
+    const response = await apiRequest<CatalogResponse<CourseGroupCatalogItem>>('/catalog/course-groups');
+    return response.data;
+  },
 };
+
+export interface CourseGroupCatalogItem {
+  value: string;
+  label: string;
+  course_group_id: string;
+  sigla: string;
+  course_name: string;
+  group_code: string;
+  gestion: string;
+  teacher_id: number;
+}
