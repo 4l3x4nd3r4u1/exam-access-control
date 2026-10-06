@@ -36,6 +36,7 @@ export const staffService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fullName: data.fullName,
+        ci: data.ci,
         email: data.email,
         password: data.password,
         roles: [data.role],

@@ -20,6 +20,7 @@ function toFormRole(role: string): AcademicRole {
 
 export function AcademicUserDrawer({ isOpen, onClose, onSaved, user = null }: AcademicUserDrawerProps) {
   const [fullName, setFullName] = useState(user?.full_name ?? '');
+  const [ci, setCi] = useState('');
   const [email, setEmail] = useState(user?.email ?? '');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<AcademicRole>(user ? toFormRole(user.roles[0] ?? '') : 'DOCENTE');
@@ -48,9 +49,16 @@ export function AcademicUserDrawer({ isOpen, onClose, onSaved, user = null }: Ac
           ...(password ? { newPassword: password } : {}),
         });
       } else {
-        await staffService.registerAcademicUser({ fullName, email, password, role });
+        await staffService.registerAcademicUser({
+          fullName,
+          ci,
+          email,
+          password,
+          role,
+        });
       }
       setFullName('');
+      setCi('');
       setEmail('');
       setPassword('');
       setRole('DOCENTE');
@@ -71,6 +79,16 @@ export function AcademicUserDrawer({ isOpen, onClose, onSaved, user = null }: Ac
         <label className="drawer-input-card" htmlFor="new-user-name">
           <span>Nombre</span>
           <input id="new-user-name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+        </label>
+
+        <label className="drawer-input-card" htmlFor="new-user-ci">
+          <span>CI</span>
+          <input
+            id="new-user-ci"
+            value={ci}
+            onChange={(event) => setCi(event.target.value)}
+            required
+          />
         </label>
 
         <label className="drawer-input-card" htmlFor="new-user-email">
