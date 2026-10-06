@@ -29,3 +29,12 @@ export interface EnrolledStudentsResponse {
   data: EnrolledStudent[];
   message: string;
 }
+
+// GET /course-groups devuelve la misma forma que GET /teachers/{id}/courses
+export type CourseGroup = TeacherCourse;
+
+export interface CourseGroupsResponse {
+  success: boolean;
+  data: CourseGroup[];
+  message: string;
+}

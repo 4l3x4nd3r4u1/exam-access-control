@@ -5,15 +5,19 @@ import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
 import editPersonalDataIcon from './assets/editar_datos_personales.png';
+import scheduledExamsIcon from './assets/examenes_programados.png';
+import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
 
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
 import { EditRolesDrawer } from './components/EditRolesDrawer';
 import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
+import { CourseGroupSearchDrawer } from './components/CourseGroupSearchDrawer';
 
-import { authService, hasFunction } from './services/authService';
+import { authService, hasFunction, hasRole } from './services/authService';
 
 import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
+import type { CourseGroup } from './types/course';
 import type { ProcessedRoster } from './types/processedRoster';
 
 import { AcademicStaffView } from './views/AcademicStaffView';
@@ -21,9 +25,11 @@ import {
   AssignedCoursesView,
   type CourseFunctionMode,
 } from './views/AssignedCoursesView';
+import { EnrolledStudentsView } from './views/EnrolledStudentsView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
+import { ScheduledExamsView } from './views/ScheduledExamsView';
 import './App.css';
 
 type ApplicationScreen =
@@ -31,39 +37,42 @@ type ApplicationScreen =
   | 'ACADEMIC_STAFF'
   | 'ASSIGNED_COURSES'
   | 'PROCESSED_ROSTERS'
-  | 'PROCESSED_ROSTER_DETAIL';
+  | 'PROCESSED_ROSTER_DETAIL'
+  | 'SCHEDULED_EXAMS'
+  | 'ENROLLED_STUDENTS';
+
+/** Drawer de búsqueda de materia abierto desde el panel. */
+type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS';
 
 export default function App() {
   const [courseFunctionMode, setCourseFunctionMode] =
     useState<CourseFunctionMode>('VIEW');
 
-  const [session, setSession] =
-    useState<UserSession | null>(
-      () => authService.getStoredSession(),
-    );
+  const [session, setSession] = useState<UserSession | null>(
+    () => authService.getStoredSession(),
+  );
 
   const [screen, setScreen] =
     useState<ApplicationScreen>('DASHBOARD');
 
-  const [
-    isImportDrawerOpen,
-    setIsImportDrawerOpen,
-  ] = useState(false);
+  const [isImportDrawerOpen, setIsImportDrawerOpen] =
+    useState(false);
 
-  const [
-    isEditRolesDrawerOpen,
-    setIsEditRolesDrawerOpen,
-  ] = useState(false);
+  const [isEditRolesDrawerOpen, setIsEditRolesDrawerOpen] =
+    useState(false);
 
-  const [
-    isEditPersonalDataDrawerOpen,
-    setIsEditPersonalDataDrawerOpen,
-  ] = useState(false);
+  const [isEditPersonalDataDrawerOpen, setIsEditPersonalDataDrawerOpen] =
+    useState(false);
 
-  const [
-    selectedRoster,
-    setSelectedRoster,
-  ] = useState<ProcessedRoster | null>(null);
+  const [selectedRoster, setSelectedRoster] =
+    useState<ProcessedRoster | null>(null);
+
+  const [courseSearchTarget, setCourseSearchTarget] =
+    useState<CourseSearchTarget | null>(null);
+
+  // Se guarda el grupo elegido (incluye course_group_id) para la vista destino.
+  const [selectedCourseGroup, setSelectedCourseGroup] =
+    useState<CourseGroup | null>(null);
 
   const handleLogout = () => {
     authService.clearSession();
@@ -71,6 +80,8 @@ export default function App() {
     setSession(null);
     setScreen('DASHBOARD');
     setSelectedRoster(null);
+    setSelectedCourseGroup(null);
+    setCourseSearchTarget(null);
 
     setIsImportDrawerOpen(false);
     setIsEditRolesDrawerOpen(false);
@@ -80,11 +91,7 @@ export default function App() {
   };
 
   if (!session) {
-    return (
-      <LoginView
-        onLoginSuccess={setSession}
-      />
-    );
+    return <LoginView onLoginSuccess={setSession} />;
   }
 
   if (screen === 'ASSIGNED_COURSES') {
@@ -92,9 +99,7 @@ export default function App() {
       <AssignedCoursesView
         session={session}
         mode={courseFunctionMode}
-        onBack={() =>
-          setScreen('DASHBOARD')
-        }
+        onBack={() => setScreen('DASHBOARD')}
         onLogout={handleLogout}
       />
     );
@@ -103,9 +108,7 @@ export default function App() {
   if (screen === 'ACADEMIC_STAFF') {
     return (
       <AcademicStaffView
-        onBack={() =>
-          setScreen('DASHBOARD')
-        }
+        onBack={() => setScreen('DASHBOARD')}
         canRegister={hasFunction(
           session,
           FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
@@ -121,31 +124,41 @@ export default function App() {
   if (screen === 'PROCESSED_ROSTERS') {
     return (
       <ProcessedRostersView
-        onBack={() =>
-          setScreen('DASHBOARD')
-        }
+        onBack={() => setScreen('DASHBOARD')}
         onLogout={handleLogout}
         onSelectRoster={(roster) => {
           setSelectedRoster(roster);
-          setScreen(
-            'PROCESSED_ROSTER_DETAIL',
-          );
+          setScreen('PROCESSED_ROSTER_DETAIL');
         }}
       />
     );
   }
 
-  if (
-    screen ===
-      'PROCESSED_ROSTER_DETAIL' &&
-    selectedRoster
-  ) {
+  if (screen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
     return (
       <ProcessedRosterDetailView
         roster={selectedRoster}
-        onBack={() =>
-          setScreen('PROCESSED_ROSTERS')
-        }
+        onBack={() => setScreen('PROCESSED_ROSTERS')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (screen === 'SCHEDULED_EXAMS' && selectedCourseGroup) {
+    return (
+      <ScheduledExamsView
+        courseGroup={selectedCourseGroup}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (screen === 'ENROLLED_STUDENTS' && selectedCourseGroup) {
+    return (
+      <EnrolledStudentsView
+        courseGroup={selectedCourseGroup}
+        onBack={() => setScreen('DASHBOARD')}
         onLogout={handleLogout}
       />
     );
@@ -153,221 +166,119 @@ export default function App() {
 
   const menuItems = [
     {
-      functionCode:
-        FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
-
+      functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
       label: 'Visualizar materias',
-
       icon: assignedCoursesIcon,
-
-      iconClass:
-        'app-courses-icon',
-
+      iconClass: 'app-courses-icon',
       open: () => {
         setCourseFunctionMode('VIEW');
         setScreen('ASSIGNED_COURSES');
       },
-
       visible: hasFunction(
         session,
         FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.LIST_COURSE_STUDENTS,
-
-      label: 'Estudiantes inscritos',
-
-      icon: assignedCoursesIcon,
-
-      iconClass:
-        'app-courses-icon',
-
-      open: () => {
-        setCourseFunctionMode('STUDENTS');
-        setScreen('ASSIGNED_COURSES');
-      },
-
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.LIST_COURSE_STUDENTS,
-      ),
-    },
-
-    {
-      functionCode:
-        FUNCTION_CODES.SCHEDULE_EXAM,
-
+      functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
       label: 'Programar Examen',
-
       icon: assignedCoursesIcon,
-
-      iconClass:
-        'app-courses-icon',
-
+      iconClass: 'app-courses-icon',
       open: () => {
-        setCourseFunctionMode(
-          'SCHEDULE_EXAM',
-        );
-
+        setCourseFunctionMode('SCHEDULE_EXAM');
         setScreen('ASSIGNED_COURSES');
       },
-
       visible: hasFunction(
         session,
         FUNCTION_CODES.SCHEDULE_EXAM,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.LIST_COURSE_EXAMS,
-
+      functionCode: FUNCTION_CODES.LIST_COURSE_EXAMS,
       label: 'Exámenes programados',
-
-      icon: assignedCoursesIcon,
-
-      iconClass:
-        'app-courses-icon',
-
-      open: () => {
-        setCourseFunctionMode('EXAMS');
-        setScreen('ASSIGNED_COURSES');
-      },
-
+      icon: scheduledExamsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setCourseSearchTarget('SCHEDULED_EXAMS'),
       visible: hasFunction(
         session,
         FUNCTION_CODES.LIST_COURSE_EXAMS,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
-
-      label:
-        'Estado de Habilitación',
-
+      functionCode: FUNCTION_CODES.LIST_COURSE_STUDENTS,
+      label: 'Estudiantes inscritos en una materia',
+      icon: enrolledStudentsIcon,
+      iconClass: 'admin-enrolled-icon',
+      open: () => setCourseSearchTarget('ENROLLED_STUDENTS'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_COURSE_STUDENTS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      label: 'Estado de Habilitación',
       icon: assignedCoursesIcon,
-
-      iconClass:
-        'app-courses-icon',
-
+      iconClass: 'app-courses-icon',
       open: () => {
-        setCourseFunctionMode(
-          'ELIGIBILITY',
-        );
-
+        setCourseFunctionMode('ELIGIBILITY');
         setScreen('ASSIGNED_COURSES');
       },
-
       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.IMPORT_ROSTER,
-
+      functionCode: FUNCTION_CODES.IMPORT_ROSTER,
       label: 'Importar padrón',
-
       icon: importRosterIcon,
-
-      iconClass:
-        'admin-import-icon',
-
-      open: () =>
-        setIsImportDrawerOpen(true),
-
+      iconClass: 'admin-import-icon',
+      open: () => setIsImportDrawerOpen(true),
       visible: hasFunction(
         session,
         FUNCTION_CODES.IMPORT_ROSTER,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
-
+      functionCode: FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
       label: 'Planillas importadas',
-
       icon: processedRostersIcon,
-
-      iconClass:
-        'admin-rosters-icon',
-
-      open: () =>
-        setScreen(
-          'PROCESSED_ROSTERS',
-        ),
-
+      iconClass: 'admin-rosters-icon',
+      open: () => setScreen('PROCESSED_ROSTERS'),
       visible: hasFunction(
         session,
         FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.LIST_ACADEMIC_STAFF,
-
+      functionCode: FUNCTION_CODES.LIST_ACADEMIC_STAFF,
       label: 'Personal académico',
-
       icon: academicStaffIcon,
-
-      iconClass:
-        'admin-staff-icon',
-
-      open: () =>
-        setScreen('ACADEMIC_STAFF'),
-
+      iconClass: 'admin-staff-icon',
+      open: () => setScreen('ACADEMIC_STAFF'),
       visible: hasFunction(
         session,
         FUNCTION_CODES.LIST_ACADEMIC_STAFF,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.EDIT_ROLES,
-
+      functionCode: FUNCTION_CODES.EDIT_ROLES,
       label: 'Editar roles',
-
       icon: academicStaffIcon,
-
-      iconClass:
-        'admin-roles-icon',
-
-      open: () =>
-        setIsEditRolesDrawerOpen(true),
-
+      iconClass: 'admin-roles-icon',
+      open: () => setIsEditRolesDrawerOpen(true),
       visible: hasFunction(
         session,
         FUNCTION_CODES.EDIT_ROLES,
       ),
     },
-
     {
-      functionCode:
-        FUNCTION_CODES.EDIT_PERSONAL_DATA,
-
-      label:
-        'Editar datos Personales',
-
+      functionCode: FUNCTION_CODES.EDIT_PERSONAL_DATA,
+      label: 'Editar datos Personales',
       icon: editPersonalDataIcon,
-
-      iconClass:
-        'admin-personal-data-icon',
-
-      open: () =>
-        setIsEditPersonalDataDrawerOpen(
-          true,
-        ),
-
+      iconClass: 'admin-personal-data-icon',
+      open: () => setIsEditPersonalDataDrawerOpen(true),
       visible: hasFunction(
         session,
         FUNCTION_CODES.EDIT_PERSONAL_DATA,
@@ -379,13 +290,8 @@ export default function App() {
     <main className="app-shell admin-dashboard app-dashboard">
       <header className="admin-dashboard-header">
         <div>
-          <h1 className="admin-dashboard-title">
-            Panel
-          </h1>
-
-          <p className="admin-dashboard-subtitle">
-            {session.full_name}
-          </p>
+          <h1 className="admin-dashboard-title">Panel</h1>
+          <p className="admin-dashboard-subtitle">{session.full_name}</p>
         </div>
 
         <button
@@ -394,16 +300,8 @@ export default function App() {
           onClick={handleLogout}
           aria-label="Cerrar sesión"
         >
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <circle
-              cx="12"
-              cy="8"
-              r="4.25"
-            />
-
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4.25" />
             <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
           </svg>
         </button>
@@ -426,67 +324,67 @@ export default function App() {
                 alt=""
                 className={`admin-menu-icon ${item.iconClass}`}
               />
-
-              <span>
-                {item.label}
-              </span>
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>
       ) : (
         <p className="app-dashboard-empty">
-          Tu cuenta no tiene funciones
-          disponibles.
+          Tu cuenta no tiene funciones disponibles.
         </p>
       )}
 
+      <CourseGroupSearchDrawer
+        isOpen={courseSearchTarget !== null}
+        onClose={() => setCourseSearchTarget(null)}
+        currentUserId={session.user_id}
+        // "Mis materias" solo se ofrece en el flujo de estudiantes y solo
+        // si el usuario autenticado tiene el rol DOCENTE.
+        showMyCourses={
+          courseSearchTarget === 'ENROLLED_STUDENTS' &&
+          hasRole(session, 'DOCENTE')
+        }
+        ariaLabel={
+          courseSearchTarget === 'ENROLLED_STUDENTS'
+            ? 'Buscar materia para ver estudiantes inscritos'
+            : 'Buscar materia para ver exámenes programados'
+        }
+        onSelect={(courseGroup) => {
+          if (!courseSearchTarget) return;
+
+          setSelectedCourseGroup(courseGroup);
+          setScreen(courseSearchTarget);
+          setCourseSearchTarget(null);
+        }}
+      />
+
       <ImportRosterDrawer
         isOpen={isImportDrawerOpen}
-        onClose={() =>
-          setIsImportDrawerOpen(false)
-        }
+        onClose={() => setIsImportDrawerOpen(false)}
       />
 
       <EditRolesDrawer
         isOpen={isEditRolesDrawerOpen}
-        onClose={() =>
-          setIsEditRolesDrawerOpen(false)
-        }
+        onClose={() => setIsEditRolesDrawerOpen(false)}
         currentUserId={session.user_id}
       />
 
       {isEditPersonalDataDrawerOpen && (
         <EditPersonalDataDrawer
-          isOpen={
-            isEditPersonalDataDrawerOpen
-          }
-          onClose={() =>
-            setIsEditPersonalDataDrawerOpen(
-              false,
-            )
-          }
+          isOpen={isEditPersonalDataDrawerOpen}
+          onClose={() => setIsEditPersonalDataDrawerOpen(false)}
           session={session}
           onSuccess={(updated) => {
             setSession((prev) =>
               prev
                 ? {
                     ...prev,
-
-                    full_name:
-                      updated.fullName,
-
-                    ci:
-                      updated.ci !==
-                      undefined
-                        ? updated.ci
-                        : prev.ci,
+                    full_name: updated.fullName,
+                    ci: updated.ci !== undefined ? updated.ci : prev.ci,
                   }
                 : null,
             );
-
-            setIsEditPersonalDataDrawerOpen(
-              false,
-            );
+            setIsEditPersonalDataDrawerOpen(false);
           }}
         />
       )}

@@ -8,6 +8,8 @@ import type {
   ExamType,
   ExamTypesResponse,
   ScheduleExamPayload,
+  ScheduledExam,
+  ScheduledExamsResponse,
   StudentEnrollmentCheckResponse,
 } from '../types/exam';
 
@@ -21,6 +23,20 @@ export const examService = {
       );
 
     return Array.isArray(response.data)
+      ? response.data
+      : [];
+  },
+
+  /** Exámenes programados de un grupo, con las aulas asignadas. */
+  async getScheduledExams(
+    courseGroupId: string | number,
+  ): Promise<ScheduledExam[]> {
+    const response =
+      await apiRequest<ScheduledExamsResponse>(
+        `/courses/${courseGroupId}/exams`,
+      );
+
+    return Array.isArray(response?.data)
       ? response.data
       : [];
   },
@@ -91,8 +107,10 @@ export const examService = {
       `/courses/${courseGroupId}/exams`,
       {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       },
     );
   },
 };
+

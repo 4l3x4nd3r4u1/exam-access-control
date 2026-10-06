@@ -88,3 +88,28 @@ export interface StudentEnrollmentCheckResponse {
     enrollment_date?: string;
   } | null;
 }
+
+// ── Exámenes programados (GET /courses/{course_group_id}/exams) ──────────
+export interface ScheduledExamRoom {
+  room_id: string;
+  room_name: string;
+  assigned_capacity: number;
+  assistant_id: number | null;
+}
+
+export interface ScheduledExam {
+  exam_id: string;
+  course_group_id: string;
+  exam_type: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  rooms: ScheduledExamRoom[];
+}
+
+export interface ScheduledExamsResponse {
+  success: boolean;
+  data: ScheduledExam[];
+  message: string;
+}
+
