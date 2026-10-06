@@ -8,11 +8,12 @@ import type {
   ExamType,
   ExamTypesResponse,
   ScheduleExamPayload,
+  StudentEnrollmentCheckResponse,
 } from '../types/exam';
 
 export const examService = {
   async getCourseExams(
-    courseGroupId: string,
+    courseGroupId: string | number,
   ): Promise<CourseExam[]> {
     const response =
       await apiRequest<CourseExamsResponse>(
@@ -54,11 +55,36 @@ export const examService = {
       : [];
   },
 
+  async checkStudentEnrollment(
+    courseGroupId: string | number,
+    codigoSis: string,
+  ): Promise<StudentEnrollmentCheckResponse> {
+    try {
+      return await apiRequest<StudentEnrollmentCheckResponse>(
+        `/courses/${courseGroupId}/check-enrollment?codigo_sis=${encodeURIComponent(
+          codigoSis,
+        )}`,
+      );
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Estudiante no encontrado en la materia.',
+        data: null,
+      };
+    }
+  },
+
   async scheduleExam(
-    courseGroupId: string,
+    courseGroupId: string | number,
     payload: ScheduleExamPayload,
-  ): Promise<void> {
-    await apiRequest<{
+  ): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return await apiRequest<{
       success: boolean;
       message: string;
     }>(

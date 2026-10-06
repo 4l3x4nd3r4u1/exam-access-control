@@ -46,7 +46,7 @@ export interface ExamTypesResponse {
 }
 
 export interface AvailableRoom {
-  room_id: string;
+  room_id: string | number;
   room_name: string;
   capacity: number;
 }
@@ -63,14 +63,28 @@ export interface ScheduleExamRoomPayload {
   auxiliarId?: number | null;
 }
 
+export interface ScheduleExamStudentRuleData {
+  studentId: number;
+  rule: string;
+  codigoSis?: string;
+}
+
 export interface ScheduleExamPayload {
   examTypeId: number;
   date: string;
   startTime: string;
   rooms: ScheduleExamRoomPayload[];
   generalRules: string[];
-  studentRules: {
-    studentId: number;
-    rule: string;
-  }[];
+  studentRules: ScheduleExamStudentRuleData[];
+}
+
+export interface StudentEnrollmentCheckResponse {
+  success: boolean;
+  message: string;
+  data: {
+    user_id: number;
+    status: string;
+    ineligibility_reason: string | null;
+    enrollment_date?: string;
+  } | null;
 }
