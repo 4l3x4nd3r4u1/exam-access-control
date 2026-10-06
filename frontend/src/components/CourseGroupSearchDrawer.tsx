@@ -18,6 +18,7 @@ interface CourseGroupSearchDrawerProps {
   showMyCourses?: boolean;
   currentUserId: number;
   ariaLabel?: string;
+  onlyTeacherCourses?: boolean;
 }  
 
 const ALL_TERMS = '';
@@ -27,6 +28,7 @@ function CourseGroupSearchContent({
   onSelect,
   showMyCourses = false,
   currentUserId,
+  onlyTeacherCourses = false,
 }: Omit<CourseGroupSearchDrawerProps, 'isOpen' | 'ariaLabel'>) {
   const [courseGroups, setCourseGroups] = useState<CourseGroup[]>([]);
   const [myCourseIds, setMyCourseIds] = useState<Set<string> | null>(null);
@@ -37,12 +39,18 @@ function CourseGroupSearchContent({
   const [search, setSearch] = useState('');
   const [term, setTerm] = useState(ALL_TERMS);
 
-  // 1) Datos base del buscador: GET /course-groups
+  // 1) Datos base del buscador: si onlyTeacherCourses es true, pide las materias asignadas al docente
   useEffect(() => {
     let isMounted = true;
 
-    courseService
-      .getCourseGroups()
+    setIsLoading(true);
+    setError(null);
+
+    const request = onlyTeacherCourses
+      ? courseService.getTeacherCourses(currentUserId)
+      : courseService.getCourseGroups();
+
+    request
       .then((items) => {
         if (isMounted) setCourseGroups(items);
       })
@@ -51,7 +59,9 @@ function CourseGroupSearchContent({
           setError(
             requestError instanceof Error
               ? requestError.message
-              : 'No se pudo cargar la lista de materias.',
+              : onlyTeacherCourses
+                ? 'No se pudieron cargar las materias del docente.'
+                : 'No se pudo cargar la lista de materias.',
           );
         }
       })
@@ -62,7 +72,7 @@ function CourseGroupSearchContent({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [onlyTeacherCourses, currentUserId]);
 
   // 2) "Mis materias": GET /teachers/{user_id}/courses (se pide una sola vez)
   const toggleOnlyMine = () => {
@@ -161,7 +171,7 @@ function CourseGroupSearchContent({
           </select>
         </label>
 
-        {showMyCourses && (
+        {!onlyTeacherCourses && showMyCourses && (
           <button
             type="button"
             className={`cg-mine-chip${onlyMine ? ' is-active' : ''}`}
@@ -204,7 +214,11 @@ function CourseGroupSearchContent({
           ))}
 
         {!busy && !error && visibleGroups.length === 0 && (
-          <p className="cg-feedback">No se encontraron materias.</p>
+          <p className="cg-feedback">
+            {onlyTeacherCourses
+              ? 'No tienes materias asignadas.'
+              : 'No se encontraron materias.'}
+          </p>
         )}
       </div>
 

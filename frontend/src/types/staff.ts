@@ -21,13 +21,15 @@ export interface AcademicUserRegistrationData {
   ci: string;
   email: string;
   password: string;
-  role: string;
+  roles: string[];
+  role?: string;
 }
 
 export interface AcademicUserUpdateData {
   fullName: string;
   email: string;
-  role: string;
+  roles?: string[];
+  role?: string;
   newPassword?: string;
 }
 

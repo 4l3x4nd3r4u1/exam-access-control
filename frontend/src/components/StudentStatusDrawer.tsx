@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BottomDrawer } from './BottomDrawer';
+import { ConfirmModal } from './ConfirmModal';
 import { courseService } from '../services/courseService';
 import type { EnrolledStudent } from '../types/course';
 
@@ -15,13 +16,17 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
   const [status, setStatus] = useState<EnrolledStudent['status']>(student.status);
   const [reason, setReason] = useState(student.ineligibilityReason ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleClose = () => {
-    if (!isSaving) onClose();
+    if (!isSaving) {
+      setIsConfirmOpen(false);
+      onClose();
+    }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const cleanReason = reason.trim();
 
@@ -31,9 +36,16 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
     }
 
     setError(null);
+    setIsConfirmOpen(true);
+  };
+
+  const executeSave = async () => {
+    const cleanReason = reason.trim();
+    setError(null);
     setIsSaving(true);
     try {
       await courseService.updateStudentStatus(courseGroupId, student.userId, status, cleanReason);
+      setIsConfirmOpen(false);
       onSaved({
         ...student,
         status,
@@ -41,6 +53,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
       });
       onClose();
     } catch (requestError: unknown) {
+      setIsConfirmOpen(false);
       setError(requestError instanceof Error ? requestError.message : 'No se pudo actualizar el estado.');
     } finally {
       setIsSaving(false);
@@ -85,6 +98,29 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
           <button type="submit" className="drawer-submit-button" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</button>
         </div>
       </form>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="Confirmar cambio de estado"
+        isDangerous={status === 'INHABILITADO'}
+        message={
+          <div>
+            <p>¿Estás seguro de que deseas cambiar el estado de este estudiante?</p>
+            <div className="confirm-modal-summary-box">
+              <div><strong>Estudiante:</strong> {student.fullName} ({student.studentKey})</div>
+              <div><strong>Nuevo estado:</strong> {status}</div>
+              {status === 'INHABILITADO' && reason.trim() && (
+                <div><strong>Motivo:</strong> {reason.trim()}</div>
+              )}
+            </div>
+          </div>
+        }
+        confirmLabel="Sí, cambiar estado"
+        cancelLabel="Cancelar"
+        isLoading={isSaving}
+        onConfirm={executeSave}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </BottomDrawer>
   );
 }

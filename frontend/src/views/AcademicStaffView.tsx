@@ -11,15 +11,23 @@ interface AcademicStaffViewProps {
 }
 
 function formatRole(role: string): string {
+  const normalized = (role || '').toUpperCase().trim();
   const labels: Record<string, string> = {
     ADMIN: 'Administrador',
+    ADMINISTRADOR: 'Administrador',
     AUXILIAR: 'Auxiliar',
     ASSISTANT: 'Auxiliar',
     DOCENTE: 'Docente',
     TEACHER: 'Docente',
+    ESTUDIANTE: 'Estudiante',
+    STUDENT: 'Estudiante',
   };
 
-  return labels[role] ?? role;
+  if (labels[normalized]) {
+    return labels[normalized];
+  }
+
+  return role ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase() : '';
 }
 
 function formatRoles(roles: string[]) {

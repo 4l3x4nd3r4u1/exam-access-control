@@ -28,7 +28,14 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 
   const json = await response.json();
   if (!response.ok) {
-    throw new Error(json.message || 'No se pudo completar la solicitud.');
+    let errorMsg = json.message;
+    if (json.errors && typeof json.errors === 'object') {
+      const firstKey = Object.keys(json.errors)[0];
+      if (firstKey && Array.isArray(json.errors[firstKey]) && json.errors[firstKey].length > 0) {
+        errorMsg = json.errors[firstKey][0];
+      }
+    }
+    throw new Error(errorMsg || 'No se pudo completar la solicitud.');
   }
 
   return json as T;

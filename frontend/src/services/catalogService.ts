@@ -45,4 +45,9 @@ export const catalogService = {
     const response = await apiRequest<CatalogResponse<CatalogItem>>('/catalog/functions');
     return response.data;
   },
+
+  async getEmailDomains(): Promise<CatalogItem[]> {
+    const response = await apiRequest<CatalogResponse<CatalogItem>>('/catalog/email-domains');
+    return response.data;
+  },
 };

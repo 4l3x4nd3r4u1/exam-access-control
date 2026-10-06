@@ -10,7 +10,6 @@ import { courseService } from '../services/courseService';
 import type { TeacherCourse } from '../types/course';
 import type { CourseFunctionMode } from './AssignedCoursesView';
 
-import { TeacherCourseDetailView } from './TeacherCourseDetailView';
 import { TeacherStudentsView } from './TeacherStudentsView';
 
 
@@ -18,6 +17,7 @@ interface TeacherCoursesViewProps {
   teacherId: number;
   teacherName: string;
   mode: CourseFunctionMode;
+  presentation?: 'screen' | 'drawer';
   onBack: () => void;
   onLogout: () => void;
 }
@@ -47,6 +47,7 @@ export function TeacherCoursesView({
   teacherId,
   teacherName,
   mode,
+  presentation = 'screen',
   onBack,
   onLogout,
 }: TeacherCoursesViewProps) {
@@ -128,7 +129,6 @@ export function TeacherCoursesView({
   );
 
   if (selectedCourse) {
-
     if (mode === 'ELIGIBILITY') {
       return (
         <TeacherStudentsView
@@ -141,6 +141,10 @@ export function TeacherCoursesView({
     }
 
     if (mode === 'SCHEDULE_EXAM') {
+      if (!selectedCourse.course.can_interact) {
+        return null;
+      }
+
       return (
         <main className="app-shell teacher-course-detail-screen">
           <ScheduleExamDrawer
@@ -154,32 +158,31 @@ export function TeacherCoursesView({
       );
     }
 
-    return (
-      <TeacherCourseDetailView
-        course={selectedCourse.course}
-        subjectIcon={selectedCourse.icon}
-        onBack={() => setSelectedCourse(null)}
-        onLogout={onLogout}
-      />
-    );
+    return null;
   }
 
+  const Container = presentation === 'drawer' ? 'div' : 'main';
+
   return (
-    <main className="app-shell teacher-courses-screen">
+    <Container
+      className={`${presentation === 'drawer' ? '' : 'app-shell '}teacher-courses-screen${presentation === 'drawer' ? ' teacher-courses-drawer-content' : ''}`}
+    >
       <header className="teacher-courses-heading-row">
-        <button
-          type="button"
-          className="teacher-courses-back"
-          onClick={onBack}
-          aria-label="Volver"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+        {presentation === 'screen' && (
+          <button
+            type="button"
+            className="teacher-courses-back"
+            onClick={onBack}
+            aria-label="Volver"
           >
-            <path d="M20 12H4M10 6l-6 6 6 6" />
-          </svg>
-        </button>
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M20 12H4M10 6l-6 6 6 6" />
+            </svg>
+          </button>
+        )}
 
         <div>
           <h1>Materias</h1>
@@ -266,18 +269,8 @@ export function TeacherCoursesView({
                 course.subject_code,
               );
 
-              return (
-                <button
-                  type="button"
-                  className="teacher-course-card"
-                  key={course.course_group_id}
-                  onClick={() =>
-                    setSelectedCourse({
-                      course,
-                      icon,
-                    })
-                  }
-                >
+              const cardContent = (
+                <>
                   <img
                     src={icon}
                     alt=""
@@ -327,6 +320,38 @@ export function TeacherCoursesView({
                       </span>
                     </div>
                   </div>
+                </>
+              );
+
+              const isReadOnly =
+                mode === 'VIEW' ||
+                (mode === 'SCHEDULE_EXAM' && !course.can_interact);
+
+              if (isReadOnly) {
+                return (
+                  <article
+                    className="teacher-course-card teacher-course-card-readonly"
+                    key={course.course_group_id}
+                  >
+                    {cardContent}
+                  </article>
+                );
+              }
+
+              return (
+                <button
+                  type="button"
+                  className="teacher-course-card"
+                  key={course.course_group_id}
+                  onClick={() =>
+                    setSelectedCourse({
+                      course,
+                      icon,
+                    })
+                  }
+                >
+                  {cardContent}
+                  <span className="teacher-course-chevron" aria-hidden="true">›</span>
                 </button>
               );
             })}
@@ -340,6 +365,6 @@ export function TeacherCoursesView({
       >
         Cerrar
       </button>
-    </main>
+    </Container>
   );
 }

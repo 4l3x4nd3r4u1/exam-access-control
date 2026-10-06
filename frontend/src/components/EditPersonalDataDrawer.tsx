@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { BottomDrawer } from './BottomDrawer';
+import { ConfirmModal } from './ConfirmModal';
 import { staffService } from '../services/staffService';
 import type { PersonalDataUpdatePayload } from '../types/staff';
 import type { UserSession } from '../types/auth';
@@ -23,15 +24,17 @@ export function EditPersonalDataDrawer({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const closeDrawer = () => {
     if (isSaving) return;
     setError(null);
+    setIsConfirmOpen(false);
     onClose();
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
@@ -47,11 +50,16 @@ export function EditPersonalDataDrawer({
       return;
     }
 
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
     setIsSaving(true);
+    setError(null);
 
     try {
       const payload: PersonalDataUpdatePayload = {
-        fullName: trimmedName,
+        fullName: fullName.trim(),
       };
 
       const initialCi = (session.ci ?? '').trim();
@@ -60,18 +68,21 @@ export function EditPersonalDataDrawer({
         payload.ci = currentCi;
       }
 
+      const trimmedPassword = password.trim();
       if (trimmedPassword) {
         payload.newPassword = trimmedPassword;
       }
 
       await staffService.updatePersonalData(payload);
 
+      setIsConfirmOpen(false);
       onSuccess({
         fullName: payload.fullName,
         ci: payload.ci !== undefined ? payload.ci : (session.ci ?? undefined),
       });
       onClose();
     } catch (requestError: unknown) {
+      setIsConfirmOpen(false);
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -169,6 +180,26 @@ export function EditPersonalDataDrawer({
           </button>
         </div>
       </form>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="Confirmar actualización"
+        message={
+          <div>
+            <p>¿Estás seguro de que deseas actualizar tus datos personales?</p>
+            <div className="confirm-modal-summary-box">
+              <div><strong>Nombre:</strong> {fullName.trim()}</div>
+              {ci.trim() && <div><strong>CI:</strong> {ci.trim()}</div>}
+              {password.trim() && <div><strong>Contraseña:</strong> (será actualizada)</div>}
+            </div>
+          </div>
+        }
+        confirmLabel="Sí, guardar cambios"
+        cancelLabel="Cancelar"
+        isLoading={isSaving}
+        onConfirm={handleConfirmSave}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </BottomDrawer>
   );
 }
