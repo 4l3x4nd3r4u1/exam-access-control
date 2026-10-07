@@ -22,6 +22,8 @@ import type {
   ScheduleExamPayload,
 } from '../types/exam';
 
+import { suggestOptimalRooms } from '../utils/roomSuggestion';
+
 interface TimeSlot {
   start: string;
   end: string;
@@ -255,6 +257,11 @@ export function ScheduleExamDrawer({
   );
 
   const [
+    hasManuallyChangedRooms,
+    setHasManuallyChangedRooms,
+  ] = useState(false);
+
+  const [
     isLoadingRooms,
     setIsLoadingRooms,
   ] = useState(false);
@@ -343,6 +350,8 @@ export function ScheduleExamDrawer({
       return;
     }
 
+    setHasManuallyChangedRooms(false);
+
     let isMounted = true;
 
     setIsLoadingExamTypes(true);
@@ -408,9 +417,18 @@ export function ScheduleExamDrawer({
       )
       .then((students) => {
         if (isMounted) {
-          setEnrolledStudents(
-            students || [],
-          );
+          const list = students || [];
+          setEnrolledStudents(list);
+
+          if (!hasManuallyChangedRooms && availableRooms.length > 0) {
+            const suggestion = suggestOptimalRooms(
+              availableRooms,
+              list.length,
+            );
+            setSelectedRoomIds(
+              suggestion.suggestedRoomIds,
+            );
+          }
         }
       })
       .catch(() => {
@@ -425,6 +443,8 @@ export function ScheduleExamDrawer({
   }, [
     isOpen,
     course.course_group_id,
+    hasManuallyChangedRooms,
+    availableRooms,
   ]);
 
   useEffect(() => {
@@ -452,19 +472,37 @@ export function ScheduleExamDrawer({
 
         setAvailableRooms(rooms);
 
-        setSelectedRoomIds(
-          (current) =>
-            current.filter(
-              (roomId) =>
-                rooms.some(
-                  (room) =>
-                    String(
-                      room.room_id,
-                    ) ===
-                    String(roomId),
-                ),
-            ),
-        );
+        const targetCount =
+          enrolledStudents.length > 0
+            ? enrolledStudents.length
+            : Number(course.total_enrolled || 0);
+
+        if (
+          !hasManuallyChangedRooms ||
+          selectedRoomIds.length === 0
+        ) {
+          const suggestion = suggestOptimalRooms(
+            rooms,
+            targetCount,
+          );
+          setSelectedRoomIds(
+            suggestion.suggestedRoomIds,
+          );
+        } else {
+          setSelectedRoomIds(
+            (current) =>
+              current.filter(
+                (roomId) =>
+                  rooms.some(
+                    (room) =>
+                      String(
+                        room.room_id,
+                      ) ===
+                      String(roomId),
+                  ),
+              ),
+          );
+        }
       })
       .catch((error: unknown) => {
         if (!isMounted) {
@@ -624,9 +662,33 @@ export function ScheduleExamDrawer({
       selectedExamTypeId,
     ]);
 
+  const optimalSuggestion = useMemo(() => {
+    return suggestOptimalRooms(availableRooms, totalEnrolled);
+  }, [availableRooms, totalEnrolled]);
+
+  const isCurrentSelectionOptimal = useMemo(() => {
+    if (
+      optimalSuggestion.suggestedRoomIds.length !== selectedRoomIds.length ||
+      optimalSuggestion.suggestedRoomIds.length === 0
+    ) {
+      return false;
+    }
+    const currentSet = new Set(selectedRoomIds.map(String));
+    return optimalSuggestion.suggestedRoomIds.every((id) =>
+      currentSet.has(String(id)),
+    );
+  }, [optimalSuggestion.suggestedRoomIds, selectedRoomIds]);
+
+  const handleApplyOptimalSuggestion = () => {
+    const suggestion = suggestOptimalRooms(availableRooms, totalEnrolled);
+    setSelectedRoomIds(suggestion.suggestedRoomIds);
+    setHasManuallyChangedRooms(false);
+  };
+
   const handleToggleRoom = (
     roomId: string | number,
   ) => {
+    setHasManuallyChangedRooms(true);
     setSelectedRoomIds(
       (current) => {
         const exists =
@@ -1538,6 +1600,13 @@ export function ScheduleExamDrawer({
                 cupos)
               </span>
             )}
+
+            {isCurrentSelectionOptimal &&
+              selectedRooms.length > 0 && (
+                <span className="schedule-exam-capacity-suggested-tag">
+                  {' '}• Sugerencia óptima automática
+                </span>
+              )}
           </p>
 
           {isRoomsOpen && (
@@ -1546,10 +1615,27 @@ export function ScheduleExamDrawer({
               role="region"
               aria-label="Selección de aulas"
             >
-              <span className="schedule-exam-panel-tip">
-                Selecciona las aulas
-                para este examen:
-              </span>
+              <div className="schedule-exam-auto-suggest-header">
+                <span className="schedule-exam-panel-tip">
+                  {isCurrentSelectionOptimal
+                    ? '✨ Aulas sugeridas automáticamente según capacidad:'
+                    : 'Selecciona las aulas para este examen:'}
+                </span>
+
+                {!isCurrentSelectionOptimal &&
+                  availableRooms.length > 0 && (
+                    <button
+                      type="button"
+                      className="schedule-exam-suggest-action-btn"
+                      onClick={
+                        handleApplyOptimalSuggestion
+                      }
+                      title="Restablecer la selección óptima calculada por el sistema"
+                    >
+                      ⚡ Restablecer sugerencia óptima
+                    </button>
+                  )}
+              </div>
 
               {isLoadingRooms ? (
                 <p className="schedule-exam-empty-rules">
@@ -1579,6 +1665,17 @@ export function ScheduleExamDrawer({
                             ),
                         );
 
+                      const isSuggested =
+                        optimalSuggestion.suggestedRoomIds.some(
+                          (id) =>
+                            String(
+                              id,
+                            ) ===
+                            String(
+                              room.room_id,
+                            ),
+                        );
+
                       return (
                         <button
                           key={
@@ -1589,11 +1686,20 @@ export function ScheduleExamDrawer({
                             isChecked
                               ? 'selected'
                               : ''
+                          } ${
+                            isSuggested
+                              ? 'suggested-pill'
+                              : ''
                           }`}
                           onClick={() =>
                             handleToggleRoom(
                               room.room_id,
                             )
+                          }
+                          title={
+                            isSuggested
+                              ? 'Aula sugerida por el sistema para optimizar capacidad'
+                              : undefined
                           }
                         >
                           <span className="schedule-exam-room-check">
@@ -1615,6 +1721,12 @@ export function ScheduleExamDrawer({
                             }
                             )
                           </span>
+
+                          {isSuggested && (
+                            <span className="schedule-exam-room-star-tag">
+                              Sugerida
+                            </span>
+                          )}
                         </button>
                       );
                     },
