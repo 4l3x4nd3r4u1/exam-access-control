@@ -3,6 +3,12 @@ import processedRostersIcon from '../assets/planillas_importadas.svg';
 import academicStaffIcon from '../assets/personal_academico.svg';
 import studentsEnrolledIcon from '../assets/estudiantes_inscritos.svg';
 import examDocIcon from '../assets/documento_examen.svg';
+import scheduleExamIcon from '../assets/programar_examen.svg';
+import editPersonalDataIcon from '../assets/editar_datos_personales.svg';
+import editRolesIcon from '../assets/editar_roles.svg';
+import coursesIcon from '../assets/icono_materia-2.svg';
+import registerStaffIcon from '../assets/registrar_personal.svg';
+import studentEligibilityIcon from '../assets/estado_habilitacion.svg';
 
 export type AppScreenId =
   | 'DASHBOARD'
@@ -14,8 +20,8 @@ export interface SystemFunctionConfig {
   key: string;
   title: string;
   description: string;
-  iconType: 'img' | 'svg_roles' | 'svg_personal' | 'svg_user_add' | 'svg_courses' | 'svg_schedule' | 'svg_status';
-  iconSrc?: string;
+  iconType: 'img';
+  iconSrc: string;
   screen?: AppScreenId;
   action?: string;
 }
@@ -48,28 +54,32 @@ export const systemFunctionsRegistry: Record<string, SystemFunctionConfig> = {
     key: 'EDITAR_ROLES',
     title: 'Editar Roles',
     description: 'Editar roles de una cuenta',
-    iconType: 'svg_roles',
+    iconType: 'img',
+    iconSrc: editRolesIcon,
     screen: 'EDIT_ROLES',
   },
   EDITAR_DATOS_PERSONALES: {
     key: 'EDITAR_DATOS_PERSONALES',
     title: 'Editar datos Personales',
     description: 'Editar datos personales de cuenta propia',
-    iconType: 'svg_personal',
+    iconType: 'img',
+    iconSrc: editPersonalDataIcon,
     action: 'EDIT_PERSONAL_DATA',
   },
   REGISTRAR_PERSONAL_ACADEMICO: {
     key: 'REGISTRAR_PERSONAL_ACADEMICO',
     title: 'Registrar personal académico',
     description: 'Registrar nuevo personal académico',
-    iconType: 'svg_user_add',
+    iconType: 'img',
+    iconSrc: registerStaffIcon,
     action: 'REGISTER_ACADEMIC_STAFF',
   },
   VISUALIZAR_MATERIAS_ASIGNADAS: {
     key: 'VISUALIZAR_MATERIAS_ASIGNADAS',
     title: 'Visualizar Materias',
     description: 'Visualizar materias asignadas a cargo',
-    iconType: 'svg_courses',
+    iconType: 'img',
+    iconSrc: coursesIcon,
     screen: 'TEACHER_COURSES',
   },
   LISTAR_ESTUDIANTES_MATERIA: {
@@ -84,7 +94,8 @@ export const systemFunctionsRegistry: Record<string, SystemFunctionConfig> = {
     key: 'PROGRAMAR_EXAMEN',
     title: 'Programar Examen',
     description: 'Programar examen para una materia con asignación automática de aulas',
-    iconType: 'svg_schedule',
+    iconType: 'img',
+    iconSrc: scheduleExamIcon,
     action: 'SCHEDULE_EXAM',
   },
   LISTAR_EXAMENES_MATERIA: {
@@ -99,7 +110,8 @@ export const systemFunctionsRegistry: Record<string, SystemFunctionConfig> = {
     key: 'GESTIONAR_HABILITACION_ESTUDIANTE',
     title: 'Estado de Habilitación',
     description: 'Cambiar estado de habilitación de un estudiante con motivo académico',
-    iconType: 'svg_status',
+    iconType: 'img',
+    iconSrc: studentEligibilityIcon,
     action: 'STUDENT_STATUS',
   },
 };

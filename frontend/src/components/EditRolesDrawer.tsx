@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import { BottomDrawer } from './BottomDrawer';
+import { ConfirmModal } from './ConfirmModal';
 import { staffService } from '../services/staffService';
 import { catalogService } from '../services/catalogService';
 import { authService } from '../services/authService';
@@ -49,6 +50,7 @@ export function EditRolesDrawer({
   const [selectedUser, setSelectedUser] = useState<AcademicStaffMember | null>(propUser);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -149,10 +151,11 @@ export function EditRolesDrawer({
     if (isSaving) return;
     setSelectedUser(null);
     setModalError(null);
+    setIsConfirmOpen(false);
     onClose();
   };
 
-  const handleSaveRoles = async (event: FormEvent) => {
+  const handleSaveRoles = (event: FormEvent) => {
     event.preventDefault();
     if (!selectedUser) return;
 
@@ -165,6 +168,13 @@ export function EditRolesDrawer({
       setModalError('Debe seleccionar al menos un rol.');
       return;
     }
+
+    setModalError(null);
+    setIsConfirmOpen(true);
+  };
+
+  const executeSaveRoles = async () => {
+    if (!selectedUser) return;
 
     setIsSaving(true);
     setModalError(null);
@@ -187,6 +197,7 @@ export function EditRolesDrawer({
         onSaved(updatedUser, userRoles);
       }
 
+      setIsConfirmOpen(false);
       setToastMessage(response.message || 'Roles actualizados exitosamente');
       setTimeout(() => setToastMessage(null), 3000);
 
@@ -196,6 +207,7 @@ export function EditRolesDrawer({
         setSelectedUser(null);
       }
     } catch (err: unknown) {
+      setIsConfirmOpen(false);
       setModalError(err instanceof Error ? err.message : 'Error al actualizar roles.');
     } finally {
       setIsSaving(false);
@@ -393,6 +405,25 @@ export function EditRolesDrawer({
           </div>
         )}
       </BottomDrawer>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen && Boolean(selectedUser)}
+        title="Confirmar cambio de roles"
+        message={
+          <div>
+            <p>¿Estás seguro de que deseas actualizar los roles para este usuario?</p>
+            <div className="confirm-modal-summary-box">
+              <div><strong>Usuario:</strong> {selectedUser?.full_name}</div>
+              <div><strong>Roles seleccionados:</strong> {userRoles.map((r) => formatRoleLabel(r)).join(', ')}</div>
+            </div>
+          </div>
+        }
+        confirmLabel="Sí, guardar roles"
+        cancelLabel="Cancelar"
+        isLoading={isSaving}
+        onConfirm={executeSaveRoles}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </>
   );
 }

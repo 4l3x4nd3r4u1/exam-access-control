@@ -5,9 +5,11 @@ import {
 } from 'react';
 
 import { BottomDrawer } from './BottomDrawer';
+import { ConfirmModal } from './ConfirmModal';
 
 import { examService } from '../services/examService';
 import { courseService } from '../services/courseService';
+import { authService } from '../services/authService';
 
 import type {
   TeacherCourse,
@@ -318,9 +320,19 @@ export function ScheduleExamDrawer({
   ] = useState(false);
 
   const [
+    isConfirmModalOpen,
+    setIsConfirmModalOpen,
+  ] = useState(false);
+
+  const [
     errorMessage,
     setErrorMessage,
   ] = useState<string | null>(null);
+
+  const currentSession = authService.getStoredSession();
+  const isAssignedTeacher =
+    course.can_interact ??
+    (currentSession && course.teacher_id ? course.teacher_id === currentSession.user_id : true);
 
   const currentSlot =
     TIME_SLOTS[startTimeIndex] ||
@@ -600,6 +612,18 @@ export function ScheduleExamDrawer({
         .join(', ');
     }, [selectedRooms]);
 
+  const selectedExamType =
+    useMemo(() => {
+      return examTypes.find(
+        (item) =>
+          item.value ===
+          selectedExamTypeId,
+      );
+    }, [
+      examTypes,
+      selectedExamTypeId,
+    ]);
+
   const handleToggleRoom = (
     roomId: string | number,
   ) => {
@@ -867,7 +891,14 @@ export function ScheduleExamDrawer({
       );
     };
 
-  const handleSave = async () => {
+  const handleSave = () => {
+    if (!isAssignedTeacher) {
+      setErrorMessage(
+        'No tienes permiso para programar exámenes en una materia asignada a otro docente.',
+      );
+      return;
+    }
+
     if (
       selectedExamTypeId === null
     ) {
@@ -899,6 +930,11 @@ export function ScheduleExamDrawer({
       return;
     }
 
+    setErrorMessage(null);
+    setIsConfirmModalOpen(true);
+  };
+
+  const executeSave = async () => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -942,7 +978,7 @@ export function ScheduleExamDrawer({
     const payload:
       ScheduleExamPayload = {
       examTypeId:
-        selectedExamTypeId,
+        selectedExamTypeId!,
 
       date: rawDate,
 
@@ -974,13 +1010,7 @@ export function ScheduleExamDrawer({
       );
 
       setSaveSuccess(true);
-
-      const selectedExamType =
-        examTypes.find(
-          (item) =>
-            item.value ===
-            selectedExamTypeId,
-        );
+      setIsConfirmModalOpen(false);
 
       if (onSaved) {
         onSaved({
@@ -1014,6 +1044,7 @@ export function ScheduleExamDrawer({
         onClose();
       }, 700);
     } catch (error: unknown) {
+      setIsConfirmModalOpen(false);
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -1035,6 +1066,23 @@ export function ScheduleExamDrawer({
         <h2 className="schedule-exam-title">
           Programar Examen
         </h2>
+
+        {!isAssignedTeacher && (
+          <div
+            style={{
+              background: '#fde8e8',
+              color: '#9b1c1c',
+              border: '1px solid #f8b4b4',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              margin: '12px 0',
+              fontSize: '13px',
+              lineHeight: '1.4',
+            }}
+          >
+            ⚠️ No eres el docente asignado a esta materia. No puedes programar exámenes para otros docentes.
+          </div>
+        )}
 
         <div className="schedule-exam-spread-row schedule-exam-info-row">
           <span className="schedule-exam-label">
@@ -1972,7 +2020,7 @@ export function ScheduleExamDrawer({
             className="schedule-exam-submit-btn"
             onClick={handleSave}
             disabled={
-              isSubmitting
+              isSubmitting || !isAssignedTeacher
             }
           >
             {isSubmitting
@@ -1983,6 +2031,29 @@ export function ScheduleExamDrawer({
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        title="Confirmar programación"
+        message={
+          <div>
+            <p>¿Estás seguro de que deseas programar este examen con los siguientes datos?</p>
+            <div className="confirm-modal-summary-box">
+              <div><strong>Materia:</strong> {course.subject_name} (Grupo {course.group_code})</div>
+              <div><strong>Evaluación:</strong> {selectedExamType?.label ?? 'Examen'}</div>
+              <div><strong>Fecha:</strong> {formatDateToSpanish(rawDate)}</div>
+              <div><strong>Horario:</strong> {currentSlot.start} - {currentSlot.end}</div>
+              <div><strong>Aulas:</strong> {roomsSummary || 'Ninguna'}</div>
+              <div><strong>Estudiantes:</strong> {totalEnrolled} asignados</div>
+            </div>
+          </div>
+        }
+        confirmLabel="Sí, programar examen"
+        cancelLabel="Volver a revisar"
+        isLoading={isSubmitting}
+        onConfirm={executeSave}
+        onCancel={() => setIsConfirmModalOpen(false)}
+      />
     </BottomDrawer>
   );
 }

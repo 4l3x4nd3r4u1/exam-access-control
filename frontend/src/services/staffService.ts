@@ -31,15 +31,19 @@ export const staffService = {
   },
 
   async registerAcademicUser(data: AcademicUserRegistrationData): Promise<void> {
+    const roles = Array.isArray(data.roles) && data.roles.length > 0
+      ? data.roles
+      : (data.role ? [data.role] : []);
+
     await apiRequest('/academic-users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fullName: data.fullName,
-        ci: data.ci,
+        ci: data.ci ? data.ci : null,
         email: data.email,
         password: data.password,
-        roles: [data.role],
+        roles,
       }),
     });
 

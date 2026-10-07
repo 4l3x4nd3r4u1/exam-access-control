@@ -12,9 +12,13 @@ export interface JwtPayload {
 
 const roleLabelsMap: Record<string, string> = {
   ADMIN: 'Administrador',
+  ADMINISTRADOR: 'Administrador',
   DOCENTE: 'Docente',
+  TEACHER: 'Docente',
   AUXILIAR: 'Auxiliar',
+  ASSISTANT: 'Auxiliar',
   ESTUDIANTE: 'Estudiante',
+  STUDENT: 'Estudiante',
 };
 
 export function decodeJwtToken(token: string): JwtPayload | null {
@@ -39,5 +43,8 @@ export function decodeJwtToken(token: string): JwtPayload | null {
 export function formatRoleLabel(role: string): string {
   if (!role) return '';
   const normalizedKey = role.toUpperCase().trim();
-  return roleLabelsMap[normalizedKey] ?? role;
+  if (roleLabelsMap[normalizedKey]) {
+    return roleLabelsMap[normalizedKey];
+  }
+  return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 }

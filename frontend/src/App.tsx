@@ -1,17 +1,22 @@
 import { useState } from 'react';
 
 import assignedCoursesIcon from './assets/icono_materia-2.svg';
+import scheduleExamIcon from './assets/programar_examen.svg';
+import scheduledExamsIcon from './assets/documento_examen.svg';
+import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
+import studentEligibilityIcon from './assets/estado_habilitacion.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
-import editPersonalDataIcon from './assets/editar_datos_personales.png';
-import scheduledExamsIcon from './assets/examenes_programados.png';
-import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
+import registerAcademicStaffIcon from './assets/registrar_personal.svg';
+import editRolesIcon from './assets/editar_roles.svg';
+import editPersonalDataIcon from './assets/editar_datos_personales.svg';
 
 import { ImportRosterDrawer } from './components/ImportRosterDrawer';
 import { EditRolesDrawer } from './components/EditRolesDrawer';
 import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
 import { CourseGroupSearchDrawer } from './components/CourseGroupSearchDrawer';
+import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
 
 import { authService, hasFunction } from './services/authService';
 
@@ -37,14 +42,13 @@ import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
 type ApplicationScreen =
   | 'DASHBOARD'
   | 'ACADEMIC_STAFF'
-  | 'ASSIGNED_COURSES'
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL'
   | 'SCHEDULED_EXAMS'
   | 'ENROLLED_STUDENTS';
 
 /** Drawer de búsqueda de materia abierto desde el panel. */
-type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS';
+type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS' | 'SCHEDULE_EXAM';
 
 export default function App() {
   const [courseFunctionMode, setCourseFunctionMode] =
@@ -58,6 +62,9 @@ export default function App() {
     useState<ApplicationScreen>('DASHBOARD');
 
   const [isImportDrawerOpen, setIsImportDrawerOpen] =
+    useState(false);
+
+  const [isAssignedCoursesDrawerOpen, setIsAssignedCoursesDrawerOpen] =
     useState(false);
 
   const [isEditRolesDrawerOpen, setIsEditRolesDrawerOpen] =
@@ -79,6 +86,9 @@ export default function App() {
   const [selectedCourseGroup, setSelectedCourseGroup] =
     useState<CourseGroup | null>(null);
 
+  const [courseForScheduleExam, setCourseForScheduleExam] =
+    useState<CourseGroup | null>(null);
+
   const handleLogout = () => {
     authService.clearSession();
     
@@ -87,8 +97,10 @@ export default function App() {
     setSelectedRoster(null);
     setSelectedCourseGroup(null);
     setCourseSearchTarget(null);
+    setCourseForScheduleExam(null);
 
     setIsImportDrawerOpen(false);
+    setIsAssignedCoursesDrawerOpen(false);
     setIsEditRolesDrawerOpen(false);
     setIsEditPersonalDataDrawerOpen(false);
     setIsAcademicUserDrawerOpen(false);
@@ -100,16 +112,6 @@ export default function App() {
     return <LoginView onLoginSuccess={setSession} />;
   }
 
-  if (screen === 'ASSIGNED_COURSES') {
-    return (
-      <AssignedCoursesView
-        session={session}
-        mode={courseFunctionMode}
-        onBack={() => setScreen('DASHBOARD')}
-        onLogout={handleLogout}
-      />
-    );
-  }
 
   if (screen === 'ACADEMIC_STAFF') {
   return (
@@ -170,7 +172,7 @@ export default function App() {
       iconClass: 'app-courses-icon',
       open: () => {
         setCourseFunctionMode('VIEW');
-        setScreen('ASSIGNED_COURSES');
+        setIsAssignedCoursesDrawerOpen(true);
       },
       visible: hasFunction(
         session,
@@ -180,12 +182,9 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
       label: 'Programar Examen',
-      icon: assignedCoursesIcon,
-      iconClass: 'app-courses-icon',
-      open: () => {
-        setCourseFunctionMode('SCHEDULE_EXAM');
-        setScreen('ASSIGNED_COURSES');
-      },
+      icon: scheduleExamIcon,
+      iconClass: 'admin-schedule-exam-icon',
+      open: () => setCourseSearchTarget('SCHEDULE_EXAM'),
       visible: hasFunction(
         session,
         FUNCTION_CODES.SCHEDULE_EXAM,
@@ -216,11 +215,11 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
       label: 'Estado de Habilitación',
-      icon: assignedCoursesIcon,
-      iconClass: 'app-courses-icon',
+      icon: studentEligibilityIcon,
+      iconClass: 'admin-eligibility-icon',
       open: () => {
         setCourseFunctionMode('ELIGIBILITY');
-        setScreen('ASSIGNED_COURSES');
+        setIsAssignedCoursesDrawerOpen(true);
       },
       visible: hasFunction(
         session,
@@ -261,20 +260,20 @@ export default function App() {
       ),
     },
     {
-    functionCode: FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
-    label: 'Registrar personal académico',
-    icon: academicStaffIcon,
-    iconClass: 'admin-staff-icon',
-    open: () => setIsAcademicUserDrawerOpen(true),
-    visible: hasFunction(
-      session,
-      FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
-     ),
-   },
+      functionCode: FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+      label: 'Registrar personal académico',
+      icon: registerAcademicStaffIcon,
+      iconClass: 'admin-register-staff-icon',
+      open: () => setIsAcademicUserDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+      ),
+    },
     {
       functionCode: FUNCTION_CODES.EDIT_ROLES,
       label: 'Editar roles',
-      icon: academicStaffIcon,
+      icon: editRolesIcon,
       iconClass: 'admin-roles-icon',
       open: () => setIsEditRolesDrawerOpen(true),
       visible: hasFunction(
@@ -328,12 +327,14 @@ export default function App() {
               onClick={item.open}
               key={item.functionCode}
             >
-              <img
-                src={item.icon}
-                alt=""
-                className={`admin-menu-icon ${item.iconClass}`}
-              />
-              <span>{item.label}</span>
+              <div className="admin-menu-card-frame">
+                <img
+                  src={item.icon}
+                  alt=""
+                  className={`admin-menu-icon ${item.iconClass}`}
+                />
+              </div>
+              <span className="admin-menu-card-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -347,24 +348,47 @@ export default function App() {
         isOpen={courseSearchTarget !== null}
         onClose={() => setCourseSearchTarget(null)}
         currentUserId={session.user_id}
-        // "Mis materias" solo se ofrece en el flujo de estudiantes y solo
-        // si el usuario autenticado tiene el rol DOCENTE.
-        showMyCourses={
-            courseSearchTarget === 'ENROLLED_STUDENTS'
-        }
+        onlyTeacherCourses={courseSearchTarget === 'SCHEDULE_EXAM'}
+        showMyCourses={courseSearchTarget === 'ENROLLED_STUDENTS'}
         ariaLabel={
-          courseSearchTarget === 'ENROLLED_STUDENTS'
+          courseSearchTarget === 'SCHEDULE_EXAM'
+            ? 'Buscar materia para programar examen'
+            : courseSearchTarget === 'ENROLLED_STUDENTS'
             ? 'Buscar materia para ver estudiantes inscritos'
             : 'Buscar materia para ver exámenes programados'
         }
         onSelect={(courseGroup) => {
           if (!courseSearchTarget) return;
 
+          if (courseSearchTarget === 'SCHEDULE_EXAM') {
+            setCourseForScheduleExam(courseGroup);
+            setCourseSearchTarget(null);
+            return;
+          }
+
           setSelectedCourseGroup(courseGroup);
           setScreen(courseSearchTarget);
           setCourseSearchTarget(null);
         }}
       />
+
+      {courseForScheduleExam && (
+        <ScheduleExamDrawer
+          isOpen={Boolean(courseForScheduleExam)}
+          course={courseForScheduleExam}
+          onClose={() => setCourseForScheduleExam(null)}
+        />
+      )}
+
+      {isAssignedCoursesDrawerOpen && (
+        <AssignedCoursesView
+          session={session}
+          mode={courseFunctionMode}
+          presentation="drawer"
+          onBack={() => setIsAssignedCoursesDrawerOpen(false)}
+          onLogout={handleLogout}
+        />
+      )}
 
       <ImportRosterDrawer
         isOpen={isImportDrawerOpen}
