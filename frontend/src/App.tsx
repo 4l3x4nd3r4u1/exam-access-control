@@ -17,6 +17,7 @@ import { EditRolesDrawer } from './components/EditRolesDrawer';
 import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
 import { CourseGroupSearchDrawer } from './components/CourseGroupSearchDrawer';
 import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
+import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer';
 
 import { authService, hasFunction } from './services/authService';
 
@@ -71,6 +72,9 @@ export default function App() {
     useState(false);
 
   const [isEditPersonalDataDrawerOpen, setIsEditPersonalDataDrawerOpen] =
+    useState(false);
+
+  const [isStudentEligibilityDrawerOpen, setIsStudentEligibilityDrawerOpen] =
     useState(false);
 
   const [selectedRoster, setSelectedRoster] =
@@ -217,10 +221,7 @@ export default function App() {
       label: 'Estado de Habilitación',
       icon: studentEligibilityIcon,
       iconClass: 'admin-eligibility-icon',
-      open: () => {
-        setCourseFunctionMode('ELIGIBILITY');
-        setIsAssignedCoursesDrawerOpen(true);
-      },
+      open: () => setIsStudentEligibilityDrawerOpen(true),
       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
@@ -426,6 +427,12 @@ export default function App() {
             onClose={() => setIsAcademicUserDrawerOpen(false)}
             onSaved={() => setIsAcademicUserDrawerOpen(false)}
             />
+
+      <StudentEligibilityDrawer
+        isOpen={isStudentEligibilityDrawerOpen}
+        session={session}
+        onClose={() => setIsStudentEligibilityDrawerOpen(false)}
+      />
     </main>
   );
 }

@@ -4610,6 +4610,34 @@
   white-space: nowrap;
 }
 
+.cg-row:disabled,
+.cg-row.is-disabled {
+  cursor: default;
+}
+
+.cg-row:disabled:hover,
+.cg-row.is-disabled:hover {
+  background: transparent;
+}
+
+.cg-row:nth-of-type(even):disabled:hover,
+.cg-row:nth-of-type(even).is-disabled:hover {
+  background: #ebebeb;
+}
+
+.cg-student-row {
+  justify-content: space-between;
+}
+
+.cg-student-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
 .cg-chip {
   padding: 1px 5px;
   border: 1px solid #d0d0d0;

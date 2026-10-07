@@ -12,7 +12,19 @@ interface StudentStatusDrawerProps {
   onSaved: (student: EnrolledStudent) => void;
 }
 
-export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, onSaved }: StudentStatusDrawerProps) {
+export interface StudentStatusFormProps {
+  courseGroupId: string;
+  student: EnrolledStudent;
+  onCancel: () => void;
+  onSaved: (student: EnrolledStudent) => void;
+}
+
+export function StudentStatusForm({
+  courseGroupId,
+  student,
+  onCancel,
+  onSaved,
+}: StudentStatusFormProps) {
   const [status, setStatus] = useState<EnrolledStudent['status']>(student.status);
   const [reason, setReason] = useState(student.ineligibilityReason ?? '');
   const [isSaving, setIsSaving] = useState(false);
@@ -22,7 +34,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
   const handleClose = () => {
     if (!isSaving) {
       setIsConfirmOpen(false);
-      onClose();
+      onCancel();
     }
   };
 
@@ -51,7 +63,6 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
         status,
         ineligibilityReason: status === 'INHABILITADO' ? cleanReason : null,
       });
-      onClose();
     } catch (requestError: unknown) {
       setIsConfirmOpen(false);
       setError(requestError instanceof Error ? requestError.message : 'No se pudo actualizar el estado.');
@@ -61,7 +72,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
   };
 
   return (
-    <BottomDrawer isOpen={isOpen} onClose={handleClose} ariaLabel="Editar estado">
+    <>
       <form className="student-status-drawer-content" onSubmit={handleSubmit}>
         <h2>Editar estado</h2>
 
@@ -120,6 +131,22 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
         isLoading={isSaving}
         onConfirm={executeSave}
         onCancel={() => setIsConfirmOpen(false)}
+      />
+    </>
+  );
+}
+
+export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, onSaved }: StudentStatusDrawerProps) {
+  return (
+    <BottomDrawer isOpen={isOpen} onClose={onClose} ariaLabel="Editar estado">
+      <StudentStatusForm
+        courseGroupId={courseGroupId}
+        student={student}
+        onCancel={onClose}
+        onSaved={(updated) => {
+          onSaved(updated);
+          onClose();
+        }}
       />
     </BottomDrawer>
   );
