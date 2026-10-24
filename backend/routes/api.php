@@ -49,6 +49,7 @@ Route::middleware('auth.jwt')->group(function () {
     Route::get('/courses/{courseGroupId}/students', [CourseStudentController::class, 'index'])
         ->where('courseGroupId', '[0-9]+');
     Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
+    Route::get('/exams', [ExamController::class, 'all']);
     Route::get('/course-groups', [CourseGroupController::class, 'index']);
     Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
         ->where('courseGroupId', '[0-9]+');

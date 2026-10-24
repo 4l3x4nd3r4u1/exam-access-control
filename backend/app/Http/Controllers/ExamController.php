@@ -6,6 +6,7 @@ use App\DTOs\ExamRegistrationData;
 use App\DTOs\ExamRoomData;
 use App\DTOs\ExamStudentRuleData;
 use App\DTOs\ExamSummary;
+use App\DTOs\AllExamSummary;
 use App\DTOs\RoomSummary;
 use App\Http\Requests\AvailableRoomsRequest;
 use App\Modules\CoreDataStorage;
@@ -54,6 +55,21 @@ class ExamController extends Controller
         return response()->json([
             'success' => true,
             'data' => array_map(fn(ExamSummary $exam) => $exam->toArray(), $exams),
+            'message' => 'Exámenes obtenidos exitosamente.',
+        ], 200);
+    }
+
+    /**
+     * Endpoint to list all active exams and the rooms the authenticated user
+     * can use as a control point.
+     */
+    public function all(): JsonResponse
+    {
+        $exams = $this->storage->getAllExams();
+
+        return response()->json([
+            'success' => true,
+            'data' => array_map(fn(AllExamSummary $exam) => $exam->toArray(), $exams),
             'message' => 'Exámenes obtenidos exitosamente.',
         ], 200);
     }

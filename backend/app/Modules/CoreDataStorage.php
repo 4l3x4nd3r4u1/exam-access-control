@@ -12,6 +12,8 @@ use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
 use App\DTOs\RoomSummary;
 use App\DTOs\ExamSummary;
+use App\DTOs\AllExamRoomSummary;
+use App\DTOs\AllExamSummary;
 use App\DTOs\ExamRoomSummary;
 use App\DTOs\UserPersonalData;
 use App\Exceptions\InvalidCredentialsException;
@@ -507,6 +509,54 @@ class CoreDataStorage
                     assistantId: $room->pivot->auxiliar_id ? (int) $room->pivot->auxiliar_id : null,
                 ))->toArray(),
             ))->all();
+    }
+
+    /**
+     * Retrieves all active exams with their course and assigned control rooms.
+     * The authenticated user's ID is used to calculate room-level access.
+     *
+     * @return array<AllExamSummary>
+     */
+    public function getAllExams(): array
+    {
+        $authenticatedUserId = (int) auth()->id();
+
+        return Exam::with([
+                'courseGroup.course',
+                'examType',
+                'examRooms.room',
+            ])
+            ->where('activo', true)
+            ->orderBy('fecha', 'asc')
+            ->orderBy('hora_inicio', 'asc')
+            ->get()
+            ->map(function (Exam $exam) use ($authenticatedUserId) {
+                $rooms = $exam->examRooms
+                    ->map(fn(ExamRoom $examRoom) => new AllExamRoomSummary(
+                        roomId: (string) $examRoom->aula_id,
+                        roomName: (string) ($examRoom->room?->nombre ?? ''),
+                        assistantId: $examRoom->auxiliar_id !== null
+                            ? (int) $examRoom->auxiliar_id
+                            : null,
+                        canInteract: $examRoom->auxiliar_id !== null
+                            && (int) $examRoom->auxiliar_id === $authenticatedUserId,
+                    ))
+                    ->values()
+                    ->all();
+
+                return new AllExamSummary(
+                    examId: (string) $exam->id,
+                    courseGroupId: (string) $exam->materia_grupo_id,
+                    subjectName: (string) ($exam->courseGroup?->course?->nombre ?? ''),
+                    group: (string) ($exam->courseGroup?->grupo ?? ''),
+                    examType: (string) ($exam->examType?->nombre ?? ''),
+                    date: $exam->fecha?->format('Y-m-d') ?? '',
+                    startTime: (string) $exam->hora_inicio,
+                    endTime: (string) $exam->hora_fin,
+                    rooms: $rooms,
+                );
+            })
+            ->all();
     }
 
     /**
