@@ -6,6 +6,7 @@ class AllExamSummary
 {
     /**
      * @param list<AllExamRoomSummary> $rooms
+     * @param list<string> $generalRules
      */
     public function __construct(
         public readonly string $examId,
@@ -17,6 +18,7 @@ class AllExamSummary
         public readonly string $startTime,
         public readonly string $endTime,
         public readonly array $rooms,
+        public readonly array $generalRules = [],
     ) {}
 
     public function toArray(): array
@@ -34,6 +36,7 @@ class AllExamSummary
                 fn(AllExamRoomSummary $room) => $room->toArray(),
                 $this->rooms
             ),
+            'general_rules' => $this->generalRules,
         ];
     }
 }

@@ -529,6 +529,7 @@ class CoreDataStorage
         return Exam::with([
                 'courseGroup.course',
                 'examType',
+                'rules',
                 'examRooms.room',
             ])
             ->where('activo', true)
@@ -559,6 +560,10 @@ class CoreDataStorage
                     startTime: (string) $exam->hora_inicio,
                     endTime: (string) $exam->hora_fin,
                     rooms: $rooms,
+                    generalRules: $exam->rules
+                        ->pluck('descripcion')
+                        ->values()
+                        ->all(),
                 );
             })
             ->all();
