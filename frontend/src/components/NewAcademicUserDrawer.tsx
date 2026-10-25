@@ -13,7 +13,7 @@ import type { AcademicStaffMember } from '../types/staff';
 interface AcademicUserDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (user?: AcademicStaffMember) => void;
   user?: AcademicStaffMember | null;
 }
 
@@ -172,29 +172,15 @@ export function AcademicUserDrawer({
 
     try {
       if (user) {
-        await staffService.updateAcademicUser(
-          user.user_id,
-          {
-            fullName,
-            email,
-            roles: selectedRoles,
-            role: selectedRoles[0] ?? '',
-            ...(password
-              ? {
-                  newPassword:
-                    password,
-                }
-              : {}),
-          },
-        );
+        const updatedUser: AcademicStaffMember = {
+          ...user,
+          role,
+        };
+
+        onSaved(updatedUser);
+        return;
       } else {
-        await staffService.registerAcademicUser({
-          fullName,
-          ci,
-          email,
-          password,
-          roles: selectedRoles,
-        });
+        await staffService.registerAcademicUser({ fullName, email, password, role });
       }
 
       setIsConfirmOpen(false);
@@ -238,119 +224,72 @@ export function AcademicUserDrawer({
             : 'Nuevo usuario'}
         </h2>
 
-        <label
-          className="drawer-input-card"
-          htmlFor="new-user-name"
-        >
-          <span>Nombre</span>
-
-          <input
-            id="new-user-name"
-            value={fullName}
-            onChange={(event) =>
-              setFullName(
-                event.target.value,
-              )
-            }
-            required
-          />
-        </label>
-
         {!isEditing && (
-          <label
-            className="drawer-input-card"
-            htmlFor="new-user-ci"
-          >
-            <span>CI</span>
-
-            <input
-              id="new-user-ci"
-              value={ci}
-              onChange={(event) =>
-                setCi(
-                  event.target.value,
-                )
-              }
-              required
-            />
-          </label>
-        )}
-
-        <label
-          className="drawer-input-card"
-          htmlFor="new-user-email"
-        >
-          <span>Correo Institucional</span>
-
-          <input
-            id="new-user-email"
-            type="email"
-            value={email}
-            onChange={(event) =>
-              setEmail(
-                event.target.value,
-              )
-            }
-            required
-          />
-        </label>
-
-        <label
-          className="drawer-input-card"
-          htmlFor="new-user-password"
-        >
-          <span>Contraseña</span>
-
-          <span className="drawer-password-field">
-            <input
-              id="new-user-password"
-              type={
-                showPassword
-                  ? 'text'
-                  : 'password'
-              }
-              value={password}
-              onChange={(event) =>
-                setPassword(
-                  event.target.value,
-                )
-              }
-              placeholder={
-                isEditing
-                  ? 'Dejar vacía para no cambiar'
-                  : ''
-              }
-              required={!isEditing}
-            />
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowPassword(
-                  (visible) =>
-                    !visible,
-                )
-              }
-              aria-label={
-                showPassword
-                  ? 'Ocultar contraseña'
-                  : 'Mostrar contraseña'
-              }
+          <>
+            <label
+              className="drawer-input-card"
+              htmlFor="new-user-name"
             >
-              <svg
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="2.75"
+              <span>Nombre</span>
+
+              <input
+                id="new-user-name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                required
+              />
+            </label>
+
+            <label
+              className="drawer-input-card"
+              htmlFor="new-user-email"
+            >
+              <span>Correo Institucional</span>
+
+              <input
+                id="new-user-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </label>
+
+            <label
+              className="drawer-input-card"
+              htmlFor="new-user-password"
+            >
+              <span>Contraseña</span>
+
+              <span className="drawer-password-field">
+                <input
+                  id="new-user-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
                 />
-              </svg>
-            </button>
-          </span>
-        </label>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((visible) => !visible)
+                  }
+                  aria-label={
+                    showPassword
+                      ? 'Ocultar contraseña'
+                      : 'Mostrar contraseña'
+                  }
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                    <circle cx="12" cy="12" r="2.75" />
+                  </svg>
+                </button>
+              </span>
+            </label>
+          </>
+        )}
 
         <div className="drawer-role-field">
           <span>Rol</span>

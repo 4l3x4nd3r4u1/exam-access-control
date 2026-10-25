@@ -30,32 +30,39 @@ function formatRole(role: string): string {
   return role ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase() : '';
 }
 
-function formatRoles(roles: string[]) {
-  return (
-    <span className="academic-staff-roles">
-      {roles.map((role) => (
-        <span
-          className="academic-staff-role-badge"
-          key={role}
-        >
-          {formatRole(role)}
-        </span>
-      ))}
-    </span>
-  );
-}
+export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
+  const [staff, setStaff] = useState<AcademicStaffMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isNewUserDrawerOpen, setIsNewUserDrawerOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AcademicStaffMember | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-export function AcademicStaffView({
-  onBack,
-}: AcademicStaffViewProps) {
-  const [staff, setStaff] =
-    useState<AcademicStaffMember[]>([]);
+  const loadStaff = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setIsLoading(true);
+      setError(null);
+    }
+    try {
+      const members = await staffService.getAcademicStaff();
+      setStaff(members);
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar el personal académico.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const filteredStaff = staff.filter((member) => {
+    const search = searchTerm.toLowerCase().trim();
 
-  const [error, setError] =
-    useState<string | null>(null);
+    if (!search) return true;
+
+    return (
+      member.full_name.toLowerCase().includes(search) ||
+      member.role.toLowerCase().includes(search)
+    );
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -129,20 +136,32 @@ export function AcademicStaffView({
         </p>
       </section>
 
-      <section
-        className="academic-staff-list"
-        aria-label="Listado de personal académico"
-      >
+      <section className="academic-staff-list" aria-label="Listado de personal académico">
+
+        <div className="academic-staff-search">
+          <input
+            type="text"
+            placeholder="Buscar usuario..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            aria-label="Buscar usuario"
+          />
+        </div>
+
         <div className="academic-staff-table-header">
           <span>rol</span>
           <span>nombre</span>
         </div>
 
-        {isLoading && (
-          <p className="academic-staff-feedback">
-            Cargando personal académico...
-          </p>
-        )}
+        {isLoading && <p className="academic-staff-feedback">Cargando personal académico...</p>}
+        {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
+        {!isLoading && !error && filteredStaff.map((member) => (
+          <div className="academic-staff-row" key={member.user_id}>
+            <span>{formatRole(member.role)}</span>
+            <span title={member.full_name}>{member.full_name}</span>
+          </div>
+        ))}
+      </section>
 
         {error && (
           <p
