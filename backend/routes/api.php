@@ -6,6 +6,8 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CourseGroupController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ExamAccessController;
+use App\Http\Controllers\ExamStudentObservationController;
+use App\Http\Controllers\ExceptionalEntryController;
 use App\Http\Controllers\StudentRosterController;
 use App\Http\Controllers\TeacherCourseController;
 use Illuminate\Http\Request;
@@ -52,6 +54,8 @@ Route::middleware('auth.jwt')->group(function () {
     Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
     Route::get('/exams', [ExamController::class, 'all']);
     Route::post('/exam-access/check', [ExamAccessController::class, 'check']);
+    Route::post('/exam-access/observations', [ExamStudentObservationController::class, 'store']);
+    Route::post('/exam-access/exceptional-entry', [ExceptionalEntryController::class, 'store']);
     Route::get('/course-groups', [CourseGroupController::class, 'index']);
     Route::get('/courses/{courseGroupId}/exams', [ExamController::class, 'index'])
         ->where('courseGroupId', '[0-9]+');

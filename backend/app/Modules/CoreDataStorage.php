@@ -16,6 +16,8 @@ use App\DTOs\AllExamRoomSummary;
 use App\DTOs\AllExamSummary;
 use App\DTOs\ExamAccessResult;
 use App\DTOs\ExpulsionHistoryItem;
+use App\DTOs\ExamStudentObservationResult;
+use App\DTOs\ExceptionalEntryResult;
 use App\DTOs\ExamRoomSummary;
 use App\DTOs\UserPersonalData;
 use App\Exceptions\InvalidCredentialsException;
@@ -672,6 +674,22 @@ class CoreDataStorage
             );
         }
 
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('aula_id', $examStudent->aula_id)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new ExamAccessResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para validar el ingreso en este examen.',
+                httpStatus: 403,
+            );
+        }
+
         $assignedRoomId = $examStudent->aula_id !== null
             ? (int) $examStudent->aula_id
             : null;
@@ -712,6 +730,85 @@ class CoreDataStorage
             );
         }
 
+        $presentStatusId = ExamStudentStatus::where('nombre', 'PRESENTE')->value('id');
+
+        if ($presentStatusId === null) {
+            return new ExamAccessResult(
+                isSuccessful: false,
+                data: [],
+                message: "El estado 'PRESENTE' no está configurado en el sistema.",
+                httpStatus: 500,
+            );
+        }
+
+        $entryResult = DB::transaction(function () use ($examId, $student, $presentStatusId, $roomId) {
+            $lockedExamStudent = ExamStudent::where('examen_id', $examId)
+                ->where('usuario_id', $student->usuario_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($lockedExamStudent === null) {
+                return [
+                    'alreadyRegistered' => false,
+                    'checkInTime' => null,
+                ];
+            }
+
+            if ($lockedExamStudent->hora_ingreso !== null || $lockedExamStudent->estado_id === $presentStatusId) {
+                return [
+                    'alreadyRegistered' => true,
+                    'checkInTime' => $lockedExamStudent->hora_ingreso?->toDateTimeString(),
+                ];
+            }
+
+            $entryTime = now();
+
+            DB::table('examen_estudiante')
+                ->where('examen_id', $examId)
+                ->where('usuario_id', $student->usuario_id)
+                ->where('aula_id', $roomId)
+                ->update([
+                    'estado_id' => $presentStatusId,
+                    'hora_ingreso' => $entryTime,
+                    'updated_at' => $entryTime,
+                ]);
+
+            DB::table('registro_acceso_examen')->insert([
+                'exam_id' => $examId,
+                'aula_id' => $roomId,
+                'user_id_estudiante' => $student->usuario_id,
+                'user_id_operador' => auth()->id(),
+                'fecha' => $entryTime->toDateString(),
+                'hora' => $entryTime->toTimeString(),
+                'resultado' => 'PERMITIDO',
+                'observacion' => null,
+                'created_at' => $entryTime,
+                'updated_at' => $entryTime,
+            ]);
+
+            return [
+                'alreadyRegistered' => false,
+                'checkInTime' => $entryTime->toDateTimeString(),
+            ];
+        });
+
+        if ($entryResult['alreadyRegistered']) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'YA REGISTRÓ INGRESO',
+                        'assigned_room_id' => $assignedRoomId,
+                        'assigned_room_name' => $assignedRoomName,
+                        'check_in_time' => $entryResult['checkInTime'],
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante ya registró su ingreso.',
+            );
+        }
+
         return new ExamAccessResult(
             isSuccessful: true,
             data: [
@@ -720,7 +817,7 @@ class CoreDataStorage
                     'result' => 'HABILITADO',
                     'assigned_room_id' => $assignedRoomId,
                     'assigned_room_name' => $assignedRoomName,
-                    'check_in_time' => null,
+                    'check_in_time' => $entryResult['checkInTime'],
                 ],
                 'expulsion_history' => $expulsionHistory,
             ],
@@ -782,6 +879,274 @@ class CoreDataStorage
             )->toArray())
             ->values()
             ->all();
+    }
+
+    /**
+     * Stores an observation for a student already assigned to an exam.
+     * Only the exam teacher or the assistant assigned to the student's room
+     * can update this field.
+     */
+    public function storeExamStudentObservation(
+        string $identifier,
+        int $examId,
+        string $observation,
+    ): ExamStudentObservationResult {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $enrollment = StudentCourseEnrollment::with('enrollmentStatus')
+            ->where('usuario_id', $student->usuario_id)
+            ->where('materia_grupo_id', $exam->materia_grupo_id)
+            ->first();
+
+        if ($enrollment === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no está inscrito en la materia del examen.',
+                httpStatus: 422,
+            );
+        }
+
+        if ($enrollment->enrollmentStatus?->nombre !== 'HABILITADO') {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [
+                    'status' => $enrollment->enrollmentStatus?->nombre,
+                    'ineligibility_reason' => $enrollment->motivo_inhabilitacion,
+                ],
+                message: 'Solo se pueden registrar observaciones para estudiantes habilitados.',
+                httpStatus: 422,
+            );
+        }
+
+        $examStudent = ExamStudent::where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no figura en el examen.',
+                httpStatus: 404,
+            );
+        }
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('aula_id', $examStudent->aula_id)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para registrar observaciones en este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        $cleanObservation = trim($observation);
+
+        DB::table('examen_estudiante')
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->update([
+                'observaciones' => $cleanObservation,
+                'updated_at' => now(),
+            ]);
+
+        return new ExamStudentObservationResult(
+            isSuccessful: true,
+            data: [
+                'student' => [
+                    'user_id' => (int) $student->usuario_id,
+                    'codigo_sis' => (string) $student->codigo_sis,
+                    'ci' => (string) ($student->user?->ci ?? ''),
+                    'full_name' => (string) ($student->user?->nombre ?? ''),
+                ],
+                'exam_id' => $examId,
+                'observation' => $cleanObservation,
+                'updated_at' => now()->toIso8601String(),
+            ],
+            message: 'Observación registrada correctamente.',
+        );
+    }
+
+    /**
+     * Registers an exceptional entry for an ineligible student already
+     * assigned to an exam. The operation also records the entry time.
+     */
+    public function registerExceptionalEntry(
+        string $identifier,
+        int $examId,
+        string $observation,
+    ): ExceptionalEntryResult {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $enrollment = StudentCourseEnrollment::with('enrollmentStatus')
+            ->where('usuario_id', $student->usuario_id)
+            ->where('materia_grupo_id', $exam->materia_grupo_id)
+            ->first();
+
+        if ($enrollment === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no está inscrito en la materia del examen.',
+                httpStatus: 422,
+            );
+        }
+
+        if ($enrollment->enrollmentStatus?->nombre !== 'INHABILITADO') {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [
+                    'status' => $enrollment->enrollmentStatus?->nombre,
+                ],
+                message: 'El ingreso excepcional solo aplica a estudiantes inhabilitados.',
+                httpStatus: 422,
+            );
+        }
+
+        $examStudent = ExamStudent::where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no figura en el examen.',
+                httpStatus: 404,
+            );
+        }
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('aula_id', $examStudent->aula_id)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para registrar un ingreso excepcional en este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        if ($examStudent->hora_ingreso !== null
+            || in_array($examStudent->status?->nombre, ['PRESENTE', 'INGRESO EXCEPCIONAL'], true)) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [
+                    'check_in_time' => $examStudent->hora_ingreso?->toDateTimeString(),
+                ],
+                message: 'El estudiante ya tiene un ingreso registrado en este examen.',
+                httpStatus: 409,
+            );
+        }
+
+        $exceptionalStatusId = ExamStudentStatus::where('nombre', 'INGRESO EXCEPCIONAL')->value('id');
+
+        if ($exceptionalStatusId === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: "El estado 'INGRESO EXCEPCIONAL' no está configurado en el sistema.",
+                httpStatus: 500,
+            );
+        }
+
+        $cleanObservation = trim($observation);
+        $entryTime = now();
+
+        DB::transaction(function () use ($examStudent, $exceptionalStatusId, $cleanObservation, $entryTime, $authenticatedUserId) {
+            DB::table('examen_estudiante')
+                ->where('examen_id', $examStudent->examen_id)
+                ->where('usuario_id', $examStudent->usuario_id)
+                ->update([
+                    'estado_id' => $exceptionalStatusId,
+                    'observaciones' => $cleanObservation,
+                    'hora_ingreso' => $entryTime,
+                    'updated_at' => $entryTime,
+                ]);
+
+            DB::table('registro_acceso_examen')->insert([
+                'exam_id' => $examStudent->examen_id,
+                'aula_id' => $examStudent->aula_id,
+                'user_id_estudiante' => $examStudent->usuario_id,
+                'user_id_operador' => $authenticatedUserId,
+                'fecha' => $entryTime->toDateString(),
+                'hora' => $entryTime->toTimeString(),
+                'resultado' => 'EXCEPCION',
+                'observacion' => $cleanObservation,
+                'created_at' => $entryTime,
+                'updated_at' => $entryTime,
+            ]);
+        });
+
+        return new ExceptionalEntryResult(
+            isSuccessful: true,
+            data: [
+                'student' => [
+                    'user_id' => (int) $student->usuario_id,
+                    'codigo_sis' => (string) $student->codigo_sis,
+                    'ci' => (string) ($student->user?->ci ?? ''),
+                    'full_name' => (string) ($student->user?->nombre ?? ''),
+                ],
+                'exam_id' => $examId,
+                'status' => 'INGRESO EXCEPCIONAL',
+                'observation' => $cleanObservation,
+                'check_in_time' => $entryTime->toDateTimeString(),
+            ],
+            message: 'Ingreso excepcional registrado correctamente.',
+        );
     }
 
     /**
