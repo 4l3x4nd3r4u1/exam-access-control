@@ -18,6 +18,7 @@ use App\DTOs\ExamAccessResult;
 use App\DTOs\ExpulsionHistoryItem;
 use App\DTOs\ExamStudentObservationResult;
 use App\DTOs\ExceptionalEntryResult;
+use App\DTOs\ExamStudentExpulsionResult;
 use App\DTOs\ExamRoomSummary;
 use App\DTOs\UserPersonalData;
 use App\Exceptions\InvalidCredentialsException;
@@ -609,6 +610,55 @@ class CoreDataStorage
 
         $expulsionHistory = $this->getStudentExpulsionHistory((int) $student->usuario_id);
 
+        $examStudent = ExamStudent::with(['room', 'status'])
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent !== null) {
+            $authenticatedUserId = (int) auth()->id();
+            $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+            $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+                ->where('aula_id', $examStudent->aula_id)
+                ->where('auxiliar_id', $authenticatedUserId)
+                ->exists();
+
+            if (!$isExamTeacher && !$isAssignedAssistant) {
+                return new ExamAccessResult(
+                    isSuccessful: false,
+                    data: [],
+                    message: 'No tiene permiso para validar el ingreso en este examen.',
+                    httpStatus: 403,
+                );
+            }
+        }
+
+        // An exceptional entry or a previous normal entry takes precedence
+        // over the current enrollment status: the student already entered
+        // this specific exam.
+        if ($examStudent !== null
+            && ($examStudent->status?->nombre === 'PRESENTE'
+                || $examStudent->status?->nombre === 'INGRESO EXCEPCIONAL'
+                || $examStudent->hora_ingreso !== null)) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'YA REGISTRÓ INGRESO',
+                        'assigned_room_id' => $examStudent->aula_id !== null
+                            ? (int) $examStudent->aula_id
+                            : null,
+                        'assigned_room_name' => $examStudent->room?->nombre,
+                        'check_in_time' => $examStudent->hora_ingreso?->toDateTimeString(),
+                        'norma_particular' => $examStudent->norma_particular,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante ya registró su ingreso.',
+            );
+        }
+
         $enrollment = StudentCourseEnrollment::with('enrollmentStatus')
             ->where('usuario_id', $student->usuario_id)
             ->where('materia_grupo_id', $exam->materia_grupo_id)
@@ -625,6 +675,7 @@ class CoreDataStorage
                         'assigned_room_id' => null,
                         'assigned_room_name' => null,
                         'check_in_time' => null,
+                        'norma_particular' => $examStudent?->norma_particular,
                     ],
                     'expulsion_history' => $expulsionHistory,
                 ],
@@ -645,17 +696,13 @@ class CoreDataStorage
                         'assigned_room_id' => null,
                         'assigned_room_name' => null,
                         'check_in_time' => null,
+                        'norma_particular' => $examStudent?->norma_particular,
                     ],
                     'expulsion_history' => $expulsionHistory,
                 ],
                 message: 'El estudiante está inhabilitado.',
             );
         }
-
-        $examStudent = ExamStudent::with(['room', 'status'])
-            ->where('examen_id', $examId)
-            ->where('usuario_id', $student->usuario_id)
-            ->first();
 
         if ($examStudent === null) {
             return new ExamAccessResult(
@@ -667,26 +714,11 @@ class CoreDataStorage
                         'assigned_room_id' => null,
                         'assigned_room_name' => null,
                         'check_in_time' => null,
+                        'norma_particular' => null,
                     ],
                     'expulsion_history' => $expulsionHistory,
                 ],
                 message: 'El estudiante no figura en el examen.',
-            );
-        }
-
-        $authenticatedUserId = (int) auth()->id();
-        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
-        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('aula_id', $examStudent->aula_id)
-            ->where('auxiliar_id', $authenticatedUserId)
-            ->exists();
-
-        if (!$isExamTeacher && !$isAssignedAssistant) {
-            return new ExamAccessResult(
-                isSuccessful: false,
-                data: [],
-                message: 'No tiene permiso para validar el ingreso en este examen.',
-                httpStatus: 403,
             );
         }
 
@@ -706,6 +738,7 @@ class CoreDataStorage
                         'assigned_room_id' => $assignedRoomId,
                         'assigned_room_name' => $assignedRoomName,
                         'check_in_time' => $checkInTime,
+                        'norma_particular' => $examStudent->norma_particular,
                     ],
                     'expulsion_history' => $expulsionHistory,
                 ],
@@ -723,6 +756,7 @@ class CoreDataStorage
                         'assigned_room_id' => $assignedRoomId,
                         'assigned_room_name' => $assignedRoomName,
                         'check_in_time' => null,
+                        'norma_particular' => $examStudent->norma_particular,
                     ],
                     'expulsion_history' => $expulsionHistory,
                 ],
@@ -818,6 +852,7 @@ class CoreDataStorage
                     'assigned_room_id' => $assignedRoomId,
                     'assigned_room_name' => $assignedRoomName,
                     'check_in_time' => $entryResult['checkInTime'],
+                    'norma_particular' => $examStudent->norma_particular,
                 ],
                 'expulsion_history' => $expulsionHistory,
             ],
@@ -1146,6 +1181,135 @@ class CoreDataStorage
                 'check_in_time' => $entryTime->toDateTimeString(),
             ],
             message: 'Ingreso excepcional registrado correctamente.',
+        );
+    }
+
+    /**
+     * Registers an expulsion for a student already assigned to an exam.
+     */
+    public function registerExamStudentExpulsion(
+        string $identifier,
+        int $examId,
+        string $reason,
+    ): ExamStudentExpulsionResult {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $examStudent = ExamStudent::with('room')
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no figura en el examen.',
+                httpStatus: 404,
+            );
+        }
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('aula_id', $examStudent->aula_id)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para registrar expulsiones en este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        $expelledStatusId = ExamStudentStatus::where('nombre', 'EXPULSADO')->value('id');
+
+        if ($expelledStatusId === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: "El estado 'EXPULSADO' no está configurado en el sistema.",
+                httpStatus: 500,
+            );
+        }
+
+        if ((int) $examStudent->estado_id === (int) $expelledStatusId) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [
+                    'reason' => $examStudent->motivo_expulsion,
+                ],
+                message: 'El estudiante ya fue expulsado de este examen.',
+                httpStatus: 409,
+            );
+        }
+
+        $cleanReason = trim($reason);
+        $eventTime = now();
+
+        DB::transaction(function () use ($examStudent, $expelledStatusId, $cleanReason, $eventTime, $authenticatedUserId) {
+            DB::table('examen_estudiante')
+                ->where('examen_id', $examStudent->examen_id)
+                ->where('usuario_id', $examStudent->usuario_id)
+                ->update([
+                    'estado_id' => $expelledStatusId,
+                    'motivo_expulsion' => $cleanReason,
+                    'updated_at' => $eventTime,
+                ]);
+
+            DB::table('registro_acceso_examen')->insert([
+                'exam_id' => $examStudent->examen_id,
+                'aula_id' => $examStudent->aula_id,
+                'user_id_estudiante' => $examStudent->usuario_id,
+                'user_id_operador' => $authenticatedUserId,
+                'fecha' => $eventTime->toDateString(),
+                'hora' => $eventTime->toTimeString(),
+                'resultado' => 'EXPULSION',
+                'observacion' => $cleanReason,
+                'created_at' => $eventTime,
+                'updated_at' => $eventTime,
+            ]);
+        });
+
+        return new ExamStudentExpulsionResult(
+            isSuccessful: true,
+            data: [
+                'student' => [
+                    'user_id' => (int) $student->usuario_id,
+                    'codigo_sis' => (string) $student->codigo_sis,
+                    'ci' => (string) ($student->user?->ci ?? ''),
+                    'full_name' => (string) ($student->user?->nombre ?? ''),
+                ],
+                'exam_id' => $examId,
+                'status' => 'EXPULSADO',
+                'reason' => $cleanReason,
+                'room_id' => $examStudent->aula_id !== null ? (int) $examStudent->aula_id : null,
+                'room_name' => $examStudent->room?->nombre,
+                'event_time' => $eventTime->toDateTimeString(),
+            ],
+            message: 'Expulsión registrada correctamente.',
         );
     }
 
