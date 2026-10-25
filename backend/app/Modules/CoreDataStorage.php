@@ -19,6 +19,7 @@ use App\DTOs\ExpulsionHistoryItem;
 use App\DTOs\ExamStudentObservationResult;
 use App\DTOs\ExceptionalEntryResult;
 use App\DTOs\ExamStudentExpulsionResult;
+use App\DTOs\DuringExamResult;
 use App\DTOs\ExamRoomSummary;
 use App\DTOs\UserPersonalData;
 use App\Exceptions\InvalidCredentialsException;
@@ -1315,6 +1316,113 @@ class CoreDataStorage
                 'event_time' => $eventTime->toDateTimeString(),
             ],
             message: 'Expulsión registrada correctamente.',
+        );
+    }
+
+    /**
+     * Reads the current exam status without changing the student's entry.
+     */
+    public function checkDuringExam(string $identifier, int $examId): DuringExamResult
+    {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new DuringExamResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new DuringExamResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $examStudent = ExamStudent::with(['room', 'status'])
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->when(
+                $examStudent !== null,
+                fn($query) => $query->where('aula_id', $examStudent->aula_id)
+            )
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new DuringExamResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para consultar este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        $studentData = [
+            'user_id' => (int) $student->usuario_id,
+            'codigo_sis' => (string) $student->codigo_sis,
+            'ci' => (string) ($student->user?->ci ?? ''),
+            'full_name' => (string) ($student->user?->nombre ?? ''),
+        ];
+
+        $expulsionHistory = $this->getStudentExpulsionHistory((int) $student->usuario_id);
+
+        if ($examStudent === null) {
+            return new DuringExamResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'exam_student' => [
+                        'result' => 'NO FIGURA EN EL EXAMEN',
+                        'status_id' => null,
+                        'assigned_room_id' => null,
+                        'assigned_room_name' => null,
+                        'check_in_time' => null,
+                        'norma_particular' => null,
+                        'observations' => null,
+                        'expulsion_reason' => null,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante no figura en el examen.',
+            );
+        }
+
+        $result = $examStudent->status?->nombre ?? 'AUSENTE';
+
+        return new DuringExamResult(
+            isSuccessful: true,
+            data: [
+                'student' => $studentData,
+                'exam_student' => [
+                    'result' => $result,
+                    'status_id' => $examStudent->estado_id !== null
+                        ? (int) $examStudent->estado_id
+                        : null,
+                    'assigned_room_id' => $examStudent->aula_id !== null
+                        ? (int) $examStudent->aula_id
+                        : null,
+                    'assigned_room_name' => $examStudent->room?->nombre,
+                    'check_in_time' => $examStudent->hora_ingreso?->toDateTimeString(),
+                    'norma_particular' => $examStudent->norma_particular,
+                    'observations' => $examStudent->observaciones,
+                    'expulsion_reason' => $examStudent->motivo_expulsion,
+                ],
+                'expulsion_history' => $expulsionHistory,
+            ],
+            message: 'Estado del estudiante obtenido correctamente.',
         );
     }
 
