@@ -1,5 +1,6 @@
 import type { ControlPointExam, ControlPointRoom } from '../types/controlPoint';
 import { normalizeText } from './searchHelper.ts';
+import type { EnrolledStudent } from '../types/course';
 
 export type ControlPointExamStatus = 'En curso' | 'Próximamente' | 'Finalizado' | 'Sin horario';
 
@@ -44,4 +45,13 @@ export function abbreviateExamType(type: string): string {
     'EXAMEN FINAL': 'EF', 'SEGUNDA INSTANCIA': 'SI', 'EXAMEN DE MESA': 'EM',
   };
   return names[type.toUpperCase().trim()] ?? type;
+}
+
+export function filterControlPointStudents(students: EnrolledStudent[], search: string): EnrolledStudent[] {
+  const words = normalizeText(search).split(' ').filter(Boolean);
+  if (words.length === 0) return [];
+  return students.filter((student) => {
+    const text = normalizeText(`${student.fullName} ${student.studentKey} ${student.ci}`);
+    return words.every((word) => text.includes(word));
+  });
 }

@@ -44,4 +44,25 @@
 .cp-exam-heading h1 { font-size: 23px; font-weight: 600; letter-spacing: -.4px; margin-bottom: 5px; }
 .cp-exam-heading p { display: flex; align-items: center; gap: 5px; color: #777; font-size: 12px; line-height: 1.7; }
 .cp-exam-heading .cp-icon { width: 13px; height: 13px; }
+.cp-current-status { margin-left: auto; display: flex; gap: 5px; align-items: center; font-size: 10px; white-space: nowrap; }
+.cp-tabs { display: grid; grid-template-columns: 1fr 1fr; background: #f0f0f0; border-radius: 6px; padding: 3px; text-align: center; }
+.cp-tabs > * { border: 0; padding: 9px 4px; font-size: 12px; border-radius: 4px; }
+.cp-tabs .cp-tab-active { background: #fff; box-shadow: 0 1px 3px #0000000a; }
+.cp-tabs button:disabled { color: #999; background: transparent; }
+.cp-student-search { min-width: 0; }
+.cp-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.cp-students { margin-top: 14px; }
+.cp-student-columns, .cp-student-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, .9fr); gap: 5px; align-items: center; width: 100%; }
+.cp-student-columns { color: #777; font-size: 10px; padding: 4px; }
+.cp-student-row { text-align: left; background: #f1f1f1; border: 0; border-radius: 3px; margin-bottom: 4px; padding: 9px 5px; cursor: pointer; }
+.cp-student-row > span { font-size: 11px; overflow-wrap: anywhere; }
+.cp-student-row:hover:not(:disabled) { background: #e6e6e6; }
+.cp-student-row:disabled { opacity: .6; cursor: default; }
+.cp-selected-student { font-size: 14px; line-height: 1.5; }
+.cp-selected-student p { font-size: 12px; color: #777; }
+.cp-rules { font-size: 12px; color: #666; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.cp-rules summary { cursor: pointer; }
+.cp-rules summary span { margin-left: 5px; font-size: 10px; }
+.cp-rules ul { margin: 8px 0 0 20px; line-height: 1.6; overflow-wrap: anywhere; }
+.cp-check-button { display: block; width: 100%; margin-top: 8px; }
 @media (max-width: 350px) { .cp-screen { padding-inline: 12px; } .cp-chip { max-width: 75px; } }
