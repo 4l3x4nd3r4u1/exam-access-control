@@ -1,0 +1,36 @@
+.cp-screen { padding: 18px 18px 24px; color: #202020; font-size: 14px; }
+.cp-picker, .cp-ingress { display: flex; flex-direction: column; gap: 18px; }
+.cp-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.cp-topbar { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.cp-topbar h1 { font-size: 17px; font-weight: 500; }
+.cp-icon-button { border: 0; background: transparent; width: 34px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px; }
+.cp-screen button:focus-visible, .cp-screen summary:focus-visible, .cp-screen input:focus-visible, .cp-screen select:focus-visible, .cp-screen textarea:focus-visible { outline: 2px solid #176d42; outline-offset: 3px; }
+.cp-count { display: flex; gap: 10px; align-items: baseline; font-size: 17px; }
+.cp-count > :last-child { color: #777; font-size: 12px; }
+.cp-exam-list { display: flex; flex-direction: column; gap: 5px; }
+.cp-exam-row { background: #f1f1f1; border-radius: 5px; }
+.cp-exam-row summary { display: flex; align-items: center; gap: 5px; padding: 10px 8px; cursor: pointer; list-style: none; }
+.cp-exam-row summary::-webkit-details-marker { display: none; }
+.cp-exam-row[open] summary > .cp-icon:last-child { transform: rotate(90deg); }
+.cp-exam-row summary > .cp-icon:last-child { width: 13px; height: 13px; }
+.cp-exam-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.cp-chip { font-size: 10px; background: #fff; border: 1px solid #ddd; padding: 2px 4px; border-radius: 4px; max-width: 100px; }
+.cp-room-list { padding: 0 8px 10px; display: grid; gap: 7px; }
+.cp-room-button { display: flex; gap: 10px; align-items: center; text-align: left; width: 100%; border: 1px solid #d6d6d6; border-radius: 6px; padding: 10px; background: #fff; color: #222; cursor: pointer; }
+.cp-room-button > span { flex: 1; }
+.cp-room-button strong { font-size: 13px; font-weight: 500; }
+.cp-room-button small { display: block; margin-top: 3px; font-size: 11px; color: #176d42; }
+.cp-room-button:disabled { color: #777; background: #f7f7f7; cursor: default; }
+.cp-room-button:disabled small { color: #777; }
+.cp-feedback { color: #666; padding: 18px 4px; line-height: 1.5; font-size: 13px; }
+.cp-error { color: #a12c25; }
+.cp-text-button { background: transparent; border: 0; text-decoration: underline; padding: 8px 0; color: inherit; cursor: pointer; }
+.cp-primary { background: #202020; color: #fff; border: 0; border-radius: 7px; min-height: 42px; padding: 10px 16px; cursor: pointer; font-size: 13px; }
+.cp-primary:disabled { opacity: .5; cursor: default; }
+.cp-cancel { margin: auto auto 0; min-width: 150px; }
+.cp-muted { color: #777; font-size: 12px; line-height: 1.5; }
+.cp-eyebrow { color: #777; font-size: 10px; text-transform: uppercase; letter-spacing: .3px; }
+.cp-exam-heading h1 { font-size: 23px; font-weight: 600; letter-spacing: -.4px; margin-bottom: 5px; }
+.cp-exam-heading p { display: flex; align-items: center; gap: 5px; color: #777; font-size: 12px; line-height: 1.7; }
+.cp-exam-heading .cp-icon { width: 13px; height: 13px; }
+@media (max-width: 350px) { .cp-screen { padding-inline: 12px; } .cp-chip { max-width: 75px; } }

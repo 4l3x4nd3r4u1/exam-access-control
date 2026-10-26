@@ -3,6 +3,7 @@ import { useState } from 'react';
 import assignedCoursesIcon from './assets/icono_materia-2.svg';
 import scheduleExamIcon from './assets/programar_examen.svg';
 import scheduledExamsIcon from './assets/documento_examen.svg';
+import controlPointsIcon from './assets/puntos_control.svg';
 import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
 import studentEligibilityIcon from './assets/estado_habilitacion.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
@@ -36,6 +37,9 @@ import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
 import { ScheduledExamsView } from './views/ScheduledExamsView';
+import { ControlPointsView } from './views/ControlPointsView';
+import { ControlPointIngressView } from './views/ControlPointIngressView';
+import type { ControlPointSelection } from './types/controlPoint';
 import './App.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
 
@@ -46,6 +50,8 @@ type ApplicationScreen =
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL'
   | 'SCHEDULED_EXAMS'
+  | 'CONTROL_POINTS'
+  | 'CONTROL_POINT_INGRESS'
   | 'ENROLLED_STUDENTS';
 
 /** Drawer de búsqueda de materia abierto desde el panel. */
@@ -80,6 +86,8 @@ export default function App() {
   const [selectedRoster, setSelectedRoster] =
     useState<ProcessedRoster | null>(null);
 
+  const [selectedControlPoint, setSelectedControlPoint] = useState<ControlPointSelection | null>(null);
+
   const [courseSearchTarget, setCourseSearchTarget] =
     useState<CourseSearchTarget | null>(null);
   
@@ -99,6 +107,7 @@ export default function App() {
     setSession(null);
     setScreen('DASHBOARD');
     setSelectedRoster(null);
+    setSelectedControlPoint(null);
     setSelectedCourseGroup(null);
     setCourseSearchTarget(null);
     setCourseForScheduleExam(null);
@@ -168,7 +177,31 @@ export default function App() {
     );
   }
 
+  if (screen === 'CONTROL_POINTS') {
+    return <ControlPointsView userId={session.user_id} onBack={() => setScreen('DASHBOARD')} onSelect={(selection) => {
+      setSelectedControlPoint(selection);
+      setScreen('CONTROL_POINT_INGRESS');
+    }} />;
+  }
+
+  if (screen === 'CONTROL_POINT_INGRESS' && selectedControlPoint) {
+    return <ControlPointIngressView selection={selectedControlPoint} onBack={() => {
+      setSelectedControlPoint(null);
+      setScreen('CONTROL_POINTS');
+    }} />;
+  }
+
   const menuItems = [
+    {
+      // Navigation entry: GET /exams is available to authenticated users.
+      // Room access is determined by the backend's can_interact assignment.
+      functionCode: 'control-points',
+      label: 'Puntos de control',
+      icon: controlPointsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setScreen('CONTROL_POINTS'),
+      visible: true,
+    },
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
       label: 'Visualizar materias',
