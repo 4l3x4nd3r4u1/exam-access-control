@@ -31,6 +31,16 @@ test('lists exams using the current session and supports cancellation', async ()
   assert.deepEqual(await controlPointService.getExams(abort.signal), [{ exam_id: '15' }]);
 });
 
+test('gets exam type options from the API catalog, including types beyond the original design', async () => {
+  const types = [{ value: 17, label: 'EXAMEN EXTRAORDINARIO' }];
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, 'http://127.0.0.1:8000/api/catalog/exam-types');
+    assert.equal(options.headers.get('Authorization'), 'Bearer test-token');
+    return Response.json({ success: true, data: types });
+  };
+  assert.deepEqual(await controlPointService.getExamTypes(), types);
+});
+
 test('checks access only when explicitly called and sends the selected exam and room', async () => {
   globalThis.fetch = async (url, options) => {
     assert.equal(url, 'http://127.0.0.1:8000/api/exam-access/check');

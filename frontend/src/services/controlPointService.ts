@@ -1,6 +1,7 @@
 import { API_BASE_URL, apiRequest, createApiHeaders } from './apiClient';
 import type { ApiResponse } from '../types/auth';
 import type { CourseGroup, EnrolledStudent } from '../types/course';
+import type { CatalogItem } from './catalogService';
 import type {
   CheckAccessPayload,
   ControlPointExam,
@@ -48,6 +49,11 @@ async function post<T>(endpoint: string, payload: unknown, signal?: AbortSignal)
 }
 
 export const controlPointService = {
+  async getExamTypes(signal?: AbortSignal): Promise<CatalogItem[]> {
+    const response = await apiRequest<ApiResponse<CatalogItem[]>>('/catalog/exam-types', { signal });
+    return response.data;
+  },
+
   async getExams(signal?: AbortSignal): Promise<ControlPointExam[]> {
     const response = await apiRequest<ApiResponse<ControlPointExam[]>>('/exams', { signal });
     return response.data;

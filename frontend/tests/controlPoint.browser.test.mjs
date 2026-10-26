@@ -57,6 +57,8 @@ test('control points: assigned rooms, filters, search and access results in a mo
   const runtimeErrors = [];
   const unexpectedRequests = [];
   const checks = [];
+  const observations = [];
+  let observationMode = 'validation';
   let resultMode = 'HABILITADO';
   send = (method, params = {}) => new Promise((done, reject) => {
     const id = ++nextId;
@@ -68,8 +70,9 @@ test('control points: assigned rooms, filters, search and access results in a mo
   const exam = {
     exam_id: '15', course_group_id: '3', subject_name: 'Teoría de Autómatas', group: '1', exam_type: 'PRIMER PARCIAL',
     date: '2026-11-10', start_time: '08:00:00', end_time: '09:30:00', general_rules: ['Carnet de identidad obligatorio'],
-    rooms: [{ room_id: '2', room_name: 'Aula 691B', assistant_id: 25, can_interact: true },
-      { room_id: '1', room_name: 'Aula 691A', assistant_id: 8, can_interact: false }],
+    rooms: [{ room_id: '1', room_name: 'Aula 691A', assistant_id: 8, can_interact: false },
+      { room_id: '2', room_name: 'Aula 691B', assistant_id: 25, can_interact: true },
+      { room_id: '3', room_name: 'Auditorio', assistant_id: 25, can_interact: true }],
   };
   const accessResponse = () => ({
     success: resultMode !== 'ESTUDIANTE NO ENCONTRADO',
@@ -87,14 +90,26 @@ test('control points: assigned rooms, filters, search and access results in a mo
     let status = 200;
     const path = new URL(request.url).pathname;
     if (request.method === 'OPTIONS') body = {};
-    else if (path === '/api/exams') body = { success: true, data: [exam, { ...exam, exam_id: '16', subject_name: 'Seguridad de Sistemas', course_group_id: '4', exam_type: 'EXAMEN FINAL', rooms: [exam.rooms[1]] }] };
+    else if (path === '/api/exams') body = { success: true, data: [exam, { ...exam, exam_id: '16', subject_name: 'Seguridad de Sistemas', course_group_id: '4', exam_type: 'EXAMEN FINAL', rooms: [exam.rooms[0]] }] };
     else if (path === '/api/course-groups') body = { success: true, data: [{ course_group_id: '3', academic_term: '2/2026' }, { course_group_id: '4', academic_term: '1/2026' }] };
+    else if (path === '/api/catalog/exam-types') body = { success: true, data: [
+      { value: 1, label: 'PRIMER PARCIAL' }, { value: 2, label: 'SEGUNDO PARCIAL' },
+      { value: 3, label: 'EXAMEN FINAL' }, { value: 4, label: 'SEGUNDA INSTANCIA' }, { value: 5, label: 'EXAMEN DE MESA' },
+    ] };
     else if (path === '/api/courses/3/students') body = { success: true, data: [{ userId: 101, studentKey: student.codigo_sis, ci: student.ci, fullName: student.full_name, status: 'HABILITADO', ineligibilityReason: null }] };
     else if (path === '/api/exam-access/check') {
       checks.push(JSON.parse(request.postData));
       await delay(60);
       status = resultMode === 'FORBIDDEN' ? 403 : resultMode === 'ESTUDIANTE NO ENCONTRADO' ? 404 : 200;
       body = resultMode === 'FORBIDDEN' ? { success: false, message: 'Asignación revocada.' } : accessResponse();
+    } else if (path === '/api/exam-access/observations') {
+      const payload = JSON.parse(request.postData);
+      observations.push(payload);
+      await delay(60);
+      status = observationMode === 'validation' ? 422 : 200;
+      body = observationMode === 'validation'
+        ? { success: false, errors: { observation: ['Observación inválida.'] } }
+        : { success: true, data: { student, exam_id: payload.exam_id, observation: payload.observation, updated_at: '2026-11-10T12:15:00Z' }, message: 'Observación registrada correctamente.' };
     } else { unexpectedRequests.push(path); status = 500; body = { message: `Unexpected request: ${path}` }; }
     await send('Fetch.fulfillRequest', { requestId, responseCode: status, responseHeaders: [
       { name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: '*' },
@@ -123,8 +138,16 @@ test('control points: assigned rooms, filters, search and access results in a mo
     throw new Error(`UI condition timed out: ${expression}`);
   };
   const click = (selector) => evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
-  const fill = (selector, value) => evaluate(`(() => { const input = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(value)}); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
-  const select = (selector, value) => evaluate(`(() => { const input = document.querySelector(${JSON.stringify(selector)}); input.value = ${JSON.stringify(value)}; input.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  const fill = (selector, value) => evaluate(`(() => { const input = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(value)}); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  const select = async (selector, value) => {
+    await click(selector);
+    await waitFor(`document.querySelector('.cp-filter-menu') !== null`);
+    await evaluate(`Array.from(document.querySelectorAll('.cp-filter-menu [role="option"]')).find((option) => option.dataset.value === ${JSON.stringify(value)}).click()`);
+  };
+  const key = async (keyName, code, virtualKeyCode) => {
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: keyName, code, windowsVirtualKeyCode: virtualKeyCode });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: keyName, code, windowsVirtualKeyCode: virtualKeyCode });
+  };
   await send('Page.enable');
   await send('Runtime.enable');
   await send('Fetch.enable', { patterns: [{ urlPattern: 'http://127.0.0.1:8000/api/*' }] });
@@ -137,24 +160,51 @@ test('control points: assigned rooms, filters, search and access results in a mo
   await t.test('opens from the panel and combines filters', async () => {
     await waitFor(`Array.from(document.querySelectorAll('.admin-menu-card')).some((button) => button.textContent.includes('Puntos de control'))`);
     await evaluate(`Array.from(document.querySelectorAll('.admin-menu-card')).find((button) => button.textContent.includes('Puntos de control')).click()`);
-    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 2`);
+    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 3`);
+    assert.equal(await evaluate(`document.querySelectorAll('.cp-exam-row:disabled').length`), 1);
+    assert.equal(await evaluate(`/Aula|Auditorio/.test(document.querySelector('.cp-exam-list').textContent)`), false);
     const screenshot = await send('Page.captureScreenshot', { format: 'png' });
     await writeFile(join(tempRoot, 'control-points-list.png'), Buffer.from(screenshot.data, 'base64'));
+    assert.equal(await evaluate(`document.querySelectorAll('.cp-filter-trigger > .cp-icon').length`), 6);
+    await click('[aria-label="Filtrar por tipo de examen"]');
+    await waitFor(`document.querySelectorAll('.cp-filter-menu [role="option"]').length === 5`);
+    const typeScreenshot = await send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(join(tempRoot, 'control-points-filter-type.png'), Buffer.from(typeScreenshot.data, 'base64'));
+    await key('Escape', 'Escape', 27);
+    await waitFor(`document.querySelector('.cp-filter-menu') === null`);
+    await click('[aria-label="Filtrar por estado"]');
+    await waitFor(`document.querySelectorAll('.cp-filter-state .cp-icon').length === 3`);
+    const statusScreenshot = await send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(join(tempRoot, 'control-points-filter-status.png'), Buffer.from(statusScreenshot.data, 'base64'));
+    await key('Escape', 'Escape', 27);
+    await evaluate(`document.querySelector('[aria-label="Filtrar por estado"]').focus()`);
+    await key('ArrowDown', 'ArrowDown', 40);
+    await waitFor(`document.activeElement?.getAttribute('role') === 'option'`);
+    assert.equal(await evaluate(`document.activeElement.dataset.value`), 'En curso');
+    await key('ArrowDown', 'ArrowDown', 40);
+    assert.equal(await evaluate(`document.activeElement.dataset.value`), 'Próximamente');
+    await key('Enter', 'Enter', 13);
+    await waitFor(`document.querySelector('[aria-label="Filtrar por estado"]').textContent.includes('Próximamente') && !document.querySelector('.cp-filter-menu')`);
+    await click('.cp-search button');
     await fill('#cp-subject-search', 'automatas');
-    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 1`);
+    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 2`);
     await select('[aria-label="Filtrar por tipo de examen"]', 'EXAMEN FINAL');
     await waitFor(`document.body.textContent.includes('No se encontraron exámenes con estos filtros.')`);
     await click('.cp-search button');
-    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 2`);
+    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 3`);
     await select('[aria-label="Filtrar por gestión"]', '2/2026');
-    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 1`);
+    await waitFor(`document.querySelectorAll('.cp-exam-row').length === 2`);
   });
 
-  await t.test('blocks another responsible person’s room and typing does not register an entry', async () => {
-    await click('.cp-exam-row summary');
-    assert.equal(await evaluate(`document.querySelectorAll('.cp-room-button:disabled').length`), 1);
-    await click('.cp-room-button:not(:disabled)');
+  await t.test('opens the assigned room directly from the subject and typing does not register an entry', async () => {
+    assert.equal(await evaluate(`document.querySelector('.cp-exam-list details') === null`), true);
+    await click('.cp-exam-row:not(:disabled)');
     await waitFor(`document.querySelector('#cp-student-query') && !document.body.textContent.includes('Cargando estudiantes...')`);
+    assert.equal(await evaluate(`document.querySelector('.cp-exam-heading').textContent.includes('Aula 691B')`), true);
+    assert.equal(await evaluate(`document.querySelector('#cp-student-query').value === '' && document.querySelectorAll('.cp-student-row').length === 1`), true);
+    assert.equal(checks.length, 0);
+    const initialScreenshot = await send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(join(tempRoot, 'control-points-students.png'), Buffer.from(initialScreenshot.data, 'base64'));
     await fill('#cp-student-query', 'Pedro');
     await waitFor(`document.querySelectorAll('.cp-student-row').length === 1`);
     assert.equal(checks.length, 0);
@@ -166,6 +216,24 @@ test('control points: assigned rooms, filters, search and access results in a mo
     await writeFile(join(tempRoot, 'control-points-ingress.png'), Buffer.from(screenshot.data, 'base64'));
   });
 
+  await t.test('validates observations, preserves failed text, prevents duplicate saves and confirms success', async () => {
+    assert.equal(await evaluate(`document.querySelector('.cp-observation button[type="submit"]').disabled`), true);
+    await fill('#cp-observation-text', '   ');
+    assert.equal(await evaluate(`document.querySelector('.cp-observation button[type="submit"]').disabled`), true);
+    await fill('#cp-observation-text', ' Estudiante con lentes sospechosos ');
+    await click('.cp-observation button[type="submit"]');
+    await waitFor(`document.querySelector('.cp-observation [role="alert"]')?.textContent.includes('Observación inválida.')`);
+    assert.equal(await evaluate(`document.querySelector('#cp-observation-text').value`), ' Estudiante con lentes sospechosos ');
+    observationMode = 'success';
+    await evaluate(`(() => { const button = document.querySelector('.cp-observation button[type="submit"]'); button.click(); button.click(); })()`);
+    await waitFor(`document.querySelector('.cp-save-notice')?.textContent.includes('Observación registrada correctamente.')`);
+    assert.equal(observations.length, 2);
+    assert.deepEqual(observations[1], { identifier: '202001234', exam_id: 15, observation: 'Estudiante con lentes sospechosos' });
+    assert.equal(await evaluate(`document.querySelector('.cp-observation button[type="submit"]').disabled`), true);
+    const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(join(tempRoot, 'control-points-observation.png'), Buffer.from(screenshot.data, 'base64'));
+  });
+
   await t.test('renders repeated entry, wrong room, ineligible, missing exam, and not-found responses', async () => {
     for (const mode of ['YA REGISTRÓ INGRESO', 'AULA INCORRECTA', 'INHABILITADO', 'NO FIGURA EN EL EXAMEN', 'ESTUDIANTE NO ENCONTRADO']) {
       resultMode = mode;
@@ -174,6 +242,7 @@ test('control points: assigned rooms, filters, search and access results in a mo
       await waitFor(`!document.querySelector('.cp-result-card')`);
       await click('.cp-check-button');
       await waitFor(`document.querySelector('.cp-result-card h2')?.textContent.includes(${JSON.stringify(mode)})`);
+      if (mode !== 'YA REGISTRÓ INGRESO') assert.equal(await evaluate(`document.querySelector('.cp-observation') === null`), true);
     }
     assert.equal(await evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true);
   });

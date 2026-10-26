@@ -1,4 +1,4 @@
-import type { ControlPointExam, ControlPointRoom } from '../types/controlPoint';
+import type { ControlPointExam, ControlPointRoom, ExamAccessResponse } from '../types/controlPoint';
 import { normalizeText } from './searchHelper.ts';
 import type { EnrolledStudent } from '../types/course';
 
@@ -49,9 +49,22 @@ export function abbreviateExamType(type: string): string {
 
 export function filterControlPointStudents(students: EnrolledStudent[], search: string): EnrolledStudent[] {
   const words = normalizeText(search).split(' ').filter(Boolean);
-  if (words.length === 0) return [];
+  if (words.length === 0) return students;
   return students.filter((student) => {
     const text = normalizeText(`${student.fullName} ${student.studentKey} ${student.ci}`);
     return words.every((word) => text.includes(word));
   });
+}
+
+export function canRecordControlPointObservation(
+  response: ExamAccessResponse, students: EnrolledStudent[], roomId: string,
+): boolean {
+  if (!response.success || !response.data.student ||
+      Number(response.data.access.assigned_room_id) !== Number(roomId)) return false;
+  if (response.data.access.result === 'HABILITADO') return true;
+  // A previous exceptional entry also returns YA REGISTRÓ INGRESO. Only students
+  // with current academic eligibility can have an observation saved by this API.
+  return response.data.access.result === 'YA REGISTRÓ INGRESO' && students.some((student) =>
+    student.userId === response.data.student?.user_id && student.status === 'HABILITADO',
+  );
 }

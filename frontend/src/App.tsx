@@ -193,16 +193,6 @@ export default function App() {
 
   const menuItems = [
     {
-      // Navigation entry: GET /exams is available to authenticated users.
-      // Room access is determined by the backend's can_interact assignment.
-      functionCode: 'control-points',
-      label: 'Puntos de control',
-      icon: controlPointsIcon,
-      iconClass: 'admin-exams-icon',
-      open: () => setScreen('CONTROL_POINTS'),
-      visible: true,
-    },
-    {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
       label: 'Visualizar materias',
       icon: assignedCoursesIcon,
@@ -325,6 +315,16 @@ export default function App() {
         session,
         FUNCTION_CODES.EDIT_PERSONAL_DATA,
       ),
+    },
+    {
+      // Navigation entry: GET /exams is available to authenticated users.
+      // Room access is determined by the backend's can_interact assignment.
+      functionCode: 'control-points',
+      label: 'Puntos de control',
+      icon: controlPointsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setScreen('CONTROL_POINTS'),
+      visible: true,
     },
   ].filter((item) => item.visible);
 

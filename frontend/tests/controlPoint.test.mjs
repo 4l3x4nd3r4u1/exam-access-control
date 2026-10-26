@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { canUseControlPoint, filterControlPointExams, filterControlPointStudents, getControlPointStatus } from '../src/utils/controlPoint.ts';
+import { canRecordControlPointObservation, canUseControlPoint, filterControlPointExams, filterControlPointStudents, getControlPointStatus } from '../src/utils/controlPoint.ts';
 
 test('only an assigned room explicitly authorized by the API can be opened', () => {
   const room = { room_id: '2', room_name: '691B', assistant_id: 25, can_interact: true };
@@ -21,7 +21,8 @@ test('searches enrolled students by name, SIS, and CI without treating eligibili
   assert.deepEqual(filterControlPointStudents([student], 'pedro alvarez'), [student]);
   assert.deepEqual(filterControlPointStudents([student], '202001'), [student]);
   assert.deepEqual(filterControlPointStudents([student], '7891234'), [student]);
-  assert.deepEqual(filterControlPointStudents([student], ''), []);
+  assert.deepEqual(filterControlPointStudents([student], ''), [student]);
+  assert.deepEqual(filterControlPointStudents([student], '   '), [student]);
   assert.deepEqual(filterControlPointStudents([student], 'otro'), []);
 });
 
@@ -40,4 +41,15 @@ test('combines search without accents, exam type, status, and the actual course 
   assert.equal(filterControlPointExams([exam], { ...filters, term: '1/2026' }, terms).length, 0);
   assert.equal(filterControlPointExams([exam], { ...filters, type: 'EXAMEN FINAL' }, terms).length, 0);
   assert.deepEqual(filterControlPointExams([exam], { search: '', type: '', status: '', term: '' }, terms), [exam]);
+});
+
+test('observations require eligibility, a resolved student and the currently selected room', () => {
+  const response = { success: true, data: { student: { user_id: 101 }, access: { result: 'HABILITADO', assigned_room_id: 2 } } };
+  assert.equal(canRecordControlPointObservation(response, [], '2'), true);
+  assert.equal(canRecordControlPointObservation(response, [], '1'), false);
+  const repeated = { ...response, data: { ...response.data, access: { ...response.data.access, result: 'YA REGISTRÓ INGRESO' } } };
+  assert.equal(canRecordControlPointObservation(repeated, [{ userId: 101, status: 'HABILITADO' }], '2'), true);
+  assert.equal(canRecordControlPointObservation(repeated, [{ userId: 101, status: 'INHABILITADO' }], '2'), false);
+  assert.equal(canRecordControlPointObservation(repeated, [], '2'), false);
+  assert.equal(canRecordControlPointObservation({ ...response, data: { ...response.data, access: { result: 'INHABILITADO', assigned_room_id: 2 } } }, [], '2'), false);
 });

@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { ControlPointIcon } from '../components/ControlPointIcon';
 import { ControlPointStudentSearch } from '../components/ControlPointStudentSearch';
 import { ControlPointAccessResult } from '../components/ControlPointAccessResult';
+import { ControlPointObservationForm } from '../components/ControlPointObservationForm';
 import { ControlPointApiError, controlPointService } from '../services/controlPointService';
-import { canUseControlPoint, getControlPointStatus } from '../utils/controlPoint';
+import { canRecordControlPointObservation, canUseControlPoint, getControlPointStatus } from '../utils/controlPoint';
 import { formatExamType } from '../utils/examFormat';
 import type { ControlPointSelection, ExamAccessResponse } from '../types/controlPoint';
 import type { EnrolledStudent } from '../types/course';
@@ -22,6 +23,7 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
   const [response, setResponse] = useState<ExamAccessResponse | null>(null);
   const [accessError, setAccessError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [savingObservation, setSavingObservation] = useState(false);
   const [blocked, setBlocked] = useState(!canUseControlPoint(room, userId));
   const inFlight = useRef(false);
   const accessRequest = useRef<AbortController | null>(null);
@@ -53,7 +55,7 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
 
   const checkAccess = async (identifier: string) => {
     const cleanIdentifier = identifier.trim();
-    if (inFlight.current || blocked || !canUseControlPoint(room, userId)) return;
+    if (inFlight.current || savingObservation || blocked || !canUseControlPoint(room, userId)) return;
     if (!cleanIdentifier || cleanIdentifier.length > 50) {
       setAccessError('Introduce un SIS o CI de hasta 50 caracteres.');
       return;
@@ -84,7 +86,7 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
   return (
     <main className="app-shell cp-screen cp-ingress">
       <header className="cp-topbar">
-        <button className="cp-icon-button" type="button" disabled={busy} onClick={onBack} aria-label="Volver a puntos de control"><ControlPointIcon name="back" /></button>
+        <button className="cp-icon-button" type="button" disabled={busy || savingObservation} onClick={onBack} aria-label="Volver a puntos de control"><ControlPointIcon name="back" /></button>
         <span className="cp-eyebrow">Control de acceso</span>
         <span className="cp-current-status"><span className={`cp-status-dot cp-status-${status.replaceAll(' ', '-').toLowerCase()}`} />{status}</span>
       </header>
@@ -97,11 +99,25 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
         <span className="cp-tab-active">Ingreso</span>
         <button type="button" disabled title="Disponible en una próxima etapa">Durante el examen</button>
       </div>
-      {exam.general_rules.length > 0 && <details className="cp-rules"><summary>Normas generales <span>{exam.general_rules.length}</span></summary><ul>{exam.general_rules.map((rule, index) => <li key={index}>{rule}</li>)}</ul></details>}
-      <ControlPointStudentSearch students={students} query={query} onQueryChange={changeQuery} onSelect={(student) => { void checkAccess(student.studentKey || student.ci); }} isLoading={isLoading} error={error} onRetry={() => { setError(null); setIsLoading(true); setAttempt((value) => value + 1); }} showSuggestions={!response && !busy} busy={busy || blocked} onCheck={() => { void checkAccess(query); }} />
+      <ControlPointStudentSearch
+        students={students}
+        query={query}
+        onQueryChange={changeQuery}
+        onSelect={(student) => { void checkAccess(student.studentKey || student.ci); }}
+        isLoading={isLoading}
+        error={error}
+        onRetry={() => { setError(null); setIsLoading(true); setAttempt((value) => value + 1); }}
+        showSuggestions={!response && !busy}
+        busy={busy}
+        disabled={savingObservation || blocked}
+        onCheck={() => { void checkAccess(query); }}
+      />
       {accessError && <p className="cp-feedback cp-error" role="alert">{accessError}</p>}
       {blocked && <p className="cp-feedback cp-error" role="alert">El control está bloqueado para esta sesión. Vuelve al listado para comprobar tu asignación o inicia sesión nuevamente.</p>}
       {response && <ControlPointAccessResult response={response} />}
+      {response && !blocked && canRecordControlPointObservation(response, students, room.room_id) && (
+        <ControlPointObservationForm examId={Number(exam.exam_id)} identifier={response.data.student?.codigo_sis || query} onSavingChange={setSavingObservation} onAccessDenied={() => setBlocked(true)} />
+      )}
     </main>
   );
 }
