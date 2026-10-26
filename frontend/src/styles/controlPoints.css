@@ -65,4 +65,21 @@
 .cp-rules summary span { margin-left: 5px; font-size: 10px; }
 .cp-rules ul { margin: 8px 0 0 20px; line-height: 1.6; overflow-wrap: anywhere; }
 .cp-check-button { display: block; width: 100%; margin-top: 8px; }
+.cp-access-result { display: grid; gap: 12px; }
+.cp-result-card { border: 1px solid #d9d9d9; border-radius: 6px; padding: 10px; overflow-wrap: anywhere; }
+.cp-result-card h2 { display: flex; align-items: center; gap: 7px; font-size: 20px; font-weight: 500; line-height: 1.2; }
+.cp-result-card p { color: #666; font-size: 11px; line-height: 1.5; margin-top: 4px; }
+.cp-result-dot { width: 15px; height: 15px; flex-shrink: 0; border-radius: 50%; background: #a83c33; }
+.cp-result-allowed .cp-result-dot { background: #00a64b; }
+.cp-result-warning .cp-result-dot { background: #d68b10; }
+.cp-history { border: 1px solid #dedede; border-radius: 6px; padding: 9px; }
+.cp-history h3 { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+.cp-history .cp-icon { width: 15px; height: 15px; }
+.cp-history ul { list-style: none; display: grid; gap: 5px; }
+.cp-history li { padding: 6px; border-radius: 3px; background: #f3f3f3; overflow-wrap: anywhere; }
+.cp-history li > div { display: flex; align-items: baseline; gap: 6px; justify-content: space-between; }
+.cp-history strong { font-size: 12px; font-weight: 500; }
+.cp-history li span { font-size: 9px; text-align: right; }
+.cp-history li p { font-size: 10px; color: #666; line-height: 1.5; }
+.cp-particular-rule { border-left: 3px solid #aaa; background: #f5f5f5; padding: 10px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 @media (max-width: 350px) { .cp-screen { padding-inline: 12px; } .cp-chip { max-width: 75px; } }

@@ -185,7 +185,7 @@ export default function App() {
   }
 
   if (screen === 'CONTROL_POINT_INGRESS' && selectedControlPoint) {
-    return <ControlPointIngressView selection={selectedControlPoint} onBack={() => {
+    return <ControlPointIngressView key={`${selectedControlPoint.exam.exam_id}-${selectedControlPoint.room.room_id}-${session.user_id}`} selection={selectedControlPoint} userId={session.user_id} onBack={() => {
       setSelectedControlPoint(null);
       setScreen('CONTROL_POINTS');
     }} />;
