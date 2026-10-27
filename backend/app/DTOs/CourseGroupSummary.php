@@ -12,6 +12,7 @@ class CourseGroupSummary
         public readonly string $academicTerm,
         public readonly int $totalEnrolled,
         public readonly int $teacherId,
+        public readonly bool $canInteract = false,
     ) {}
 
     public function toArray(): array
@@ -24,6 +25,7 @@ class CourseGroupSummary
             'academic_term' => $this->academicTerm,
             'total_enrolled' => $this->totalEnrolled,
             'teacher_id' => $this->teacherId,
+            'can_interact' => $this->canInteract,
         ];
     }
 }

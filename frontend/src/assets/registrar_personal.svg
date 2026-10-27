@@ -1,0 +1,46 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="regShadow" x="14" y="16" width="100" height="102" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#000000" flood-opacity="0.16" />
+    </filter>
+    <linearGradient id="avatarBgGrad" x1="24" y1="20" x2="104" y2="106" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+    <linearGradient id="addBadgeGrad" x1="72" y1="72" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="capGrad" x1="42" y1="20" x2="86" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#regShadow)">
+    <!-- Base Card / Squircle -->
+    <rect x="22" y="24" width="84" height="84" rx="22" fill="url(#avatarBgGrad)" />
+
+    <!-- Academic Person Silhouette -->
+    <!-- Head -->
+    <circle cx="64" cy="58" r="15" fill="#FFFFFF" />
+    
+    <!-- Shoulders -->
+    <path d="M40 96C40 82 50 78 64 78C78 78 88 82 88 96" fill="#FFFFFF" />
+
+    <!-- Academic Mortarboard Cap on Top of Head -->
+    <path d="M64 30L86 38L64 46L42 38L64 30Z" fill="url(#capGrad)" stroke="#FFFFFF" stroke-width="1.5" />
+    <!-- Cap skullcap base -->
+    <path d="M52 42C52 42 56 47 64 47C72 47 76 42 76 42" stroke="url(#capGrad)" stroke-width="2.5" stroke-linecap="round" fill="none" />
+    <!-- Tassel -->
+    <path d="M82 40V48" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" />
+    <circle cx="82" cy="49" r="1.5" fill="#F59E0B" />
+
+    <!-- Floating Plus Badge -->
+    <g>
+      <circle cx="88" cy="86" r="18" fill="url(#addBadgeGrad)" stroke="#FFFFFF" stroke-width="3" />
+      <!-- Plus symbol -->
+      <path d="M88 78V94M80 86H96" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" />
+    </g>
+  </g>
+</svg>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BottomDrawer } from './BottomDrawer';
+import { ConfirmModal } from './ConfirmModal';
 import { courseService } from '../services/courseService';
 import type { EnrolledStudent } from '../types/course';
 
@@ -11,17 +12,33 @@ interface StudentStatusDrawerProps {
   onSaved: (student: EnrolledStudent) => void;
 }
 
-export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, onSaved }: StudentStatusDrawerProps) {
+export interface StudentStatusFormProps {
+  courseGroupId: string;
+  student: EnrolledStudent;
+  onCancel: () => void;
+  onSaved: (student: EnrolledStudent) => void;
+}
+
+export function StudentStatusForm({
+  courseGroupId,
+  student,
+  onCancel,
+  onSaved,
+}: StudentStatusFormProps) {
   const [status, setStatus] = useState<EnrolledStudent['status']>(student.status);
   const [reason, setReason] = useState(student.ineligibilityReason ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleClose = () => {
-    if (!isSaving) onClose();
+    if (!isSaving) {
+      setIsConfirmOpen(false);
+      onCancel();
+    }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const cleanReason = reason.trim();
 
@@ -31,16 +48,23 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
     }
 
     setError(null);
+    setIsConfirmOpen(true);
+  };
+
+  const executeSave = async () => {
+    const cleanReason = reason.trim();
+    setError(null);
     setIsSaving(true);
     try {
-      await courseService.updateStudentStatus(courseGroupId, student.studentKey, status, cleanReason);
+      await courseService.updateStudentStatus(courseGroupId, student.userId, status, cleanReason);
+      setIsConfirmOpen(false);
       onSaved({
         ...student,
         status,
         ineligibilityReason: status === 'INHABILITADO' ? cleanReason : null,
       });
-      onClose();
     } catch (requestError: unknown) {
+      setIsConfirmOpen(false);
       setError(requestError instanceof Error ? requestError.message : 'No se pudo actualizar el estado.');
     } finally {
       setIsSaving(false);
@@ -48,7 +72,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
   };
 
   return (
-    <BottomDrawer isOpen={isOpen} onClose={handleClose} ariaLabel="Editar estado">
+    <>
       <form className="student-status-drawer-content" onSubmit={handleSubmit}>
         <h2>Editar estado</h2>
 
@@ -74,6 +98,7 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
             onChange={(event) => setReason(event.target.value)}
             placeholder={status === 'INHABILITADO' ? 'Escriba el motivo' : 'Sin motivo'}
             disabled={status === 'HABILITADO'}
+            maxLength={500}
           />
         </label>
 
@@ -84,6 +109,45 @@ export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, o
           <button type="submit" className="drawer-submit-button" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar cambios'}</button>
         </div>
       </form>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="Confirmar cambio de estado"
+        isDangerous={status === 'INHABILITADO'}
+        message={
+          <div>
+            <p>¿Estás seguro de que deseas cambiar el estado de este estudiante?</p>
+            <div className="confirm-modal-summary-box">
+              <div><strong>Estudiante:</strong> {student.fullName} ({student.studentKey})</div>
+              <div><strong>Nuevo estado:</strong> {status}</div>
+              {status === 'INHABILITADO' && reason.trim() && (
+                <div><strong>Motivo:</strong> {reason.trim()}</div>
+              )}
+            </div>
+          </div>
+        }
+        confirmLabel="Sí, cambiar estado"
+        cancelLabel="Cancelar"
+        isLoading={isSaving}
+        onConfirm={executeSave}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
+    </>
+  );
+}
+
+export function StudentStatusDrawer({ isOpen, courseGroupId, student, onClose, onSaved }: StudentStatusDrawerProps) {
+  return (
+    <BottomDrawer isOpen={isOpen} onClose={onClose} ariaLabel="Editar estado">
+      <StudentStatusForm
+        courseGroupId={courseGroupId}
+        student={student}
+        onCancel={onClose}
+        onSaved={(updated) => {
+          onSaved(updated);
+          onClose();
+        }}
+      />
     </BottomDrawer>
   );
 }

@@ -1,0 +1,37 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="roleShadow" x="16" y="16" width="96" height="102" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#000000" flood-opacity="0.18" />
+    </filter>
+    <linearGradient id="shieldGrad" x1="28" y1="20" x2="100" y2="106" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#6D28D9" />
+    </linearGradient>
+    <linearGradient id="innerShield" x1="64" y1="28" x2="64" y2="98" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05" />
+    </linearGradient>
+    <linearGradient id="keyGrad" x1="68" y1="68" x2="104" y2="104" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#roleShadow)">
+    <!-- Main Shield -->
+    <path d="M64 22L98 34V62C98 84 83 100 64 106C45 100 30 84 30 62V34L64 22Z" fill="url(#shieldGrad)" />
+    <!-- Glossy Inner Shield -->
+    <path d="M64 26L93 36V62C93 81 80 95 64 101C48 95 35 81 35 62V36L64 26Z" fill="url(#innerShield)" />
+
+    <!-- User / Admin Silhouette on Shield -->
+    <circle cx="64" cy="50" r="10" fill="#FFFFFF" />
+    <path d="M48 76C48 68 54 65 64 65C74 65 80 68 80 76" fill="#FFFFFF" />
+
+    <!-- Role Key / Permission Badge -->
+    <g>
+      <circle cx="86" cy="84" r="15" fill="url(#keyGrad)" stroke="#FFFFFF" stroke-width="2.5" />
+      <!-- Key Icon -->
+      <path d="M83 81C83 79.3431 84.3431 78 86 78C87.6569 78 89 79.3431 89 81C89 82.3 88.18 83.4 87 83.8V89H89V91H87V93H85V83.8C83.82 83.4 83 82.3 83 81Z" fill="#FFFFFF" />
+    </g>
+  </g>
+</svg>

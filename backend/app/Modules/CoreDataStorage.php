@@ -3,32 +3,48 @@
 namespace App\Modules;
 
 use App\DTOs\ProcessedRosterSummary;
+use App\DTOs\ProcessedRosterDetail;
 use App\DTOs\RawFileData;
 use App\DTOs\ImportSummary;
 use App\DTOs\UserSession;
 use App\DTOs\UserSummary;
 use App\DTOs\CourseGroupSummary;
 use App\DTOs\EnrolledStudentSummary;
+use App\DTOs\RoomSummary;
 use App\DTOs\ExamSummary;
-use App\DTOs\ScheduleExamData;
+use App\DTOs\AllExamRoomSummary;
+use App\DTOs\AllExamSummary;
+use App\DTOs\ExamAccessResult;
+use App\DTOs\ExpulsionHistoryItem;
+use App\DTOs\ExamStudentObservationResult;
+use App\DTOs\ExceptionalEntryResult;
+use App\DTOs\ExamStudentExpulsionResult;
+use App\DTOs\DuringExamResult;
+use App\DTOs\ExamRoomSummary;
+use App\DTOs\UserPersonalData;
 use App\Exceptions\InvalidCredentialsException;
-use App\Models\EstadoInscripcion;
-use App\Models\Usuario;
-use App\Models\Rol;
-use App\Models\Estudiante;
-use App\Models\Materia;
-use App\Models\MateriaGrupo;
-use App\Models\Inscripcion;
-use App\Models\Examen;
-use App\Models\TipoExamen;
-use App\Models\Aula;
-use App\Models\ExamenAula;
-use App\Models\ExamenNorma;
+use App\Models\Course;
+use App\Models\CourseGroup;
+use App\Models\EmailDomain;
+use App\Models\EnrollmentStatus;
+use App\Models\Exam;
+use App\Models\ExamRoom;
+use App\Models\ExamStudent;
+use App\Models\ExamRule;
+use App\Models\ExamStudentStatus;
+use App\Models\ExamType;
+use App\Models\Room;
+use App\Models\Role;
+use App\Models\Student;
+use App\Models\StudentCourseEnrollment;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\DTOs\UserRegistrationData;
-use App\DTOs\UserUpdateData;
+use App\DTOs\UserRolesData;
+use App\DTOs\ExamRegistrationData;
 use App\DTOs\OperationResult;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -45,30 +61,34 @@ class CoreDataStorage
      */
     public function authenticate(string $email, string $password): UserSession
     {
-        $usuario = Usuario::where('email', strtolower(trim($email)))->first();
+        $user = User::where('email', strtolower(trim($email)))->first();
 
-        if (!$usuario) {
+        if (!$user) {
             throw new InvalidCredentialsException('Credenciales incorrectas');
         }
 
-        if (!Hash::check($password, $usuario->contrasena)) {
+        if (!Hash::check($password, $user->contrasena)) {
             throw new InvalidCredentialsException('Credenciales incorrectas');
         }
 
-        if (!$usuario->activo) {
+        if (!$user->activo) {
             throw new InvalidCredentialsException('Usuario inactivo o deshabilitado');
         }
 
-        $token = JWTAuth::fromUser($usuario);
+        $token = JWTAuth::fromUser($user);
         $ttlMinutes = (int) config('jwt.ttl', 360);
 
+        // Record session in 'sesion' table
+        \App\Models\UserSession::create([
+            'usuario_id' => $user->id,
+            'pid' => (string) getmypid(),
+            'fecha' => now(),
+            'activo' => true,
+        ]);
+
         return new UserSession(
-          userId: (int) $usuario->id,
-            role: (string) ($usuario->roles->first()?->nombre ?? ''),
-            fullName: (string) $usuario->nombre,
-            email: (string) $usuario->email,
-            isActive: (bool) $usuario->activo,
             token: $token,
+            isActive: (bool) $user->activo,
             tokenType: 'bearer',
             expiresIn: $ttlMinutes * 60,
         );
@@ -84,31 +104,28 @@ class CoreDataStorage
     {
         $email = strtolower(trim($data->email));
 
-        // Validate institutional email domain
-        if (!str_ends_with($email, '@umss.edu.bo')) {
+        $emailDomain = EmailDomain::where('activo', true)
+            ->get()
+            ->first(fn($d) => str_ends_with($email, $d->dominio));
+
+        if (!$emailDomain) {
             return new OperationResult(
                 isSuccessful: false,
-                message: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
+                message: 'El correo debe pertenecer a un dominio institucional válido (@umss.edu.bo)'
             );
         }
 
-        // Check if email already exists
-        if (Usuario::where('email', $email)->exists()) {
+        if (User::where('email', $email)->exists()) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'El correo ya está registrado'
             );
         }
 
-        // Convert functional roles to database roles
-        $role = match ($data->role) {
-            'DOCENTE' => 'TEACHER',
-            'AUXILIAR' => 'ASSISTANT',
-            'ADMIN' => 'ADMIN',
-            default => null
-        };
+        $roleNames = array_map(fn($r) => strtoupper(trim($r)), $data->roles);
+        $roles = Role::whereIn('nombre', $roleNames)->get();
 
-        if ($role === null) {
+        if ($roles->isEmpty()) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Rol no válido'
@@ -116,28 +133,47 @@ class CoreDataStorage
         }
 
         try {
-                $usuario = Usuario::create([
-                'nombre' => $data->fullName,
-                'email' => $email,
-                'contrasena' => $data->password,
-                'activo' => true,
-                'ci' => ''
-            ]);
-            
-            $rolModelo = Rol::where('nombre', $role)->first();
-
-            if ($rolModelo) {
-                $usuario->roles()->attach($rolModelo->id, [
-                'activo' => true,
-                'fecha_asignacion' => now()
+            DB::transaction(function () use ($data, $email, $emailDomain, $roles) {
+                $user = User::create([
+                    'nombre' => trim($data->fullName),
+                    'email' => $email,
+                    'email_id' => $emailDomain->id,
+                    'contrasena' => Hash::make($data->password),
+                    'ci' => $data->ci,
+                    'activo' => true,
                 ]);
-            }
+
+                $roleIds = $roles->pluck('id')->toArray();
+                $user->roles()->attach($roleIds, [
+                    'activo' => true,
+                    'fecha_asignacion' => now(),
+                ]);
+
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => auth()->user()->id,
+                    'accion' => 'REGISTRAR_USUARIO',
+                    'entidad_tipo' => 'usuario',
+                    'entidad_id' => $user->id,
+                    'detalles' => json_encode([
+                        'nombre' => $data->fullName,
+                        'email' => $email,
+                        'ci' => $data->ci,
+                        'roles_asignados' => $roles->pluck('nombre')->toArray(),
+                    ]),
+                    'fecha' => now(),
+                ]);
+            });
 
             return new OperationResult(
                 isSuccessful: true,
                 message: 'Usuario registrado correctamente'
             );
 
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El correo o CI ya está registrado'
+            );
         } catch (\Throwable $e) {
             return new OperationResult(
                 isSuccessful: false,
@@ -147,50 +183,34 @@ class CoreDataStorage
     }
 
     /**
-     * Updates an existing academic user in the system.
+     * Updates roles of a specific user. Only for admin use.
      *
      * @param int $userId
-     * @param UserUpdateData $data
+     * @param UserRolesData $data
      * @return OperationResult
      */
-    public function updateAcademicUser(int $userId, UserUpdateData $data): OperationResult
+    public function updateUserRoles(int $userId, UserRolesData $data): OperationResult
     {
-        $usuario = Usuario::find($userId);
+        if (auth()->id() === $userId) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'No puede cambiar sus propios roles'
+            );
+        }
 
-       if (!$usuario) {
+        $user = User::find($userId);
+
+        if (!$user) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Usuario no encontrado'
             );
         }
 
-        $email = strtolower(trim($data->email));
+        $roleNames = array_map(fn($r) => strtoupper(trim($r)), $data->roles);
+        $roles = Role::whereIn('nombre', $roleNames)->get();
 
-        // Validate institutional email domain
-        if (!str_ends_with($email, '@umss.edu.bo')) {
-            return new OperationResult(
-                isSuccessful: false,
-                message: 'El correo debe pertenecer al dominio institucional @umss.edu.bo'
-            );
-        }
-
-        // Check if email already belongs to another user
-        if (Usuario::where('email', $email)->where('id', '!=', $userId)->exists()) {
-            return new OperationResult(
-                isSuccessful: false,
-                message: 'El correo ya está registrado por otro usuario'
-            );
-        }
-
-        // Convert functional roles to database roles
-        $role = match ($data->role) {
-            'DOCENTE' => 'TEACHER',
-            'AUXILIAR' => 'ASSISTANT',
-            'ADMIN' => 'ADMIN',
-            default => null
-        };
-
-        if ($role === null) {
+        if ($roles->isEmpty()) {
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Rol no válido'
@@ -198,270 +218,240 @@ class CoreDataStorage
         }
 
         try {
-            $usuario->nombre = $data->fullName;
-            $usuario->email = $email;
+            DB::transaction(function () use ($user, $roles) {
+                $roleIds = $roles->pluck('id')->toArray();
 
-            if (!empty($data->newPassword)) {
-                $usuario->contrasena = bcrypt($data->newPassword);
-            }
-
-            $usuario->save();
-            
-            $rolModelo = Rol::where('nombre', $role)->first();
-
-            if ($rolModelo) {
-                $usuario->roles()->sync([
-                $rolModelo->id => [
-                'activo' => true,
-                'fecha_asignacion' => now()
-                    ]
+                $user->roles()->syncWithPivotValues($roleIds, [
+                    'activo' => true,
+                    'fecha_asignacion' => now(),
                 ]);
-    }
+
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => $user->id,
+                    'accion' => 'MODIFICAR_ROLES',
+                    'entidad_tipo' => 'usuario',
+                    'entidad_id' => $user->id,
+                    'detalles' => json_encode([
+                        'roles_asignados' => $roles->pluck('nombre')->toArray(),
+                    ]),
+                    'fecha' => now(),
+                ]);
+            });
 
             return new OperationResult(
                 isSuccessful: true,
-                message: 'Usuario actualizado correctamente'
+                message: 'Roles actualizados correctamente'
             );
         } catch (\Throwable $e) {
             return new OperationResult(
                 isSuccessful: false,
-                message: 'Error al actualizar usuario: ' . $e->getMessage()
+                message: 'Error al actualizar roles: ' . $e->getMessage()
             );
         }
     }
+
     /**
-     * Retrieves all active academic staff members ordered alphabetically by name.
+     * Updates personal data (name, CI, password) of the authenticated user.
      *
-     * @return array<UserSummary>
-     */
-    public function getAcademicStaff(): array
-    {
-        $usuarios = Usuario::where('activo', true)
-        ->with('roles')
-        ->orderBy('nombre', 'asc')
-        ->get();
-
-        return $usuarios->map(fn(Usuario $usuario) => new UserSummary(
-            userId: (int) $usuario->id,
-            role: (string) ($usuario->roles->first()?->nombre ?? ''),
-            fullName: (string) $usuario->nombre,
-            email: (string) $usuario->email,
-            isActive: (bool) $usuario->activo,
-        ))->all();
-    }
-
-    /**
-     * Retrieves all course groups assigned to a specific teacher with the enrolled student count.
-     *
-     * @param int $teacherId
-     * @return array<CourseGroupSummary>
-     */
-    public function getTeacherCourses(int $teacherId): array
-    {
-        $courses = MateriaGrupo::where('docente_id', $teacherId)
-            ->with('materia')
-            ->withCount('inscripciones')
-            ->orderBy('grupo', 'asc')
-            ->get();
-
-        return $courses->map(fn(MateriaGrupo $c) => new CourseGroupSummary(
-            courseGroupId: (string) $c->id,
-            subjectCode: (string) $c->materia->sigla,
-            subjectName: (string) $c->materia->nombre,
-            groupCode: (string) $c->grupo,
-            academicTerm: (string) $c->gestion,
-            totalEnrolled: (int) ($c->inscripciones_count ?? 0),
-            teacherId: (int) $c->docente_id,
-        ))->all();
-    }
-    
-    /**
-    * Retrieves all processed course rosters with the enrolled student count.
-    *
-    *   @return array<ProcessedRosterSummary>
-    */
-    public function getProcessedRosters(): array
-    {
-        $courses = MateriaGrupo::with([
-            'docente',
-            'materia'
-        ])
-        ->withCount('inscripciones')
-        ->orderBy('grupo')
-        ->get();
-
-        return $courses->map(fn(MateriaGrupo $course) => new ProcessedRosterSummary(
-            courseGroupId: (string) $course->id, 
-            subjectCode: (string) $course->materia->sigla, 
-            subjectName: (string) $course->materia->nombre, 
-            groupCode: (string) $course->grupo, 
-            academicTerm: (string) $course->gestion, 
-            totalStudents: (int) ($course->inscripciones_count ?? 0), 
-            teacherName: $course->docente?->nombre, 
-        ))->all();
-    }
-
-    /**
-     * Retrieves the list of enrolled students for a specific course group with their eligibility status.
-     *
-     * @param string $courseGroupId
-     * @return array<EnrolledStudentSummary>
-     */
-    public function getEnrolledStudents(string $courseGroupId): array
-    {
-        $enrollments = Inscripcion::where('materia_grupo_id', $courseGroupId)
-            ->with('estudiante.usuario')
-            ->get();
-
-        return $enrollments->map(function (Inscripcion $enrollment) {
-            return new EnrolledStudentSummary(
-                    studentKey: (string) $enrollment->estudiante->codigo_sis,
-                    ci: (string) ($enrollment->estudiante?->usuario?->ci ?? ''),
-                    fullName: (string) ($enrollment->estudiante?->usuario?->nombre ?? ''),
-                    status: (string) ($enrollment->estado?->nombre ?? ''),
-                    ineligibilityReason: $enrollment->motivo_inhabilitacion,
-            );
-        })->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
-    }
-
-    /**
-     * Retrieves all exams scheduled for a course group.
-     *
-     * @param string $courseGroupId
-     * @return array<ExamSummary>
-     */
-    public function getCourseExams(string $courseGroupId): array
-    {
-        $mGroupId = $this->resolveCourseGroupId($courseGroupId);
-
-        if (!$mGroupId) {
-            return [];
-        }
-
-        $exams = Examen::where('materia_grupo_id', $mGroupId)
-            ->where('activo', true)
-            ->with(['tipo', 'aulas', 'normas'])
-            ->orderBy('fecha', 'asc')
-            ->orderBy('hora_inicio', 'asc')
-            ->get();
-
-        $now = now();
-        $todayStr = $now->format('Y-m-d');
-        $nowTimeStr = $now->format('H:i:s');
-
-        return $exams->map(function (Examen $exam) use ($courseGroupId, $todayStr, $nowTimeStr) {
-            $fechaStr = $exam->fecha instanceof \DateTimeInterface
-                ? $exam->fecha->format('Y-m-d')
-                : (string) $exam->fecha;
-
-            $startTimeFormatted = date('H:i', strtotime($exam->hora_inicio));
-            $endTimeFormatted = date('H:i', strtotime($exam->hora_fin));
-            $dateDisplay = date('d/m/Y', strtotime($fechaStr));
-
-            if ($fechaStr < $todayStr || ($fechaStr === $todayStr && $exam->hora_fin < $nowTimeStr)) {
-                $status = 'Finalizado';
-            } elseif ($fechaStr === $todayStr && $exam->hora_inicio <= $nowTimeStr && $exam->hora_fin >= $nowTimeStr) {
-                $status = 'En curso';
-            } else {
-                $status = 'Próximamente';
-            }
-
-            return new ExamSummary(
-                id: (int) $exam->id,
-                courseGroupId: $courseGroupId,
-                title: (string) ($exam->tipo?->nombre ?? 'Examen'),
-                date: $dateDisplay,
-                startTime: $startTimeFormatted,
-                endTime: $endTimeFormatted,
-                status: $status,
-                classrooms: $exam->aulas->pluck('nombre')->all(),
-                rules: $exam->normas->pluck('descripcion')->all()
-            );
-        })->all();
-    }
-
-    /**
-     * Schedules a new exam for a course group.
-     *
-     * @param string $courseGroupId
-     * @param ScheduleExamData $data
+     * @param UserPersonalData $data
      * @return OperationResult
      */
-    public function scheduleExam(string $courseGroupId, ScheduleExamData $data): OperationResult
+    public function updatePersonalData(UserPersonalData $data): OperationResult
     {
-        $mGroupId = $this->resolveCourseGroupId($courseGroupId);
-
-        if (!$mGroupId || !MateriaGrupo::where('id', $mGroupId)->exists()) {
-            return new OperationResult(
-                isSuccessful: false,
-                message: 'El grupo de materia especificado no existe.'
-            );
-        }
-
-        $parsedDate = date('Y-m-d', strtotime($data->date));
-        $parsedStartTime = date('H:i:s', strtotime($data->startTime));
-        $parsedEndTime = date('H:i:s', strtotime($data->endTime));
-
-        if (!$parsedDate || $parsedDate === '1970-01-01') {
-            return new OperationResult(
-                isSuccessful: false,
-                message: 'La fecha proporcionada no es válida.'
-            );
-        }
+        $user = auth()->user();
 
         try {
-            DB::transaction(function () use ($mGroupId, $data, $parsedDate, $parsedStartTime, $parsedEndTime) {
-                $tipoExamen = TipoExamen::firstOrCreate([
-                    'nombre' => trim($data->title)
-                ]);
+            DB::transaction(function () use ($user, $data) {
+                $user->nombre = trim($data->fullName);
 
-                $examen = Examen::create([
-                    'materia_grupo_id' => $mGroupId,
-                    'tipo_examen_id' => $tipoExamen->id,
-                    'fecha' => $parsedDate,
-                    'hora_inicio' => $parsedStartTime,
-                    'hora_fin' => $parsedEndTime,
+                if (!empty($data->ci)) {
+                    $user->ci = trim($data->ci);
+                }
+
+                if (!empty($data->newPassword)) {
+                    $user->contrasena = Hash::make($data->newPassword);
+                }
+
+                $user->save();
+
+                DB::table('registro_auditoria')->insert([
+                    'usuario_id' => $user->id,
+                    'accion' => 'MODIFICAR_DATOS_PERSONALES',
+                    'entidad_tipo' => 'usuario',
+                    'entidad_id' => $user->id,
+                    'detalles' => json_encode([
+                        'nombre' => $data->fullName,
+                        'ci' => $data->ci,
+                        'cambio_password' => !empty($data->newPassword),
+                    ]),
+                    'fecha' => now(),
+                ]);
+            });
+
+            return new OperationResult(
+                isSuccessful: true,
+                message: 'Datos actualizados correctamente'
+            );
+
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'El CI ya está registrado'
+            );
+        } catch (\Throwable $e) {
+            return new OperationResult(
+                isSuccessful: false,
+                message: 'Error al actualizar datos: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Registers a new exam with room assignments and rules.
+     *
+     * @param ExamRegistrationData $data
+     * @return OperationResult
+     */
+    public function registerExam(ExamRegistrationData $data, ?int $auditUserId = null): OperationResult
+    {
+        try {
+            DB::transaction(function () use ($data, $auditUserId) {
+                $now = now();
+
+                // Validate course group exists
+                $courseGroup = CourseGroup::find($data->courseGroupId);
+                if (!$courseGroup) {
+                    throw new \Exception("El grupo de materia con ID {$data->courseGroupId} no existe.");
+                }
+
+                // Validate exam type exists
+                $examType = ExamType::find($data->examTypeId);
+                if (!$examType) {
+                    throw new \Exception("El tipo de examen con ID {$data->examTypeId} no existe.");
+                }
+
+                // Validate rooms exist
+                $roomIds = array_column($data->rooms, 'roomId');
+                $existingRooms = Room::whereIn('id', $roomIds)->count();
+                if ($existingRooms !== count($roomIds)) {
+                    throw new \Exception("Una o más aulas no existen.");
+                }
+
+                // Validate exam type ID
+                if (empty($data->examTypeId)) {
+                    throw new \Exception("El tipo de examen es requerido.");
+                }
+
+                // Check for duplicate exam (same course group, exam type, and date)
+                $existingExam = Exam::where('materia_grupo_id', $data->courseGroupId)
+                    ->where('tipo_examen_id', $data->examTypeId)
+                    ->where('fecha', $data->date)
+                    ->where('activo', true)
+                    ->first();
+
+                if ($existingExam) {
+                    throw new \Exception("Ya existe un examen programado para esta materia, tipo y fecha.");
+                }
+
+                // Calculate end time (start + 1:30h)
+                $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
+
+                // Get default status: AUSENTE
+                $ausenteStatus = ExamStudentStatus::where('nombre', 'AUSENTE')->first();
+                if (!$ausenteStatus) {
+                    throw new \Exception("El estado 'AUSENTE' no está configurado en el sistema.");
+                }
+
+                // Create exam
+                $exam = Exam::create([
+                    'materia_grupo_id' => $data->courseGroupId,
+                    'tipo_examen_id' => $data->examTypeId,
+                    'fecha' => $data->date,
+                    'hora_inicio' => $data->startTime,
+                    'hora_fin' => $endTime,
                     'activo' => true,
                 ]);
 
-                foreach ($data->classrooms as $roomName) {
-                    $cleanName = trim((string) $roomName);
-                    if ($cleanName === '') {
-                        continue;
+                if (!$exam || !$exam->id) {
+                    throw new \Exception("No se pudo crear el examen.");
+                }
+
+                // Validate student IDs exist in database
+                $allStudentIds = [];
+                foreach ($data->rooms as $room) {
+                    $allStudentIds = array_merge($allStudentIds, $room->students);
+                }
+                $existingStudents = User::whereIn('id', array_unique($allStudentIds))->count();
+                if ($existingStudents !== count(array_unique($allStudentIds))) {
+                    throw new \Exception("Uno o más estudiantes no existen en la base de datos.");
+                }
+
+                // Assign rooms with students
+                foreach ($data->rooms as $room) {
+                    $examRoom = ExamRoom::create([
+                        'examen_id' => $exam->id,
+                        'aula_id' => $room->roomId,
+                        'cupo_asignado' => count($room->students),
+                        'auxiliar_id' => $room->auxiliarId,
+                    ]);
+
+                    // Assign students to this room
+                    foreach ($room->students as $studentId) {
+                        ExamStudent::create([
+                            'examen_id' => $exam->id,
+                            'usuario_id' => $studentId,
+                            'aula_id' => $room->roomId,
+                            'estado_id' => $ausenteStatus->id,
+                            'observaciones' => null,
+                        ]);
                     }
+                }
 
-                    $capacidad = str_contains(strtolower($cleanName), 'auditorio') ? 120 : 80;
-                    $aula = Aula::firstOrCreate(
-                        ['nombre' => $cleanName],
-                        ['capacidad' => $capacidad]
-                    );
-
-                    ExamenAula::firstOrCreate([
-                        'examen_id' => $examen->id,
-                        'aula_id' => $aula->id,
-                    ], [
-                        'cupo_asignado' => $aula->capacidad ?? $capacidad,
+                // Create general rules
+                foreach ($data->generalRules as $rule) {
+                    ExamRule::create([
+                        'examen_id' => $exam->id,
+                        'descripcion' => $rule,
                     ]);
                 }
 
-                foreach ($data->rules as $ruleText) {
-                    $cleanRule = trim((string) $ruleText);
-                    if ($cleanRule === '') {
-                        continue;
-                    }
+                // Create student-specific rules (normas particulares)
+                foreach ($data->studentRules as $studentRule) {
+                    ExamStudent::where('examen_id', $exam->id)
+                        ->where('usuario_id', $studentRule->studentId)
+                        ->update([
+                            'norma_particular' => $studentRule->rule,
+                        ]);
+                }
 
-                    ExamenNorma::create([
-                        'examen_id' => $examen->id,
-                        'descripcion' => $cleanRule,
+                // Audit
+                if ($auditUserId) {
+                    DB::table('registro_auditoria')->insert([
+                        'usuario_id' => $auditUserId,
+                        'accion' => 'PROGRAMAR_EXAMEN',
+                        'entidad_tipo' => 'examen',
+                        'entidad_id' => $exam->id,
+                        'detalles' => json_encode([
+                            'course_group_id' => $data->courseGroupId,
+                            'exam_type_id' => $data->examTypeId,
+                            'date' => $data->date,
+                            'start_time' => $data->startTime,
+                            'end_time' => $endTime,
+                            'rooms_count' => count($data->rooms),
+                            'general_rules_count' => count($data->generalRules),
+                            'student_rules_count' => count($data->studentRules),
+                        ]),
+                        'fecha' => $now,
                     ]);
                 }
             });
 
             return new OperationResult(
                 isSuccessful: true,
-                message: 'Examen programado exitosamente.'
+                message: 'Examen programado correctamente'
             );
         } catch (\Throwable $e) {
+            Log::error('Error registering exam: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() . ' - Trace: ' . $e->getTraceAsString());
             return new OperationResult(
                 isSuccessful: false,
                 message: 'Error al programar el examen: ' . $e->getMessage()
@@ -470,38 +460,1192 @@ class CoreDataStorage
     }
 
     /**
-     * Resolves course group ID from an integer string or canonical format (e.g. 'INF110-G1-2/2026').
+     * Retrieves all available (non-reserved) rooms for a specific date and time.
+     * A room is unavailable if it has an exam that overlaps with the given time slot.
+     *
+     * @param string $date
+     * @param string $startTime
+     * @return array<RoomSummary>
      */
-    private function resolveCourseGroupId(string $courseGroupId): ?int
+    public function getAvailableRooms(string $date, string $startTime): array
     {
-        if (is_numeric($courseGroupId)) {
-            return (int) $courseGroupId;
+        $endTime = \Carbon\Carbon::parse($startTime)->addMinutes(90)->format('H:i');
+
+        // Find rooms that have exams overlapping with the requested time slot
+        $reservedRoomIds = ExamRoom::whereHas('exam', function ($query) use ($date, $startTime, $endTime) {
+            $query->where('fecha', $date)
+                ->where('hora_inicio', '<', $endTime)
+                ->where('hora_fin', '>', $startTime);
+        })->pluck('aula_id');
+
+        return Room::whereNotIn('id', $reservedRoomIds)
+            ->orderBy('capacidad', 'asc')
+            ->get()
+            ->map(fn(Room $room) => new RoomSummary(
+                roomId: (string) $room->id,
+                roomName: (string) $room->nombre,
+                capacity: (int) $room->capacidad,
+            ))->all();
+    }
+
+    /**
+     * Retrieves all active exams for a specific course group with their assigned rooms.
+     *
+     * @param int $courseGroupId
+     * @return array<ExamSummary>
+     */
+    public function getExamsByCourseGroup(int $courseGroupId): array
+    {
+        return Exam::with(['examType', 'rooms'])
+            ->where('materia_grupo_id', $courseGroupId)
+            ->where('activo', true)
+            ->orderBy('fecha', 'asc')
+            ->get()
+            ->map(fn(Exam $exam) => new ExamSummary(
+                examId: (string) $exam->id,
+                courseGroupId: (string) $exam->materia_grupo_id,
+                examType: (string) ($exam->examType?->nombre ?? ''),
+                date: $exam->fecha->format('Y-m-d'),
+                startTime: (string) $exam->hora_inicio,
+                endTime: (string) $exam->hora_fin,
+                rooms: $exam->rooms->map(fn(Room $room) => new ExamRoomSummary(
+                    roomId: (string) $room->pivot->aula_id,
+                    roomName: (string) $room->nombre,
+                    assignedCapacity: (int) $room->pivot->cupo_asignado,
+                    assistantId: $room->pivot->auxiliar_id ? (int) $room->pivot->auxiliar_id : null,
+                ))->toArray(),
+            ))->all();
+    }
+
+    /**
+     * Retrieves all active exams with their course and assigned control rooms.
+     * The authenticated user's ID is used to calculate room-level access.
+     *
+     * @return array<AllExamSummary>
+     */
+    public function getAllExams(): array
+    {
+        $authenticatedUserId = (int) auth()->id();
+
+        return Exam::with([
+                'courseGroup.course',
+                'examType',
+                'rules',
+                'examRooms.room',
+            ])
+            ->where('activo', true)
+            ->orderBy('fecha', 'asc')
+            ->orderBy('hora_inicio', 'asc')
+            ->get()
+            ->map(function (Exam $exam) use ($authenticatedUserId) {
+                $rooms = $exam->examRooms
+                    ->map(fn(ExamRoom $examRoom) => new AllExamRoomSummary(
+                        roomId: (string) $examRoom->aula_id,
+                        roomName: (string) ($examRoom->room?->nombre ?? ''),
+                        assistantId: $examRoom->auxiliar_id !== null
+                            ? (int) $examRoom->auxiliar_id
+                            : null,
+                        canInteract: $examRoom->auxiliar_id !== null
+                            && (int) $examRoom->auxiliar_id === $authenticatedUserId,
+                    ))
+                    ->values()
+                    ->all();
+
+                return new AllExamSummary(
+                    examId: (string) $exam->id,
+                    courseGroupId: (string) $exam->materia_grupo_id,
+                    subjectName: (string) ($exam->courseGroup?->course?->nombre ?? ''),
+                    group: (string) ($exam->courseGroup?->grupo ?? ''),
+                    examType: (string) ($exam->examType?->nombre ?? ''),
+                    date: $exam->fecha?->format('Y-m-d') ?? '',
+                    startTime: (string) $exam->hora_inicio,
+                    endTime: (string) $exam->hora_fin,
+                    rooms: $rooms,
+                    generalRules: $exam->rules
+                        ->pluck('descripcion')
+                        ->values()
+                        ->all(),
+                );
+            })
+            ->all();
+    }
+
+    /**
+     * Checks a student's eligibility and exam room assignment without
+     * registering an entry or changing any exam status.
+     */
+    public function checkExamAccess(string $identifier, int $examId, int $roomId): ExamAccessResult
+    {
+        $student = $this->findStudentBySisOrCi($identifier);
+
+        if ($student === null) {
+            return new ExamAccessResult(
+                isSuccessful: false,
+                data: [
+                    'student' => null,
+                    'access' => [
+                        'result' => 'ESTUDIANTE NO ENCONTRADO',
+                        'assigned_room_id' => null,
+                        'assigned_room_name' => null,
+                        'check_in_time' => null,
+                    ],
+                    'expulsion_history' => [],
+                ],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
         }
 
-        $parts = explode('-', $courseGroupId);
-        if (count($parts) >= 3) {
-            $sigla = $parts[0];
-            $grupo = ltrim($parts[1], 'Gg');
-            $gestion = implode('-', array_slice($parts, 2));
+        $exam = Exam::with('courseGroup')->find($examId);
 
-            $materia = Materia::where('sigla', strtoupper($sigla))->first();
-            if ($materia) {
-                $mg = MateriaGrupo::where('materia_id', $materia->id)
-                    ->where('grupo', strtoupper($grupo))
-                    ->where('gestion', $gestion)
-                    ->first();
-                if ($mg) {
-                    return (int) $mg->id;
-                }
+        if ($exam === null) {
+            return new ExamAccessResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $studentData = [
+            'user_id' => (int) $student->usuario_id,
+            'codigo_sis' => (string) $student->codigo_sis,
+            'ci' => (string) ($student->user?->ci ?? ''),
+            'full_name' => (string) ($student->user?->nombre ?? ''),
+        ];
+
+        $expulsionHistory = $this->getStudentExpulsionHistory((int) $student->usuario_id);
+
+        $examStudent = ExamStudent::with(['room', 'status'])
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent !== null) {
+            $authenticatedUserId = (int) auth()->id();
+            $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+            $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+                ->where('aula_id', $examStudent->aula_id)
+                ->where('auxiliar_id', $authenticatedUserId)
+                ->exists();
+
+            if (!$isExamTeacher && !$isAssignedAssistant) {
+                return new ExamAccessResult(
+                    isSuccessful: false,
+                    data: [],
+                    message: 'No tiene permiso para validar el ingreso en este examen.',
+                    httpStatus: 403,
+                );
             }
         }
 
-        return null;
+        // An exceptional entry or a previous normal entry takes precedence
+        // over the current enrollment status: the student already entered
+        // this specific exam.
+        if ($examStudent !== null
+            && ($examStudent->status?->nombre === 'PRESENTE'
+                || $examStudent->status?->nombre === 'INGRESO EXCEPCIONAL'
+                || $examStudent->hora_ingreso !== null)) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'YA REGISTRÓ INGRESO',
+                        'assigned_room_id' => $examStudent->aula_id !== null
+                            ? (int) $examStudent->aula_id
+                            : null,
+                        'assigned_room_name' => $examStudent->room?->nombre,
+                        'check_in_time' => $examStudent->hora_ingreso?->toDateTimeString(),
+                        'norma_particular' => $examStudent->norma_particular,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante ya registró su ingreso.',
+            );
+        }
+
+        $enrollment = StudentCourseEnrollment::with('enrollmentStatus')
+            ->where('usuario_id', $student->usuario_id)
+            ->where('materia_grupo_id', $exam->materia_grupo_id)
+            ->first();
+
+        if ($enrollment === null) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'INHABILITADO',
+                        'ineligibility_reason' => 'El estudiante no está inscrito en la materia del examen.',
+                        'assigned_room_id' => null,
+                        'assigned_room_name' => null,
+                        'check_in_time' => null,
+                        'norma_particular' => $examStudent?->norma_particular,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante no está inscrito en la materia del examen.',
+            );
+        }
+
+        $enrollmentStatus = $enrollment->enrollmentStatus;
+
+        if ($enrollmentStatus?->nombre === 'INHABILITADO') {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'INHABILITADO',
+                        'ineligibility_reason' => $enrollment->motivo_inhabilitacion,
+                        'assigned_room_id' => null,
+                        'assigned_room_name' => null,
+                        'check_in_time' => null,
+                        'norma_particular' => $examStudent?->norma_particular,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante está inhabilitado.',
+            );
+        }
+
+        if ($examStudent === null) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'NO FIGURA EN EL EXAMEN',
+                        'assigned_room_id' => null,
+                        'assigned_room_name' => null,
+                        'check_in_time' => null,
+                        'norma_particular' => null,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante no figura en el examen.',
+            );
+        }
+
+        $assignedRoomId = $examStudent->aula_id !== null
+            ? (int) $examStudent->aula_id
+            : null;
+        $assignedRoomName = $examStudent->room?->nombre;
+        $checkInTime = $examStudent->hora_ingreso?->toDateTimeString();
+
+        if ($examStudent->status?->nombre === 'PRESENTE' || $examStudent->hora_ingreso !== null) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'YA REGISTRÓ INGRESO',
+                        'assigned_room_id' => $assignedRoomId,
+                        'assigned_room_name' => $assignedRoomName,
+                        'check_in_time' => $checkInTime,
+                        'norma_particular' => $examStudent->norma_particular,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante ya registró su ingreso.',
+            );
+        }
+
+        if ($assignedRoomId !== $roomId) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'AULA INCORRECTA',
+                        'assigned_room_id' => $assignedRoomId,
+                        'assigned_room_name' => $assignedRoomName,
+                        'check_in_time' => null,
+                        'norma_particular' => $examStudent->norma_particular,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante pertenece a otra aula.',
+            );
+        }
+
+        $presentStatusId = ExamStudentStatus::where('nombre', 'PRESENTE')->value('id');
+
+        if ($presentStatusId === null) {
+            return new ExamAccessResult(
+                isSuccessful: false,
+                data: [],
+                message: "El estado 'PRESENTE' no está configurado en el sistema.",
+                httpStatus: 500,
+            );
+        }
+
+        $entryResult = DB::transaction(function () use ($examId, $student, $presentStatusId, $roomId) {
+            $lockedExamStudent = ExamStudent::where('examen_id', $examId)
+                ->where('usuario_id', $student->usuario_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($lockedExamStudent === null) {
+                return [
+                    'alreadyRegistered' => false,
+                    'checkInTime' => null,
+                ];
+            }
+
+            if ($lockedExamStudent->hora_ingreso !== null || $lockedExamStudent->estado_id === $presentStatusId) {
+                return [
+                    'alreadyRegistered' => true,
+                    'checkInTime' => $lockedExamStudent->hora_ingreso?->toDateTimeString(),
+                ];
+            }
+
+            $entryTime = now();
+
+            DB::table('examen_estudiante')
+                ->where('examen_id', $examId)
+                ->where('usuario_id', $student->usuario_id)
+                ->where('aula_id', $roomId)
+                ->update([
+                    'estado_id' => $presentStatusId,
+                    'hora_ingreso' => $entryTime,
+                    'updated_at' => $entryTime,
+                ]);
+
+            DB::table('registro_acceso_examen')->insert([
+                'exam_id' => $examId,
+                'aula_id' => $roomId,
+                'user_id_estudiante' => $student->usuario_id,
+                'user_id_operador' => auth()->id(),
+                'fecha' => $entryTime->toDateString(),
+                'hora' => $entryTime->toTimeString(),
+                'resultado' => 'PERMITIDO',
+                'observacion' => null,
+                'created_at' => $entryTime,
+                'updated_at' => $entryTime,
+            ]);
+
+            return [
+                'alreadyRegistered' => false,
+                'checkInTime' => $entryTime->toDateTimeString(),
+            ];
+        });
+
+        if ($entryResult['alreadyRegistered']) {
+            return new ExamAccessResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'access' => [
+                        'result' => 'YA REGISTRÓ INGRESO',
+                        'assigned_room_id' => $assignedRoomId,
+                        'assigned_room_name' => $assignedRoomName,
+                        'check_in_time' => $entryResult['checkInTime'],
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante ya registró su ingreso.',
+            );
+        }
+
+        return new ExamAccessResult(
+            isSuccessful: true,
+            data: [
+                'student' => $studentData,
+                'access' => [
+                    'result' => 'HABILITADO',
+                    'assigned_room_id' => $assignedRoomId,
+                    'assigned_room_name' => $assignedRoomName,
+                    'check_in_time' => $entryResult['checkInTime'],
+                    'norma_particular' => $examStudent->norma_particular,
+                ],
+                'expulsion_history' => $expulsionHistory,
+            ],
+            message: 'Estudiante habilitado para ingresar.',
+        );
     }
 
+    private function findStudentBySisOrCi(string $identifier): ?Student
+    {
+        $students = collect();
+
+        if (ctype_digit($identifier)) {
+            $student = Student::with('user')
+                ->where('codigo_sis', (int) $identifier)
+                ->first();
+
+            if ($student !== null) {
+                $students->push($student);
+            }
+        }
+
+        $studentsByCi = Student::with('user')
+            ->whereHas('user', fn($query) => $query->where('ci', $identifier))
+            ->get();
+
+        $students = $students
+            ->merge($studentsByCi)
+            ->unique('usuario_id')
+            ->values();
+
+        return $students->count() === 1 ? $students->first() : null;
+    }
 
     /**
-     * Mandatory column headers required in the roster file.
+     * @return list<array<string, mixed>>
+     */
+    private function getStudentExpulsionHistory(int $userId): array
+    {
+    $expelledStatusId = ExamStudentStatus::where('nombre', 'EXPULSADO')->value('id');
+
+    if ($expelledStatusId === null) {
+        return [];
+    }
+
+    return ExamStudent::with(['exam.courseGroup.course', 'exam.examType', 'room'])
+        ->where('usuario_id', $userId)
+        ->where('estado_id', $expelledStatusId)
+        ->orderByDesc('created_at')
+        ->get()
+        ->map(fn(ExamStudent $examStudent) => (new ExpulsionHistoryItem( // <-- Paréntesis de apertura para envolver el objeto
+            examId: (string) $examStudent->exam_id,
+            subjectName: (string) ($examStudent->exam?->courseGroup?->course?->nombre ?? ''),
+            group: (string) ($examStudent->exam?->courseGroup?->grupo ?? ''),
+            academicTerm: (string) ($examStudent->exam?->courseGroup?->gestion ?? ''),
+            examType: (string) ($examStudent->exam?->examType?->nombre ?? ''),
+            date: $examStudent->exam?->fecha?->format('Y-m-d'),
+            roomName: $examStudent->room?->nombre,
+            reason: $examStudent->motivo_expulsion,
+        ))->toArray())
+        ->values()
+        ->all();
+    }
+
+    /**
+     * Stores an observation for a student already assigned to an exam.
+     * Only the exam teacher or the assistant assigned to the student's room
+     * can update this field.
+     */
+    public function storeExamStudentObservation(
+        string $identifier,
+        int $examId,
+        string $observation,
+    ): ExamStudentObservationResult {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $enrollment = StudentCourseEnrollment::with('enrollmentStatus')
+            ->where('usuario_id', $student->usuario_id)
+            ->where('materia_grupo_id', $exam->materia_grupo_id)
+            ->first();
+
+        if ($enrollment === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no está inscrito en la materia del examen.',
+                httpStatus: 422,
+            );
+        }
+
+        if ($enrollment->enrollmentStatus?->nombre !== 'HABILITADO') {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [
+                    'status' => $enrollment->enrollmentStatus?->nombre,
+                    'ineligibility_reason' => $enrollment->motivo_inhabilitacion,
+                ],
+                message: 'Solo se pueden registrar observaciones para estudiantes habilitados.',
+                httpStatus: 422,
+            );
+        }
+
+        $examStudent = ExamStudent::where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent === null) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no figura en el examen.',
+                httpStatus: 404,
+            );
+        }
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('aula_id', $examStudent->aula_id)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new ExamStudentObservationResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para registrar observaciones en este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        $cleanObservation = trim($observation);
+
+        DB::table('examen_estudiante')
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->update([
+                'observaciones' => $cleanObservation,
+                'updated_at' => now(),
+            ]);
+
+        return new ExamStudentObservationResult(
+            isSuccessful: true,
+            data: [
+                'student' => [
+                    'user_id' => (int) $student->usuario_id,
+                    'codigo_sis' => (string) $student->codigo_sis,
+                    'ci' => (string) ($student->user?->ci ?? ''),
+                    'full_name' => (string) ($student->user?->nombre ?? ''),
+                ],
+                'exam_id' => $examId,
+                'observation' => $cleanObservation,
+                'updated_at' => now()->toIso8601String(),
+            ],
+            message: 'Observación registrada correctamente.',
+        );
+    }
+
+    /**
+     * Registers an exceptional entry for an ineligible student already
+     * assigned to an exam. The operation also records the entry time.
+     */
+    public function registerExceptionalEntry(
+        string $identifier,
+        int $examId,
+        string $observation,
+    ): ExceptionalEntryResult {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $enrollment = StudentCourseEnrollment::with('enrollmentStatus')
+            ->where('usuario_id', $student->usuario_id)
+            ->where('materia_grupo_id', $exam->materia_grupo_id)
+            ->first();
+
+        if ($enrollment === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no está inscrito en la materia del examen.',
+                httpStatus: 422,
+            );
+        }
+
+        if ($enrollment->enrollmentStatus?->nombre !== 'INHABILITADO') {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [
+                    'status' => $enrollment->enrollmentStatus?->nombre,
+                ],
+                message: 'El ingreso excepcional solo aplica a estudiantes inhabilitados.',
+                httpStatus: 422,
+            );
+        }
+
+        $examStudent = ExamStudent::where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no figura en el examen.',
+                httpStatus: 404,
+            );
+        }
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('aula_id', $examStudent->aula_id)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para registrar un ingreso excepcional en este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        if ($examStudent->hora_ingreso !== null
+            || in_array($examStudent->status?->nombre, ['PRESENTE', 'INGRESO EXCEPCIONAL'], true)) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [
+                    'check_in_time' => $examStudent->hora_ingreso?->toDateTimeString(),
+                ],
+                message: 'El estudiante ya tiene un ingreso registrado en este examen.',
+                httpStatus: 409,
+            );
+        }
+
+        $exceptionalStatusId = ExamStudentStatus::where('nombre', 'INGRESO EXCEPCIONAL')->value('id');
+
+        if ($exceptionalStatusId === null) {
+            return new ExceptionalEntryResult(
+                isSuccessful: false,
+                data: [],
+                message: "El estado 'INGRESO EXCEPCIONAL' no está configurado en el sistema.",
+                httpStatus: 500,
+            );
+        }
+
+        $cleanObservation = trim($observation);
+        $entryTime = now();
+
+        DB::transaction(function () use ($examStudent, $exceptionalStatusId, $cleanObservation, $entryTime, $authenticatedUserId) {
+            DB::table('examen_estudiante')
+                ->where('examen_id', $examStudent->examen_id)
+                ->where('usuario_id', $examStudent->usuario_id)
+                ->update([
+                    'estado_id' => $exceptionalStatusId,
+                    'observaciones' => $cleanObservation,
+                    'hora_ingreso' => $entryTime,
+                    'updated_at' => $entryTime,
+                ]);
+
+            DB::table('registro_acceso_examen')->insert([
+                'exam_id' => $examStudent->examen_id,
+                'aula_id' => $examStudent->aula_id,
+                'user_id_estudiante' => $examStudent->usuario_id,
+                'user_id_operador' => $authenticatedUserId,
+                'fecha' => $entryTime->toDateString(),
+                'hora' => $entryTime->toTimeString(),
+                'resultado' => 'EXCEPCION',
+                'observacion' => $cleanObservation,
+                'created_at' => $entryTime,
+                'updated_at' => $entryTime,
+            ]);
+        });
+
+        return new ExceptionalEntryResult(
+            isSuccessful: true,
+            data: [
+                'student' => [
+                    'user_id' => (int) $student->usuario_id,
+                    'codigo_sis' => (string) $student->codigo_sis,
+                    'ci' => (string) ($student->user?->ci ?? ''),
+                    'full_name' => (string) ($student->user?->nombre ?? ''),
+                ],
+                'exam_id' => $examId,
+                'status' => 'INGRESO EXCEPCIONAL',
+                'observation' => $cleanObservation,
+                'check_in_time' => $entryTime->toDateTimeString(),
+            ],
+            message: 'Ingreso excepcional registrado correctamente.',
+        );
+    }
+
+    /**
+     * Registers an expulsion for a student already assigned to an exam.
+     */
+    public function registerExamStudentExpulsion(
+        string $identifier,
+        int $examId,
+        string $reason,
+    ): ExamStudentExpulsionResult {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $examStudent = ExamStudent::with('room')
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        if ($examStudent === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El estudiante no figura en el examen.',
+                httpStatus: 404,
+            );
+        }
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('aula_id', $examStudent->aula_id)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para registrar expulsiones en este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        $expelledStatusId = ExamStudentStatus::where('nombre', 'EXPULSADO')->value('id');
+
+        if ($expelledStatusId === null) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [],
+                message: "El estado 'EXPULSADO' no está configurado en el sistema.",
+                httpStatus: 500,
+            );
+        }
+
+        if ((int) $examStudent->estado_id === (int) $expelledStatusId) {
+            return new ExamStudentExpulsionResult(
+                isSuccessful: false,
+                data: [
+                    'reason' => $examStudent->motivo_expulsion,
+                ],
+                message: 'El estudiante ya fue expulsado de este examen.',
+                httpStatus: 409,
+            );
+        }
+
+        $cleanReason = trim($reason);
+        $eventTime = now();
+
+        DB::transaction(function () use ($examStudent, $expelledStatusId, $cleanReason, $eventTime, $authenticatedUserId) {
+            DB::table('examen_estudiante')
+                ->where('examen_id', $examStudent->examen_id)
+                ->where('usuario_id', $examStudent->usuario_id)
+                ->update([
+                    'estado_id' => $expelledStatusId,
+                    'motivo_expulsion' => $cleanReason,
+                    'updated_at' => $eventTime,
+                ]);
+
+            DB::table('registro_acceso_examen')->insert([
+                'exam_id' => $examStudent->examen_id,
+                'aula_id' => $examStudent->aula_id,
+                'user_id_estudiante' => $examStudent->usuario_id,
+                'user_id_operador' => $authenticatedUserId,
+                'fecha' => $eventTime->toDateString(),
+                'hora' => $eventTime->toTimeString(),
+                'resultado' => 'EXPULSION',
+                'observacion' => $cleanReason,
+                'created_at' => $eventTime,
+                'updated_at' => $eventTime,
+            ]);
+        });
+
+        return new ExamStudentExpulsionResult(
+            isSuccessful: true,
+            data: [
+                'student' => [
+                    'user_id' => (int) $student->usuario_id,
+                    'codigo_sis' => (string) $student->codigo_sis,
+                    'ci' => (string) ($student->user?->ci ?? ''),
+                    'full_name' => (string) ($student->user?->nombre ?? ''),
+                ],
+                'exam_id' => $examId,
+                'status' => 'EXPULSADO',
+                'reason' => $cleanReason,
+                'room_id' => $examStudent->aula_id !== null ? (int) $examStudent->aula_id : null,
+                'room_name' => $examStudent->room?->nombre,
+                'event_time' => $eventTime->toDateTimeString(),
+            ],
+            message: 'Expulsión registrada correctamente.',
+        );
+    }
+
+    /**
+     * Reads the current exam status without changing the student's entry.
+     */
+    public function checkDuringExam(string $identifier, int $examId): DuringExamResult
+    {
+        $student = $this->findStudentBySisOrCi(trim($identifier));
+
+        if ($student === null) {
+            return new DuringExamResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No se encontró un estudiante con el SIS o CI proporcionado.',
+                httpStatus: 404,
+            );
+        }
+
+        $exam = Exam::with('courseGroup')->find($examId);
+
+        if ($exam === null) {
+            return new DuringExamResult(
+                isSuccessful: false,
+                data: [],
+                message: 'El examen no existe.',
+                httpStatus: 404,
+            );
+        }
+
+        $examStudent = ExamStudent::with(['room', 'status'])
+            ->where('examen_id', $examId)
+            ->where('usuario_id', $student->usuario_id)
+            ->first();
+
+        $authenticatedUserId = (int) auth()->id();
+        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
+            ->where('auxiliar_id', $authenticatedUserId)
+            ->when(
+                $examStudent !== null,
+                fn($query) => $query->where('aula_id', $examStudent->aula_id)
+            )
+            ->exists();
+
+        if (!$isExamTeacher && !$isAssignedAssistant) {
+            return new DuringExamResult(
+                isSuccessful: false,
+                data: [],
+                message: 'No tiene permiso para consultar este examen.',
+                httpStatus: 403,
+            );
+        }
+
+        $studentData = [
+            'user_id' => (int) $student->usuario_id,
+            'codigo_sis' => (string) $student->codigo_sis,
+            'ci' => (string) ($student->user?->ci ?? ''),
+            'full_name' => (string) ($student->user?->nombre ?? ''),
+        ];
+
+        $expulsionHistory = $this->getStudentExpulsionHistory((int) $student->usuario_id);
+
+        if ($examStudent === null) {
+            return new DuringExamResult(
+                isSuccessful: true,
+                data: [
+                    'student' => $studentData,
+                    'exam_student' => [
+                        'result' => 'NO FIGURA EN EL EXAMEN',
+                        'status_id' => null,
+                        'assigned_room_id' => null,
+                        'assigned_room_name' => null,
+                        'check_in_time' => null,
+                        'norma_particular' => null,
+                        'observations' => null,
+                        'expulsion_reason' => null,
+                    ],
+                    'expulsion_history' => $expulsionHistory,
+                ],
+                message: 'El estudiante no figura en el examen.',
+            );
+        }
+
+        $result = $examStudent->status?->nombre ?? 'AUSENTE';
+
+        return new DuringExamResult(
+            isSuccessful: true,
+            data: [
+                'student' => $studentData,
+                'exam_student' => [
+                    'result' => $result,
+                    'status_id' => $examStudent->estado_id !== null
+                        ? (int) $examStudent->estado_id
+                        : null,
+                    'assigned_room_id' => $examStudent->aula_id !== null
+                        ? (int) $examStudent->aula_id
+                        : null,
+                    'assigned_room_name' => $examStudent->room?->nombre,
+                    'check_in_time' => $examStudent->hora_ingreso?->toDateTimeString(),
+                    'norma_particular' => $examStudent->norma_particular,
+                    'observations' => $examStudent->observaciones,
+                    'expulsion_reason' => $examStudent->motivo_expulsion,
+                ],
+                'expulsion_history' => $expulsionHistory,
+            ],
+            message: 'Estado del estudiante obtenido correctamente.',
+        );
+    }
+
+    /**
+     * Retrieves all active academic staff members ordered alphabetically by name.
+     *
+     * @return array<UserSummary>
+     */
+    public function getAcademicStaff(): array
+    {
+        return User::with(['roles' => function ($query) {
+                $query->wherePivot('activo', true);
+            }])
+            ->where('activo', true)
+            ->whereHas('roles', function ($query) {
+                $query->where('rol.nombre', '!=', 'ESTUDIANTE');
+            })
+            ->orderBy('nombre', 'asc')
+            ->get()
+            ->map(fn(User $user) => new UserSummary(
+                userId: (int) $user->id,
+                fullName: (string) $user->nombre,
+                email: (string) $user->email,
+                roles: $user->roles->pluck('nombre')->toArray(),
+                isActive: (bool) $user->activo,
+            ))->all();
+    }
+
+    /**
+     * Retrieves all course groups (materia_grupo) with optional filters.
+     *
+     * @param string|null $gestion
+     * @param string|null $sigla
+     * @return array<CourseGroupSummary>
+     */
+    public function getAllCourseGroups(?string $gestion = null, ?string $sigla = null): array
+    {
+        $query = CourseGroup::with('course')
+            ->withCount('enrollments')
+            ->where('activo', true);
+
+        if ($gestion !== null) {
+            $query->where('gestion', $gestion);
+        }
+
+        if ($sigla !== null) {
+            $query->whereHas('course', fn($q) => $q->where('sigla', $sigla));
+        }
+
+        return $query->orderBy('id', 'asc')
+            ->get()
+            ->map(fn(CourseGroup $c) => new CourseGroupSummary(
+                courseGroupId: (string) $c->id,
+                subjectCode: (string) ($c->course?->sigla ?? ''),
+                subjectName: (string) ($c->course?->nombre ?? ''),
+                groupCode: (string) $c->grupo,
+                academicTerm: (string) $c->gestion,
+                totalEnrolled: (int) ($c->enrollments_count ?? 0),
+                teacherId: $c->docente_id,
+                canInteract: $c->docente_id === auth()->id(),
+            ))->all();
+    }
+
+    /**
+     * Retrieves all course groups assigned to a specific teacher with the enrolled student count.
+     *
+     * @param int $teacherId
+     * @return array<CourseGroupSummary>
+     */
+    public function getTeacherCourses(int $teacherId, ?string $gestion = null): array
+    {
+        $currentUserId = auth()->id();
+
+        $query = CourseGroup::with('course')
+            ->withCount('enrollments')
+            ->where('docente_id', $teacherId);
+
+        if ($gestion !== null) {
+            $query->where('gestion', $gestion);
+        }
+
+        return $query->orderBy('grupo', 'asc')
+            ->get()
+            ->map(fn(CourseGroup $c) => new CourseGroupSummary(
+                courseGroupId: (string) $c->id,
+                subjectCode: (string) ($c->course?->sigla ?? ''),
+                subjectName: (string) ($c->course?->nombre ?? ''),
+                groupCode: (string) $c->grupo,
+                academicTerm: (string) $c->gestion,
+                totalEnrolled: (int) ($c->enrollments_count ?? 0),
+                teacherId: $c->docente_id,
+                canInteract: $c->docente_id === $currentUserId,
+            ))->all();
+    }
+
+    /**
+     * Retrieves all processed course rosters with the enrolled student count.
+     *
+     *   @return array<ProcessedRosterSummary>
+     */
+    public function getProcessedRosters(): array
+    {
+        return CourseGroup::with(['course', 'teacher'])
+            ->where('activo', true)
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(fn(CourseGroup $course) => new ProcessedRosterSummary(
+                courseGroupId: (string) $course->id,
+                subjectCode: (string) ($course->course?->sigla ?? ''),
+                subjectName: (string) ($course->course?->nombre ?? ''),
+                groupCode: (string) $course->grupo,
+                academicTerm: (string) $course->gestion,
+                teacherName: $course->teacher?->nombre,
+            ))->all();
+    }
+
+    public function getProcessedRosterDetail(int $courseGroupId): ?ProcessedRosterDetail
+    {
+        $courseGroup = CourseGroup::with(['course', 'teacher'])
+            ->where('id', $courseGroupId)
+            ->first();
+
+        if (!$courseGroup) {
+            return null;
+        }
+
+        $metadata = new ProcessedRosterSummary(
+            courseGroupId: (string) $courseGroup->id,
+            subjectCode: (string) ($courseGroup->course?->sigla ?? ''),
+            subjectName: (string) ($courseGroup->course?->nombre ?? ''),
+            groupCode: (string) $courseGroup->grupo,
+            academicTerm: (string) $courseGroup->gestion,
+            teacherName: $courseGroup->teacher?->nombre,
+        );
+
+        $students = StudentCourseEnrollment::where('materia_grupo_id', $courseGroupId)
+            ->with(['user.student', 'enrollmentStatus'])
+            ->get()
+            ->map(fn(StudentCourseEnrollment $e) => new EnrolledStudentSummary(
+                studentKey: (string) ($e->user?->student?->codigo_sis ?? ''),
+                ci: (string) ($e->user?->ci ?? ''),
+                fullName: (string) ($e->user?->nombre ?? ''),
+                status: (string) ($e->enrollmentStatus?->nombre ?? 'HABILITADO'),
+                ineligibilityReason: $e->motivo_inhabilitacion,
+            ))
+            ->values()
+            ->all();
+
+        return new ProcessedRosterDetail($metadata, $students);
+    }
+
+    /**
+     * Retrieves the list of enrolled students for a specific course group with their eligibility status.
+     *
+     * @param int|string $courseGroupId Course group numeric ID (materia_grupo.id) or composite key
+     * @return array<EnrolledStudentSummary>
+     */
+    public function getEnrolledStudents(int $courseGroupId): array
+    {
+        return StudentCourseEnrollment::where('materia_grupo_id', $courseGroupId)
+            ->with(['user.student', 'enrollmentStatus'])
+            ->get()
+            ->map(fn(StudentCourseEnrollment $enrollment) => new EnrolledStudentSummary(
+                studentKey: (string) ($enrollment->user?->student?->codigo_sis ?? ''),
+                ci: (string) ($enrollment->user?->ci ?? ''),
+                fullName: (string) ($enrollment->user?->nombre ?? ''),
+                status: (string) ($enrollment->enrollmentStatus?->nombre ?? 'HABILITADO'),
+                ineligibilityReason: $enrollment->motivo_inhabilitacion,
+                userId: (int) ($enrollment->usuario_id ?? 0),
+            ))
+            ->sortBy('fullName', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Checks if a student (by codigo_sis) is enrolled in a specific course group.
+     *
+     * @param string $codigoSis Student's SIS code
+     * @param int $courseGroupId Course group ID (materia_grupo.id)
+     * @return array{belongs: bool, message: string, enrollment?: array}
+     */
+    public function checkStudentBelongsToCourseGroup(string $codigoSis, int $courseGroupId): array
+    {
+        // Find student by codigo_sis
+        $student = Student::where('codigo_sis', $codigoSis)->first();
+
+        if (!$student) {
+            return [
+                'belongs' => false,
+                'message' => "Estudiante con codigo_sis '{$codigoSis}' no encontrado.",
+            ];
+        }
+
+        // Check enrollment
+        $enrollment = StudentCourseEnrollment::where('usuario_id', $student->usuario_id)
+            ->where('materia_grupo_id', $courseGroupId)
+            ->first();
+
+        if (!$enrollment) {
+            return [
+                'belongs' => false,
+                'message' => "Estudiante '{$codigoSis}' no esta inscrito en la materia.",
+            ];
+        }
+
+        return [
+            'belongs' => true,
+            'message' => "Estudiante '{$codigoSis}' esta inscrito en la materia.",
+            'enrollment' => [
+                'user_id' => $enrollment->usuario_id,
+                'status' => $enrollment->enrollmentStatus?->nombre ?? 'HABILITADO',
+                'ineligibility_reason' => $enrollment->motivo_inhabilitacion,
+                'enrollment_date' => $enrollment->fecha_inscripcion?->format('Y-m-d'),
+            ],
+        ];
+    }
+
+    /**
+     * Retrieves the list of enrolled students for a specific course group with their eligibility status.
+     *
+     * @param int|string $courseGroupId Course group numeric ID (materia_grupo.id) or composite key
+     * @return array<EnrolledStudentSummary>
      */
     private const REQUIRED_COLUMNS = [
         'codigo_sis',
@@ -520,7 +1664,8 @@ class CoreDataStorage
      * @param RawFileData $fileData Object containing uploaded file data
      * @return ImportSummary Structured processing summary
      */
-    public function importStudentRoster(RawFileData $fileData): ImportSummary
+
+ public function importStudentRoster(RawFileData $fileData): ImportSummary
     {
         $extension = strtolower(trim($fileData->extension, '. '));
 
@@ -547,15 +1692,15 @@ class CoreDataStorage
      */
     public function generateCsvTemplate(): string
     {
-        return "Docente: Lic. Juan Carlos Perez Gomez\n"
+        return "Docente: Juan Carlos Perez Gomez\n"
             . "Email Docente: juan.perez@umss.edu.bo\n"
             . "Materia: INF110 - INTRODUCCION A LA PROGRAMACION\n"
             . "Grupo: 1\n"
             . "Gestion: 2/2026\n\n"
             . "Codigo SIS,CI,Nombre Completo\n"
-            . "202001234,7891234,ALVAREZ CLAROS PEDRO\n"
-            . "202005678,6543210,BENITEZ LOPEZ CARMEN\n"
-            . "202109876,8912345,CASTRO ROJAS MARIO\n";
+            . "202001234,7891234,Alvarez Claros Pedro\n"
+            . "202005678,6543210,Benitez Lopez Carmen\n"
+            . "202109876,8912345,Castro Rojas Mario\n";
     }
 
     /**
@@ -693,7 +1838,7 @@ class CoreDataStorage
             );
         }
 
-        $materiaGrupoId = MateriaGrupo::whereHas('materia', function ($query) use ($metadata) {
+        $materiaGrupoId = CourseGroup::whereHas('course', function ($query) use ($metadata) {
             $query->where('sigla', $metadata['materia.sigla']);
         })
         ->where('grupo', $metadata['grupo'])
@@ -703,17 +1848,17 @@ class CoreDataStorage
         // Validate: if this materia_grupo already exists with a different teacher
         $teacherEmail = strtolower(trim($metadata['teacher_email']));
 
-       $existingCourse = MateriaGrupo::whereHas('materia', function ($query) use ($metadata) {
+       $existingCourse = CourseGroup::whereHas('course', function ($query) use ($metadata) {
            $query->where('sigla', $metadata['materia.sigla']);
        })
        ->where('grupo', $metadata['grupo'])
        ->where('gestion', $metadata['gestion'])
-       ->with('docente')
+       ->with('teacher')
        ->first();
 
-        if ($existingCourse && $existingCourse->docente) {
+        if ($existingCourse && $existingCourse->teacher) {
 
-            $existingTeacherEmail = strtolower(trim($existingCourse->docente->email));
+            $existingTeacherEmail = strtolower(trim($existingCourse->teacher->email));
 
             if ($existingTeacherEmail !== $teacherEmail) {
 
@@ -729,12 +1874,12 @@ class CoreDataStorage
         return new ImportSummary(
             totalProcessed: 0,
             successful: 0,
-            skipped: $totalProcessed,
+            skipped: 0,
             observations: [
-                "La materia ya está asignada a otro docente."
+                "La materia {$metadata['materia.sigla']} grupo {$metadata['grupo']} ({$metadata['gestion']}) ya está asignada al docente {$existingCourse->teacher->nombre} ({$existingTeacherEmail})."
             ],
             isSuccessful: false,
-            failedRows: $failedRows,
+            failedRows: [],
             metadata: $extractedMetadata
         );
     }
@@ -828,40 +1973,22 @@ class CoreDataStorage
             DB::transaction(function () use ($metadata, $validRows) {
                 $now = now();
 
-                // Teacher
+                // Teacher - must exist (pre-seeded)
                 $email = strtolower(trim($metadata['teacher_email']));
-                $defaultPasswordHash = bcrypt('password123');
-                $teacher = Usuario::where('email', $email)->first();
+                $teacher = User::where('email', $email)->first();
+
                 if (!$teacher) {
-                    $teacher = Usuario::create([
-                        'nombre' => trim($metadata['teacher_name']),
-                        'email' => $email,
-                        'contrasena' => $defaultPasswordHash,
-                        'activo' => true,
-                        'ci' => ''
-                    ]);
-
-                    $rolDocente = Rol::where('nombre', 'TEACHER')->first();
-
-                    if ($rolDocente) {
-                        $teacher->roles()->attach($rolDocente->id, [
-                        'activo' => true,
-                        'fecha_asignacion' => now()
-                        ]);
-                    }
+                    throw new \Exception("El docente con email '{$email}' no está registrado en el sistema.");
                 }
-                $materia = Materia::firstOrCreate(
-                    [
-                        'sigla' => trim($metadata['materia.sigla'])
-                    ],
-                    [
-                        'nombre' => trim($metadata['materia.nombre']),
-                        'activo' => true
-                    ]
-                );
+                // Materia - must exist (pre-seeded)
+                $materia = Course::where('sigla', trim($metadata['materia.sigla']))->first();
+
+                if (!$materia) {
+                    throw new \Exception("La materia con sigla '{$metadata['materia.sigla']}' no está registrada en el sistema.");
+                }
 
                 // CourseGroup
-               $materiaGrupo = MateriaGrupo::updateOrCreate(
+               $materiaGrupo = CourseGroup::updateOrCreate(
                    [
                        'materia_id' => $materia->id,
                         'grupo' => trim($metadata['grupo']),
@@ -873,49 +2000,45 @@ class CoreDataStorage
                    ]
                 );
 
-                // Students
-                $studentsData = [];
+// Students
                 $defaultPasswordHash = bcrypt('password123');
+                $estudianteEmailId = EmailDomain::where('dominio', '@est.umss.edu')->value('id');
+                $rolEstudiante = Role::where('nombre', 'ESTUDIANTE')->first();
+
                 foreach ($validRows as $item) {
                     $sKey = $item['studentKey'];
-                    $usuarioEstudiante = Usuario::firstOrCreate(
-                    [
-                        'ci' => $item['ci']
-                    ],
-                    [
-                        'nombre' => $item['fullName'],
-                        'email' => $item['ci'] . '@estudiante.umss.edu.bo',
-                        'contrasena' => $defaultPasswordHash,
-                        'activo' => true
-                    ]
-                );
-
-
-                    Estudiante::updateOrCreate(
+                    $usuarioEstudiante = User::firstOrCreate(
                         [
-                        'codigo_sis' => $sKey
+                            'ci' => $item['ci']
                         ],
-                    [
-                        'usuario_id' => $usuarioEstudiante->id
-                    ]
-                );
+                        [
+                            'nombre' => $item['fullName'],
+                            'email' => $sKey . '@est.umss.edu',
+                            'contrasena' => $defaultPasswordHash,
+                            'activo' => false,
+                            'email_id' => $estudianteEmailId
+                        ]
+                    );
+
+                    if ($rolEstudiante) {
+                        $usuarioEstudiante->roles()->syncWithoutDetaching([$rolEstudiante->id => [
+                            'activo' => true,
+                            'fecha_asignacion' => now()
+                        ]]);
+                    }
+
+                    Student::updateOrCreate(
+                        [
+                            'codigo_sis' => $sKey
+                        ],
+                        [
+                            'usuario_id' => $usuarioEstudiante->id
+                        ]
+                    );
                 }
 
                 // Enrollments
-                $enrollmentsData = [];
-                foreach ($validRows as $item) {
-                    $enrollmentKey = $item['studentKey'] . ':::' . $materiaGrupo->id;
-                    $enrollmentsData[$enrollmentKey] = [
-                        'student_key' => $item['studentKey'],
-                        'materia_grupo_id' => $materiaGrupo->id,
-                        'status' => 'HABILITADO',
-                        'ineligibility_reason' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                }
-
-                $estadoHabilitado = EstadoInscripcion::firstOrCreate(
+                $estadoHabilitado = EnrollmentStatus::firstOrCreate(
                     [
                         'nombre' => 'HABILITADO'
                     ],
@@ -924,18 +2047,18 @@ class CoreDataStorage
                     ]
                 );
 
-                foreach ($validRows as $item) {
+                // Cargar todos los usuarios de una sola vez (evitar N+1)
+                $ciList = array_column($validRows, 'ci');
+                $usuarios = User::whereIn('ci', $ciList)->get()->keyBy('ci');
 
-                    $usuarioEstudiante = Usuario::where(
-                        'ci',
-                         $item['ci']
-                    )->first();
+                foreach ($validRows as $item) {
+                    $usuarioEstudiante = $usuarios->get($item['ci']);
 
                     if (!$usuarioEstudiante) {
                         continue;
                     }
 
-                    Inscripcion::updateOrCreate(
+                    StudentCourseEnrollment::updateOrCreate(
                         [
                             'usuario_id' => $usuarioEstudiante->id,
                             'materia_grupo_id' => $materiaGrupo->id
@@ -1077,15 +2200,15 @@ class CoreDataStorage
 
         $existingCourseGroups = collect();
         foreach ($courseGroupsByFile as $cgData) {
-            $materia = Materia::where(
+            $materia = Course::where(
                 'sigla',
                 strtoupper($cgData['sigla'])
             )->first();
             if ($materia) {
-                $grupo = MateriaGrupo::where('materia_id', $materia->id)
+                $grupo = CourseGroup::where('materia_id', $materia->id)
                     ->where('grupo', $cgData['grupo'])
                     ->where('gestion', $cgData['gestion'])
-                    ->with('docente')
+                    ->with('teacher')
                     ->first();
             if ($grupo) {
                 $existingCourseGroups->put(
@@ -1127,14 +2250,14 @@ class CoreDataStorage
                     $validRows
                 )));
 
-                $existingTeachers = Usuario::whereIn('email', $teacherEmails)
+                $existingTeachers = User::whereIn('email', $teacherEmails)
                 ->get()
                 ->keyBy('email');
 
                 foreach ($teacherEmails as $email) {
                     if (!$existingTeachers->has($email)) {
                         $defaultPasswordHash ??= bcrypt('password123');
-                        $newTeacher = Usuario::create([
+                        $newTeacher = User::create([
                             'nombre' => 'Docente ' . $email,
                             'email' => $email,
                             'ci' => 'DOC-' . md5($email),
@@ -1149,7 +2272,7 @@ class CoreDataStorage
 
                     $r = $item['rowData'];
 
-                    $materia = Materia::firstOrCreate(
+                    $materia = Course::firstOrCreate(
                         [
                             'sigla' => strtoupper(trim($r['sigla_materia']))
                         ],
@@ -1163,7 +2286,7 @@ class CoreDataStorage
                         strtolower(trim($r['email_docente']))
                     );
 
-                    MateriaGrupo::updateOrCreate(
+                    CourseGroup::updateOrCreate(
                         [
                             'materia_id' => $materia->id,
                             'grupo' => strtoupper(trim($r['grupo'])),
@@ -1181,7 +2304,7 @@ class CoreDataStorage
                     $sKey = $item['studentKey'];
                     $r = $item['rowData'];
 
-                    $usuarioEstudiante = Usuario::updateOrCreate(
+                    $usuarioEstudiante = User::updateOrCreate(
                         [
                             'ci' => trim($r['ci'])
                         ],
@@ -1194,7 +2317,7 @@ class CoreDataStorage
                     );
 
 
-                    Estudiante::updateOrCreate(
+                    Student::updateOrCreate(
                         [
                             'codigo_sis' => $sKey
                         ],
@@ -1205,7 +2328,7 @@ class CoreDataStorage
                 }
 
 
-                $estadoHabilitado = EstadoInscripcion::firstOrCreate(
+                $estadoHabilitado = EnrollmentStatus::firstOrCreate(
                 [
                     'nombre' => 'HABILITADO'
                 ],
@@ -1218,7 +2341,7 @@ class CoreDataStorage
                 foreach ($validRows as $item) {
 
                     $r = $item['rowData'];
-                    $usuarioEstudiante = Usuario::whereHas(
+                    $usuarioEstudiante = User::whereHas(
                         'estudiante',
                 function ($query) use ($item) {
                     $query->where(
@@ -1229,13 +2352,13 @@ class CoreDataStorage
         )->first();
 
 
-    $materia = Materia::where(
+    $materia = Course::where(
         'sigla',
         strtoupper(trim($r['sigla_materia']))
     )->first();
 
 
-    $materiaGrupo = MateriaGrupo::where(
+    $materiaGrupo = CourseGroup::where(
         'materia_id',
         $materia?->id
     )
@@ -1255,7 +2378,7 @@ class CoreDataStorage
     }
 
 
-    Inscripcion::updateOrCreate(
+    StudentCourseEnrollment::updateOrCreate(
             [
                 'usuario_id' => $usuarioEstudiante->id,
                 'materia_grupo_id' => $materiaGrupo->id
@@ -1583,3 +2706,4 @@ class CoreDataStorage
         return true;
     }
 }
+

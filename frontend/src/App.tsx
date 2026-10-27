@@ -1,104 +1,486 @@
 import { useState } from 'react';
+
+import assignedCoursesIcon from './assets/icono_materia-2.svg';
+import scheduleExamIcon from './assets/programar_examen.svg';
+import scheduledExamsIcon from './assets/documento_examen.svg';
+import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
+import studentEligibilityIcon from './assets/estado_habilitacion.svg';
+import checkpointIcon from './assets/punto_control.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
-import { LoginView } from './views/LoginView';
-import { AcademicStaffView } from './views/AcademicStaffView';
-import { ProcessedRostersView } from './views/ProcessedRostersView';
-import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
-import { TeacherCoursesView } from './views/TeacherCoursesView';
-import { ImportRosterDrawer } from './components/ImportRosterDrawer';
-import { authService } from './services/authService';
-import type { UserSession } from './types/auth';
-import type { ProcessedRoster } from './types/processedRoster';
-import './App.css';
+import registerAcademicStaffIcon from './assets/registrar_personal.svg';
+import editRolesIcon from './assets/editar_roles.svg';
+import editPersonalDataIcon from './assets/editar_datos_personales.svg';
 
-type AdminScreen = 'DASHBOARD' | 'ACADEMIC_STAFF' | 'PROCESSED_ROSTERS' | 'PROCESSED_ROSTER_DETAIL';
+import { ImportRosterDrawer } from './components/ImportRosterDrawer';
+import { EditRolesDrawer } from './components/EditRolesDrawer';
+import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
+import { CourseGroupSearchDrawer } from './components/CourseGroupSearchDrawer';
+import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
+import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer';
+import { ExamSearchDrawer } from './components/ExamSearchDrawer';
+
+import { authService, hasFunction } from './services/authService';
+
+import { FUNCTION_CODES } from './types/auth';
+import type { UserSession } from './types/auth';
+import type { CourseGroup } from './types/course';
+import type { ProcessedRoster } from './types/processedRoster';
+import type { ControlExam, ControlExamRoom } from './types/examAccess';
+
+import { AcademicStaffView } from './views/AcademicStaffView';
+import {
+  AssignedCoursesView,
+  type CourseFunctionMode,
+} from './views/AssignedCoursesView';
+import { EnrolledStudentsView } from './views/EnrolledStudentsView';
+import { ExamAccessControlView } from './views/ExamAccessControlView';
+import { LoginView } from './views/LoginView';
+import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
+import { ProcessedRostersView } from './views/ProcessedRostersView';
+import { ScheduledExamsView } from './views/ScheduledExamsView';
+import './App.css';
+import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
+
+
+type ApplicationScreen =
+  | 'DASHBOARD'
+  | 'ACADEMIC_STAFF'
+  | 'PROCESSED_ROSTERS'
+  | 'PROCESSED_ROSTER_DETAIL'
+  | 'SCHEDULED_EXAMS'
+  | 'ENROLLED_STUDENTS'
+  | 'EXAM_ACCESS_CONTROL';
+
+/** Drawer de búsqueda de materia abierto desde el panel. */
+type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS' | 'SCHEDULE_EXAM';
 
 export default function App() {
-  const [session, setSession] = useState<UserSession | null>(() => authService.getStoredSession());
-  const [adminScreen, setAdminScreen] = useState<AdminScreen>('DASHBOARD');
-  const [selectedRoster, setSelectedRoster] = useState<ProcessedRoster | null>(null);
-  const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
+  const [courseFunctionMode, setCourseFunctionMode] =
+    useState<CourseFunctionMode>('VIEW');
+
+  const [session, setSession] = useState<UserSession | null>(
+    () => authService.getStoredSession(),
+  );
+
+  const [screen, setScreen] =
+    useState<ApplicationScreen>('DASHBOARD');
+
+  const [isImportDrawerOpen, setIsImportDrawerOpen] =
+    useState(false);
+
+  const [isAssignedCoursesDrawerOpen, setIsAssignedCoursesDrawerOpen] =
+    useState(false);
+
+  const [isEditRolesDrawerOpen, setIsEditRolesDrawerOpen] =
+    useState(false);
+
+  const [isEditPersonalDataDrawerOpen, setIsEditPersonalDataDrawerOpen] =
+    useState(false);
+
+  const [isStudentEligibilityDrawerOpen, setIsStudentEligibilityDrawerOpen] =
+    useState(false);
+
+  const [isExamSearchDrawerOpen, setIsExamSearchDrawerOpen] =
+    useState(false);
+
+  // Examen y aula (punto de control) elegidos para el control de acceso.
+  const [accessControlTarget, setAccessControlTarget] =
+    useState<{ exam: ControlExam; room: ControlExamRoom } | null>(null);
+
+  const [selectedRoster, setSelectedRoster] =
+    useState<ProcessedRoster | null>(null);
+
+  const [courseSearchTarget, setCourseSearchTarget] =
+    useState<CourseSearchTarget | null>(null);
+  
+  const [isAcademicUserDrawerOpen, setIsAcademicUserDrawerOpen] =
+  useState(false);
+  
+  // Se guarda el grupo elegido (incluye course_group_id) para la vista destino.
+  const [selectedCourseGroup, setSelectedCourseGroup] =
+    useState<CourseGroup | null>(null);
+
+  const [courseForScheduleExam, setCourseForScheduleExam] =
+    useState<CourseGroup | null>(null);
 
   const handleLogout = () => {
     authService.clearSession();
+    
     setSession(null);
-    setAdminScreen('DASHBOARD');
+    setScreen('DASHBOARD');
     setSelectedRoster(null);
+    setSelectedCourseGroup(null);
+    setCourseSearchTarget(null);
+    setCourseForScheduleExam(null);
+    setAccessControlTarget(null);
+    setIsExamSearchDrawerOpen(false);
+
     setIsImportDrawerOpen(false);
+    setIsAssignedCoursesDrawerOpen(false);
+    setIsEditRolesDrawerOpen(false);
+    setIsEditPersonalDataDrawerOpen(false);
+    setIsAcademicUserDrawerOpen(false);
+
+    setCourseFunctionMode('VIEW');
   };
 
   if (!session) {
     return <LoginView onLoginSuccess={setSession} />;
   }
 
-  // teacher view
-  if (session.role !== 'ADMIN') {
-    return <TeacherCoursesView teacherId={session.user_id} onLogout={handleLogout} />;
-  }
 
-  // admin view
-  if (adminScreen === 'ACADEMIC_STAFF') {
-    return <AcademicStaffView onBack={() => setAdminScreen('DASHBOARD')} />;
-  }
+  if (screen === 'ACADEMIC_STAFF') {
+  return (
+    <AcademicStaffView
+      onBack={() => setScreen('DASHBOARD')}
+    />
+  );
+}
 
-  if (adminScreen === 'PROCESSED_ROSTERS') {
-    return <ProcessedRostersView onBack={() => setAdminScreen('DASHBOARD')} onLogout={handleLogout} onSelectRoster={(roster) => {
-      setSelectedRoster(roster);
-      setAdminScreen('PROCESSED_ROSTER_DETAIL');
-    }} />;
-  }
-
-  if (adminScreen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
-    return <ProcessedRosterDetailView roster={selectedRoster} onBack={() => setAdminScreen('PROCESSED_ROSTERS')} onLogout={handleLogout} />;
-  }
-
-  if (adminScreen === 'DASHBOARD') {
+  if (screen === 'PROCESSED_ROSTERS') {
     return (
-      <main className="app-shell admin-dashboard">
-        <header className="admin-dashboard-header">
-          <div>
-            <h1 className="admin-dashboard-title">Panel</h1>
-            <p className="admin-dashboard-subtitle">Administrador</p>
-          </div>
-
-          <div className="admin-header-actions">
-            <button type="button" className="admin-icon-button" aria-label="Cambiar apariencia">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="3.25" />
-                <path d="M12 2v2.25M12 19.75V22M4.93 4.93l1.59 1.59M17.48 17.48l1.59 1.59M2 12h2.25M19.75 12H22M4.93 19.07l1.59-1.59M17.48 6.52l1.59-1.59" />
-              </svg>
-            </button>
-            <button type="button" className="admin-icon-button" onClick={handleLogout} aria-label="Cerrar sesión">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="8" r="4.25" />
-                <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
-              </svg>
-            </button>
-          </div>
-        </header>
-
-        <nav className="admin-menu-grid" aria-label="Opciones administrativas">
-          <button type="button" className="admin-menu-card" onClick={() => setIsImportDrawerOpen(true)}>
-            <img src={importRosterIcon} alt="" className="admin-menu-icon admin-import-icon" />
-            <span>Importar<br />planilla</span>
-          </button>
-
-          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('PROCESSED_ROSTERS')}>
-            <img src={processedRostersIcon} alt="" className="admin-menu-icon admin-rosters-icon" />
-            <span>Planillas<br />importadas</span>
-          </button>
-
-          <button type="button" className="admin-menu-card" onClick={() => setAdminScreen('ACADEMIC_STAFF')}>
-            <img src={academicStaffIcon} alt="" className="admin-menu-icon admin-staff-icon" />
-            <span>Personal<br />Académico</span>
-          </button>
-        </nav>
-        <ImportRosterDrawer isOpen={isImportDrawerOpen} onClose={() => setIsImportDrawerOpen(false)} />
-      </main>
+      <ProcessedRostersView
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+        onSelectRoster={(roster) => {
+          setSelectedRoster(roster);
+          setScreen('PROCESSED_ROSTER_DETAIL');
+        }}
+      />
     );
   }
 
-  return null;
+  if (screen === 'PROCESSED_ROSTER_DETAIL' && selectedRoster) {
+    return (
+      <ProcessedRosterDetailView
+        roster={selectedRoster}
+        onBack={() => setScreen('PROCESSED_ROSTERS')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (screen === 'SCHEDULED_EXAMS' && selectedCourseGroup) {
+    return (
+      <ScheduledExamsView
+        courseGroup={selectedCourseGroup}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (screen === 'ENROLLED_STUDENTS' && selectedCourseGroup) {
+    return (
+      <EnrolledStudentsView
+        courseGroup={selectedCourseGroup}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (screen === 'EXAM_ACCESS_CONTROL' && accessControlTarget) {
+    return (
+      <ExamAccessControlView
+        exam={accessControlTarget.exam}
+        room={accessControlTarget.room}
+        onBack={() => {
+          setAccessControlTarget(null);
+          setScreen('DASHBOARD');
+        }}
+      />
+    );
+  }
+
+  const menuItems = [
+    {
+      functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+      label: 'Visualizar materias',
+      icon: assignedCoursesIcon,
+      iconClass: 'app-courses-icon',
+      open: () => {
+        setCourseFunctionMode('VIEW');
+        setIsAssignedCoursesDrawerOpen(true);
+      },
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
+      label: 'Programar Examen',
+      icon: scheduleExamIcon,
+      iconClass: 'admin-schedule-exam-icon',
+      open: () => setCourseSearchTarget('SCHEDULE_EXAM'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.SCHEDULE_EXAM,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_COURSE_EXAMS,
+      label: 'Exámenes programados',
+      icon: scheduledExamsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setCourseSearchTarget('SCHEDULED_EXAMS'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_COURSE_EXAMS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_COURSE_STUDENTS,
+      label: 'Estudiantes inscritos en una materia',
+      icon: enrolledStudentsIcon,
+      iconClass: 'admin-enrolled-icon',
+      open: () => setCourseSearchTarget('ENROLLED_STUDENTS'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_COURSE_STUDENTS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      label: 'Estado de Habilitación',
+      icon: studentEligibilityIcon,
+      iconClass: 'admin-eligibility-icon',
+      open: () => setIsStudentEligibilityDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
+      label: 'Puntos de control',
+      icon: checkpointIcon,
+      iconClass: 'admin-checkpoint-icon',
+      open: () => setIsExamSearchDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.IMPORT_ROSTER,
+      label: 'Importar padrón',
+      icon: importRosterIcon,
+      iconClass: 'admin-import-icon',
+      open: () => setIsImportDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.IMPORT_ROSTER,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+      label: 'Planillas importadas',
+      icon: processedRostersIcon,
+      iconClass: 'admin-rosters-icon',
+      open: () => setScreen('PROCESSED_ROSTERS'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+      label: 'Personal académico',
+      icon: academicStaffIcon,
+      iconClass: 'admin-staff-icon',
+      open: () => setScreen('ACADEMIC_STAFF'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.LIST_ACADEMIC_STAFF,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+      label: 'Registrar personal académico',
+      icon: registerAcademicStaffIcon,
+      iconClass: 'admin-register-staff-icon',
+      open: () => setIsAcademicUserDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.EDIT_ROLES,
+      label: 'Editar roles',
+      icon: editRolesIcon,
+      iconClass: 'admin-roles-icon',
+      open: () => setIsEditRolesDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.EDIT_ROLES,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.EDIT_PERSONAL_DATA,
+      label: 'Editar datos Personales',
+      icon: editPersonalDataIcon,
+      iconClass: 'admin-personal-data-icon',
+      open: () => setIsEditPersonalDataDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.EDIT_PERSONAL_DATA,
+      ),
+    },
+  ].filter((item) => item.visible);
+
+  return (
+    <main className="app-shell admin-dashboard app-dashboard">
+      <header className="admin-dashboard-header">
+        <div>
+          <h1 className="admin-dashboard-title">Panel</h1>
+          <p className="admin-dashboard-subtitle">{session.full_name}</p>
+        </div>
+
+        <button
+          type="button"
+          className="admin-icon-button"
+          onClick={handleLogout}
+          aria-label="Cerrar sesión"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4.25" />
+            <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
+          </svg>
+        </button>
+      </header>
+
+      {menuItems.length > 0 ? (
+        <nav
+          className="admin-menu-grid"
+          aria-label="Funciones disponibles"
+        >
+          {menuItems.map((item) => (
+            <button
+              type="button"
+              className="admin-menu-card"
+              onClick={item.open}
+              key={item.functionCode}
+            >
+              <div className="admin-menu-card-frame">
+                <img
+                  src={item.icon}
+                  alt=""
+                  className={`admin-menu-icon ${item.iconClass}`}
+                />
+              </div>
+              <span className="admin-menu-card-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      ) : (
+        <p className="app-dashboard-empty">
+          Tu cuenta no tiene funciones disponibles.
+        </p>
+      )}
+      
+      <CourseGroupSearchDrawer
+        isOpen={courseSearchTarget !== null}
+        onClose={() => setCourseSearchTarget(null)}
+        currentUserId={session.user_id}
+        onlyTeacherCourses={courseSearchTarget === 'SCHEDULE_EXAM'}
+        showMyCourses={courseSearchTarget === 'ENROLLED_STUDENTS'}
+        ariaLabel={
+          courseSearchTarget === 'SCHEDULE_EXAM'
+            ? 'Buscar materia para programar examen'
+            : courseSearchTarget === 'ENROLLED_STUDENTS'
+            ? 'Buscar materia para ver estudiantes inscritos'
+            : 'Buscar materia para ver exámenes programados'
+        }
+        onSelect={(courseGroup) => {
+          if (!courseSearchTarget) return;
+
+          if (courseSearchTarget === 'SCHEDULE_EXAM') {
+            setCourseForScheduleExam(courseGroup);
+            setCourseSearchTarget(null);
+            return;
+          }
+
+          setSelectedCourseGroup(courseGroup);
+          setScreen(courseSearchTarget);
+          setCourseSearchTarget(null);
+        }}
+      />
+
+      {courseForScheduleExam && (
+        <ScheduleExamDrawer
+          isOpen={Boolean(courseForScheduleExam)}
+          course={courseForScheduleExam}
+          onClose={() => setCourseForScheduleExam(null)}
+        />
+      )}
+
+      {isAssignedCoursesDrawerOpen && (
+        <AssignedCoursesView
+          session={session}
+          mode={courseFunctionMode}
+          presentation="drawer"
+          onBack={() => setIsAssignedCoursesDrawerOpen(false)}
+          onLogout={handleLogout}
+        />
+      )}
+
+      <ImportRosterDrawer
+        isOpen={isImportDrawerOpen}
+        onClose={() => setIsImportDrawerOpen(false)}
+      />
+
+      <EditRolesDrawer
+        isOpen={isEditRolesDrawerOpen}
+        onClose={() => setIsEditRolesDrawerOpen(false)}
+        currentUserId={session.user_id}
+      />
+
+      {isEditPersonalDataDrawerOpen && (
+        <EditPersonalDataDrawer
+          isOpen={isEditPersonalDataDrawerOpen}
+          onClose={() => setIsEditPersonalDataDrawerOpen(false)}
+          session={session}
+          onSuccess={(updated) => {
+            setSession((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    full_name: updated.fullName,
+                    ci: updated.ci !== undefined ? updated.ci : prev.ci,
+                  }
+                : null,
+            );
+            setIsEditPersonalDataDrawerOpen(false);
+          }}
+        />
+      )}
+
+      <AcademicUserDrawer
+            isOpen={isAcademicUserDrawerOpen}
+            onClose={() => setIsAcademicUserDrawerOpen(false)}
+            onSaved={() => setIsAcademicUserDrawerOpen(false)}
+            />
+
+      <ExamSearchDrawer
+        isOpen={isExamSearchDrawerOpen}
+        onClose={() => setIsExamSearchDrawerOpen(false)}
+        onSelect={(exam, room) => {
+          setAccessControlTarget({ exam, room });
+          setIsExamSearchDrawerOpen(false);
+          setScreen('EXAM_ACCESS_CONTROL');
+        }}
+      />
+
+      <StudentEligibilityDrawer
+        isOpen={isStudentEligibilityDrawerOpen}
+        session={session}
+        onClose={() => setIsStudentEligibilityDrawerOpen(false)}
+      />
+    </main>
+  );
 }

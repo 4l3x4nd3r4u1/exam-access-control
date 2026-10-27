@@ -21,19 +21,29 @@ class ProcessedRosterController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_map(
-                fn(ProcessedRosterSummary $roster) => [
-                    'courseGroupId' => $roster->courseGroupId,
-                    'subjectCode' => $roster->subjectCode,
-                    'subjectName' => $roster->subjectName,
-                    'groupCode' => $roster->groupCode,
-                    'academicTerm' => $roster->academicTerm,
-                    'totalStudents' => $roster->totalStudents,
-                    'teacherName' => $roster->teacherName,
-                ],
-                $rosters
-            ),
+            'data' => array_map(fn(ProcessedRosterSummary $roster) => $roster->toArray(), $rosters),
             'message' => 'Planillas procesadas obtenidas exitosamente.',
+        ], 200);
+    }
+
+    /**
+     * Endpoint to get detail of a specific processed roster.
+     */
+    public function show(int $courseGroupId): JsonResponse
+    {
+        $detail = $this->storage->getProcessedRosterDetail($courseGroupId);
+
+        if (!$detail) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Planilla no encontrada',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $detail->toArray(),
+            'message' => 'Detalle de planilla obtenido exitosamente.',
         ], 200);
     }
 }

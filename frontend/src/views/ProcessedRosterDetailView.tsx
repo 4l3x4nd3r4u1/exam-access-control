@@ -9,20 +9,30 @@ interface ProcessedRosterDetailViewProps {
 }
 
 export function ProcessedRosterDetailView({ roster, onBack, onLogout }: ProcessedRosterDetailViewProps) {
+  const [metadata, setMetadata] = useState<ProcessedRoster>(roster);
   const [students, setStudents] = useState<RosterStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
+  const courseGroupId = roster.course_group_id || roster.courseGroupId;
 
-    processedRostersService.getRosterStudents(roster.courseGroupId)
-      .then((items) => {
-        if (isMounted) setStudents(items);
+  useEffect(() => {
+    if (!courseGroupId) return;
+
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+
+    processedRostersService.getProcessedRosterDetail(courseGroupId)
+      .then((detail) => {
+        if (isMounted) {
+          if (detail.metadata) setMetadata(detail.metadata);
+          if (Array.isArray(detail.students)) setStudents(detail.students);
+        }
       })
       .catch((requestError: unknown) => {
         if (isMounted) {
-          setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar la nómina.');
+          setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar el detalle de la planilla.');
         }
       })
       .finally(() => {
@@ -32,7 +42,14 @@ export function ProcessedRosterDetailView({ roster, onBack, onLogout }: Processe
     return () => {
       isMounted = false;
     };
-  }, [roster.courseGroupId]);
+  }, [courseGroupId]);
+
+  const activeMetadata = metadata || roster;
+  const subjectCode = activeMetadata.subject_code || activeMetadata.subjectCode || '';
+  const subjectName = activeMetadata.subject_name || activeMetadata.subjectName || '';
+  const teacherName = activeMetadata.teacher_name || activeMetadata.teacherName || '';
+  const groupCode = activeMetadata.group_code || activeMetadata.groupCode || '';
+  const academicTerm = activeMetadata.academic_term || activeMetadata.academicTerm || '';
 
   return (
     <main className="app-shell processed-roster-detail-screen">
@@ -51,11 +68,11 @@ export function ProcessedRosterDetailView({ roster, onBack, onLogout }: Processe
       </header>
 
       <section className="processed-roster-detail-header">
-        <h1>{roster.subjectCode} - {roster.subjectName}</h1>
+        <h1>{subjectCode} - {subjectName}</h1>
         <dl>
-          <div><dt>Docente:</dt><dd>{roster.teacherName ?? 'Sin asignar'}</dd></div>
-          <div><dt>Grupo:</dt><dd>{roster.groupCode}</dd></div>
-          <div><dt>Gestión:</dt><dd>{roster.academicTerm}</dd></div>
+          <div><dt>Docente:</dt><dd>{teacherName}</dd></div>
+          <div><dt>Grupo:</dt><dd>{groupCode}</dd></div>
+          <div><dt>Gestión:</dt><dd>{academicTerm}</dd></div>
         </dl>
       </section>
 
@@ -67,7 +84,9 @@ export function ProcessedRosterDetailView({ roster, onBack, onLogout }: Processe
         {error && <p className="processed-rosters-feedback processed-rosters-error" role="alert">{error}</p>}
         {!isLoading && !error && students.map((student) => (
           <div className="roster-detail-table-row" key={student.studentKey}>
-            <span>{student.studentKey}</span><span>{student.ci}</span><span>{student.fullName}</span>
+            <span>{student.studentKey}</span>
+            <span>{student.ci}</span>
+            <span>{student.fullName}</span>
           </div>
         ))}
       </section>

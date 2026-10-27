@@ -1,0 +1,45 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="badgeShadow" x="22" y="14" width="84" height="106" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+    <linearGradient id="lanyardGrad" x1="64" y1="6" x2="64" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#0369A1" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="32" y1="30" x2="96" y2="114" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F8FAFC" />
+    </linearGradient>
+    <linearGradient id="avatarGrad" x1="50" y1="46" x2="78" y2="74" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Lanyard Ribbon -->
+  <path d="M54 6C54 6 56 22 56 30H72C72 22 74 6 74 6" stroke="url(#lanyardGrad)" stroke-width="7" stroke-linecap="round" />
+  
+  <!-- Lanyard Clip -->
+  <rect x="58" y="27" width="12" height="9" rx="2" fill="#94A3B8" stroke="#64748B" stroke-width="1.5" />
+  <rect x="62" y="36" width="4" height="6" rx="1.5" fill="#475569" />
+
+  <!-- Badge Card -->
+  <g filter="url(#badgeShadow)">
+    <rect x="30" y="38" width="68" height="82" rx="12" fill="url(#cardGrad)" stroke="#E2E8F0" stroke-width="1.5" />
+    
+    <!-- Lanyard Hole -->
+    <rect x="56" y="44" width="16" height="4" rx="2" fill="#64748B" />
+
+    <!-- Avatar Circle -->
+    <circle cx="64" cy="65" r="14" fill="url(#avatarGrad)" />
+    <!-- Avatar Head & Shoulders -->
+    <circle cx="64" cy="61" r="5" fill="#FFFFFF" />
+    <path d="M54 75C54 70 58.5 68 64 68C69.5 68 74 70 74 75" fill="#FFFFFF" />
+
+    <!-- Text Lines -->
+    <rect x="42" y="85" width="44" height="4.5" rx="2.25" fill="#334155" />
+    <rect x="48" y="93" width="32" height="3.5" rx="1.75" fill="#94A3B8" />
+    <rect x="52" y="100" width="24" height="3" rx="1.5" fill="#CBD5E1" />
+  </g>
+</svg>

@@ -1,0 +1,139 @@
+import importRosterIcon from '../assets/importar_planilla.svg';
+import processedRostersIcon from '../assets/planillas_importadas.svg';
+import academicStaffIcon from '../assets/personal_academico.svg';
+import studentsEnrolledIcon from '../assets/estudiantes_inscritos.svg';
+import examDocIcon from '../assets/documento_examen.svg';
+import scheduleExamIcon from '../assets/programar_examen.svg';
+import editPersonalDataIcon from '../assets/editar_datos_personales.svg';
+import editRolesIcon from '../assets/editar_roles.svg';
+import coursesIcon from '../assets/icono_materia-2.svg';
+import registerStaffIcon from '../assets/registrar_personal.svg';
+import studentEligibilityIcon from '../assets/estado_habilitacion.svg';
+import checkpointIcon from '../assets/punto_control.svg';
+
+export type AppScreenId =
+  | 'DASHBOARD'
+  | 'EDIT_ROLES'
+  | 'ACADEMIC_STAFF'
+  | 'TEACHER_COURSES';
+
+export interface SystemFunctionConfig {
+  key: string;
+  title: string;
+  description: string;
+  iconType: 'img';
+  iconSrc: string;
+  screen?: AppScreenId;
+  action?: string;
+}
+
+export const systemFunctionsRegistry: Record<string, SystemFunctionConfig> = {
+  LISTAR_PERSONAL_ACADEMICO: {
+    key: 'LISTAR_PERSONAL_ACADEMICO',
+    title: 'Personal Académico',
+    description: 'Listar personal académico registrado',
+    iconType: 'img',
+    iconSrc: academicStaffIcon,
+    screen: 'ACADEMIC_STAFF',
+  },
+  LISTAR_PLANILLAS_PROCESADAS: {
+    key: 'LISTAR_PLANILLAS_PROCESADAS',
+    title: 'Planillas Procesadas',
+    description: 'Listar planillas procesadas y detalle',
+    iconType: 'img',
+    iconSrc: processedRostersIcon,
+  },
+  IMPORTAR_PADRON: {
+    key: 'IMPORTAR_PADRON',
+    title: 'Importar padrón',
+    description: 'Importar padrón oficial de estudiantes',
+    iconType: 'img',
+    iconSrc: importRosterIcon,
+    action: 'IMPORT_ROSTER',
+  },
+  EDITAR_ROLES: {
+    key: 'EDITAR_ROLES',
+    title: 'Editar Roles',
+    description: 'Editar roles de una cuenta',
+    iconType: 'img',
+    iconSrc: editRolesIcon,
+    screen: 'EDIT_ROLES',
+  },
+  EDITAR_DATOS_PERSONALES: {
+    key: 'EDITAR_DATOS_PERSONALES',
+    title: 'Editar datos Personales',
+    description: 'Editar datos personales de cuenta propia',
+    iconType: 'img',
+    iconSrc: editPersonalDataIcon,
+    action: 'EDIT_PERSONAL_DATA',
+  },
+  REGISTRAR_PERSONAL_ACADEMICO: {
+    key: 'REGISTRAR_PERSONAL_ACADEMICO',
+    title: 'Registrar personal académico',
+    description: 'Registrar nuevo personal académico',
+    iconType: 'img',
+    iconSrc: registerStaffIcon,
+    action: 'REGISTER_ACADEMIC_STAFF',
+  },
+  VISUALIZAR_MATERIAS_ASIGNADAS: {
+    key: 'VISUALIZAR_MATERIAS_ASIGNADAS',
+    title: 'Visualizar Materias',
+    description: 'Visualizar materias asignadas a cargo',
+    iconType: 'img',
+    iconSrc: coursesIcon,
+    screen: 'TEACHER_COURSES',
+  },
+  LISTAR_ESTUDIANTES_MATERIA: {
+    key: 'LISTAR_ESTUDIANTES_MATERIA',
+    title: 'Estudiantes inscritos en una materia',
+    description: 'Listar estudiantes inscritos dentro de una materia',
+    iconType: 'img',
+    iconSrc: studentsEnrolledIcon,
+    screen: 'TEACHER_COURSES',
+  },
+  PROGRAMAR_EXAMEN: {
+    key: 'PROGRAMAR_EXAMEN',
+    title: 'Programar Examen',
+    description: 'Programar examen para una materia con asignación automática de aulas',
+    iconType: 'img',
+    iconSrc: scheduleExamIcon,
+    action: 'SCHEDULE_EXAM',
+  },
+  LISTAR_EXAMENES_MATERIA: {
+    key: 'LISTAR_EXAMENES_MATERIA',
+    title: 'Exámenes programados',
+    description: 'Listar exámenes programados de una materia',
+    iconType: 'img',
+    iconSrc: examDocIcon,
+    action: 'SCHEDULED_EXAMS',
+  },
+  GESTIONAR_HABILITACION_ESTUDIANTE: {
+    key: 'GESTIONAR_HABILITACION_ESTUDIANTE',
+    title: 'Estado de Habilitación',
+    description: 'Cambiar estado de habilitación de un estudiante con motivo académico',
+    iconType: 'img',
+    iconSrc: studentEligibilityIcon,
+    action: 'STUDENT_STATUS',
+  },
+  GESTIONAR_PUNTOS_CONTROL_EXAMEN: {
+    key: 'GESTIONAR_PUNTOS_CONTROL_EXAMEN',
+    title: 'Puntos de control',
+    description: 'Controlar el ingreso y la permanencia de estudiantes en un examen',
+    iconType: 'img',
+    iconSrc: checkpointIcon,
+    action: 'EXAM_CHECKPOINT',
+  },
+};
+
+export const SYSTEM_FUNCTIONS_REGISTRY = systemFunctionsRegistry;
+
+export function getAuthorizedFunctions(tokenFunctions?: string[]): SystemFunctionConfig[] {
+  const allConfigs = Object.values(systemFunctionsRegistry);
+
+  if (!tokenFunctions || tokenFunctions.length === 0) {
+    return allConfigs;
+  }
+
+  const authorizedSet = new Set(tokenFunctions.map((fn) => fn.toUpperCase().trim()));
+  return allConfigs.filter((config) => authorizedSet.has(config.key));
+}

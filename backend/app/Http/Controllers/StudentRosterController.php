@@ -47,8 +47,8 @@ class StudentRosterController extends Controller
                 'isSuccessful' => $summary->isSuccessful,
             ],
             'message' => $summary->isSuccessful
-                ? ($summary->skipped > 0 ? 'Nómina procesada con observaciones.' : 'Student roster processed successfully.')
-                : 'Failed to process student roster.',
+                ? ($summary->skipped > 0 ? "Archivo procesado con observaciones." : "Archivo procesado sin observaciones")
+                : "No se pudo procesar el archivo",
         ], $summary->isSuccessful ? 200 : 422);
     }
 

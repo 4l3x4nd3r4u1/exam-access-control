@@ -4,11 +4,14 @@ namespace App\DTOs;
 
 class UserSummary
 {
+    /**
+     * @param list<string> $roles
+     */
     public function __construct(
         public readonly int $userId,
         public readonly string $fullName,
         public readonly string $email,
-        public readonly string $role,
+        public readonly array $roles,
         public readonly bool $isActive = true,
     ) {}
 
@@ -18,7 +21,7 @@ class UserSummary
             'user_id' => $this->userId,
             'full_name' => $this->fullName,
             'email' => $this->email,
-            'role' => $this->role,
+            'roles' => $this->roles,
             'is_active' => $this->isActive,
         ];
     }

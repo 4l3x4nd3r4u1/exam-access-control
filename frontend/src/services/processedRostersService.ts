@@ -1,5 +1,10 @@
 import { apiRequest } from './apiClient';
-import type { ProcessedRoster, ProcessedRostersResponse, RosterStudent, RosterStudentsResponse } from '../types/processedRoster';
+import type {
+  ProcessedRoster,
+  ProcessedRostersResponse,
+  ProcessedRosterDetailData,
+  ProcessedRosterDetailResponse,
+} from '../types/processedRoster';
 
 export const processedRostersService = {
   async getProcessedRosters(): Promise<ProcessedRoster[]> {
@@ -7,8 +12,8 @@ export const processedRostersService = {
     return response.data;
   },
 
-  async getRosterStudents(courseGroupId: string): Promise<RosterStudent[]> {
-    const response = await apiRequest<RosterStudentsResponse>(`/courses/${courseGroupId}/students`);
+  async getProcessedRosterDetail(courseGroupId: string | number): Promise<ProcessedRosterDetailData> {
+    const response = await apiRequest<ProcessedRosterDetailResponse>(`/processed-rosters/${courseGroupId}`);
     return response.data;
   },
 };

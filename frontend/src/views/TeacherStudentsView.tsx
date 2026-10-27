@@ -6,6 +6,7 @@ import { StudentStatusDrawer } from '../components/StudentStatusDrawer';
 
 interface TeacherStudentsViewProps {
   course: TeacherCourse;
+  allowStatusEdit: boolean;
   onBack: () => void;
   onLogout: () => void;
 }
@@ -14,14 +15,34 @@ function displayStatus(status: EnrolledStudent['status']): string {
   return status === 'INHABILITADO' ? 'Inhabilitado' : 'Habilitado';
 }
 
-export function TeacherStudentsView({ course, onBack, onLogout }: TeacherStudentsViewProps) {
+export function TeacherStudentsView({ course, allowStatusEdit, onBack, onLogout }: TeacherStudentsViewProps) {
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<EnrolledStudent | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const filteredStudents = students.filter((student) => {
+    if (!normalizedSearch) {
+      return true;
+    }
+
+    return (
+      student.studentKey.toLowerCase().includes(normalizedSearch) ||
+      student.ci.toLowerCase().includes(normalizedSearch) ||
+      student.fullName.toLowerCase().includes(normalizedSearch)
+    );
+  });
 
   useEffect(() => {
     let isMounted = true;
+    
+    setIsLoading(true);
+    setError(null);
+    setSelectedStudent(null);
+    setSearchTerm(''); 
 
     courseService.getEnrolledStudents(course.course_group_id)
       .then((items) => {
@@ -69,19 +90,44 @@ export function TeacherStudentsView({ course, onBack, onLogout }: TeacherStudent
         <img src={enrolledStudentsIcon} alt="" />
         <h1>Estudiantes<br />inscritos</h1>
       </section>
+       <div className="teacher-students-search">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m16.5 16.5 4 4" />
+  </svg>
+
+    <input
+      type="search"
+      value={searchTerm}
+      onChange={(event) => setSearchTerm(event.target.value)}
+      placeholder="Buscar estudiante"
+      aria-label="Buscar estudiante por SIS, CI o nombre"
+    />
+
+    {searchTerm && (
+      <button type="button" onClick={() => setSearchTerm('')}>
+        limpiar
+      </button>
+    )}
+  </div>
 
       <section className="teacher-students-table" aria-label="Estudiantes inscritos">
         <div className="teacher-students-table-header"><span>sis</span><span>nombre</span><span>estado</span></div>
         {isLoading && <p className="teacher-courses-feedback">Cargando estudiantes...</p>}
         {error && <p className="teacher-courses-feedback teacher-courses-error" role="alert">{error}</p>}
-        {!isLoading && !error && students.map((student) => (
-          <button type="button" className="teacher-students-table-row" key={student.studentKey} onClick={() => setSelectedStudent(student)}>
+        {!isLoading && !error && filteredStudents.map((student) => (
+          <button type="button" className="teacher-students-table-row" key={student.studentKey} onClick={() => { if (allowStatusEdit) { setSelectedStudent(student); } }}>
             <span>{student.studentKey}</span><span>{student.fullName}</span><span>{displayStatus(student.status)}</span>
           </button>
         ))}
+       {!isLoading && !error && filteredStudents.length === 0 && (
+          <p className="teacher-courses-feedback">
+              No se encontraron estudiantes.
+          </p>
+        )}
       </section>
 
-      {selectedStudent && (
+      {allowStatusEdit && selectedStudent && (
         <StudentStatusDrawer
           isOpen
           courseGroupId={course.course_group_id}

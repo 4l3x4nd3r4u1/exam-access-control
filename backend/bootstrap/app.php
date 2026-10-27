@@ -12,7 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->alias([
+            'auth.jwt' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
+            'role' => \App\Http\Middleware\CheckRole::class,
+            'can_function' => \App\Http\Middleware\CheckFunctionPermission::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

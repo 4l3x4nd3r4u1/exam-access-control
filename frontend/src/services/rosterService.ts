@@ -1,13 +1,8 @@
-import { API_BASE_URL } from './apiClient';
-import { getStoredSession } from './sessionStorage';
+import { API_BASE_URL, createApiHeaders } from './apiClient';
 import type { FailedRosterRow, ImportRosterApiResponse, ImportRosterSummary, RosterMetadata } from '../types/roster';
 
 function authenticatedHeaders(): Headers {
-  const headers = new Headers({ Accept: 'application/json' });
-  const token = getStoredSession()?.token;
-
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  return headers;
+  return createApiHeaders();
 }
 
 async function responseError(response: Response): Promise<Error> {
@@ -24,7 +19,7 @@ export const rosterService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/students/import`, {
+    const response = await fetch(`${API_BASE_URL}/student-roster/import`, {
       method: 'POST',
       headers: authenticatedHeaders(),
       body: formData,
@@ -43,7 +38,7 @@ export const rosterService = {
   },
 
   async downloadTemplate(): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/courses/roster-template`, {
+    const response = await fetch(`${API_BASE_URL}/student-roster/template`, {
       headers: authenticatedHeaders(),
     });
     if (!response.ok) throw await responseError(response);

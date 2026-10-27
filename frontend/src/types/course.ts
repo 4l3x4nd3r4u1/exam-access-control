@@ -6,6 +6,7 @@ export interface TeacherCourse {
   academic_term: string;
   total_enrolled: number;
   teacher_id: number;
+  can_interact: boolean;
 }
 
 export interface TeacherCoursesResponse {
@@ -15,6 +16,7 @@ export interface TeacherCoursesResponse {
 }
 
 export interface EnrolledStudent {
+  userId: number;
   studentKey: string;
   ci: string;
   fullName: string;
@@ -25,5 +27,14 @@ export interface EnrolledStudent {
 export interface EnrolledStudentsResponse {
   success: boolean;
   data: EnrolledStudent[];
+  message: string;
+}
+
+// GET /course-groups devuelve la misma forma que GET /teachers/{id}/courses
+export type CourseGroup = TeacherCourse;
+
+export interface CourseGroupsResponse {
+  success: boolean;
+  data: CourseGroup[];
   message: string;
 }
