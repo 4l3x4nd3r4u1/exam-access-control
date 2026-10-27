@@ -897,29 +897,29 @@ class CoreDataStorage
      */
     private function getStudentExpulsionHistory(int $userId): array
     {
-        $expelledStatusId = ExamStudentStatus::where('nombre', 'EXPULSADO')->value('id');
+    $expelledStatusId = ExamStudentStatus::where('nombre', 'EXPULSADO')->value('id');
 
-        if ($expelledStatusId === null) {
-            return [];
-        }
+    if ($expelledStatusId === null) {
+        return [];
+    }
 
-        return ExamStudent::with(['exam.courseGroup.course', 'exam.examType', 'room'])
-            ->where('usuario_id', $userId)
-            ->where('estado_id', $expelledStatusId)
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn(ExamStudent $examStudent) => new ExpulsionHistoryItem(
-                examId: (string) $examStudent->exam_id,
-                subjectName: (string) ($examStudent->exam?->courseGroup?->course?->nombre ?? ''),
-                group: (string) ($examStudent->exam?->courseGroup?->grupo ?? ''),
-                academicTerm: (string) ($examStudent->exam?->courseGroup?->gestion ?? ''),
-                examType: (string) ($examStudent->exam?->examType?->nombre ?? ''),
-                date: $examStudent->exam?->fecha?->format('Y-m-d'),
-                roomName: $examStudent->room?->nombre,
-                reason: $examStudent->motivo_expulsion,
-            )->toArray())
-            ->values()
-            ->all();
+    return ExamStudent::with(['exam.courseGroup.course', 'exam.examType', 'room'])
+        ->where('usuario_id', $userId)
+        ->where('estado_id', $expelledStatusId)
+        ->orderByDesc('created_at')
+        ->get()
+        ->map(fn(ExamStudent $examStudent) => (new ExpulsionHistoryItem( // <-- Paréntesis de apertura para envolver el objeto
+            examId: (string) $examStudent->exam_id,
+            subjectName: (string) ($examStudent->exam?->courseGroup?->course?->nombre ?? ''),
+            group: (string) ($examStudent->exam?->courseGroup?->grupo ?? ''),
+            academicTerm: (string) ($examStudent->exam?->courseGroup?->gestion ?? ''),
+            examType: (string) ($examStudent->exam?->examType?->nombre ?? ''),
+            date: $examStudent->exam?->fecha?->format('Y-m-d'),
+            roomName: $examStudent->room?->nombre,
+            reason: $examStudent->motivo_expulsion,
+        ))->toArray())
+        ->values()
+        ->all();
     }
 
     /**
