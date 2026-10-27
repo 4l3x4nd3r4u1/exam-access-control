@@ -129,8 +129,9 @@ export function ExamAccessControlView({
 
   const [note, setNote] = useState('');
   const [reason, setReason] = useState('');
+  
   const [isConfirmingExpulsion, setIsConfirmingExpulsion] = useState(false);
-
+  
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -424,14 +425,18 @@ export function ExamAccessControlView({
 
       case 'NO FIGURA EN EL EXAMEN':
       case 'ESTUDIANTE NO ENCONTRADO':
-      default:
         return (
           <>
             <StudentLine student={student} />
             <ResultCard
               tone="gray"
               title="SIN OCURRENCIAS"
-              detail={<p>No figura en el examen</p>}
+              detail={
+          <p>
+            {access.result === 'ESTUDIANTE NO ENCONTRADO'
+              ? 'Estudiante no encontrado'
+              : 'No figura en el examen'}
+          </p>}
               history={history}
             />
           </>
@@ -457,9 +462,10 @@ export function ExamAccessControlView({
               detail={
                 <>
                   <p>{entryLine}</p>
-                  {state.norma_particular && (
+
+                    {state.result === 'INGRESO EXCEPCIONAL' && (
                     <p className="ec-rule">
-                      Norma particular: {state.norma_particular}
+                      Ingreso excepcional autorizado
                     </p>
                   )}
                   {state.observations && (

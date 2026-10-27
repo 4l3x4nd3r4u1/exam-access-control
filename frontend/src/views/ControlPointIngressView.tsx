@@ -8,6 +8,7 @@ import { canRecordControlPointObservation, canUseControlPoint, getControlPointSt
 import { formatExamType } from '../utils/examFormat';
 import type { ControlPointSelection, ExamAccessResponse } from '../types/controlPoint';
 import type { EnrolledStudent } from '../types/course';
+import { ExamAccessControlView } from './ExamAccessControlView';
 import '../styles/controlPoints.css';
 
 interface ControlPointIngressViewProps {
@@ -18,6 +19,7 @@ interface ControlPointIngressViewProps {
 
 export function ControlPointIngressView({ selection, userId, onBack }: ControlPointIngressViewProps) {
   const { exam, room } = selection;
+  const [showDuringExam, setShowDuringExam] = useState(false);
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState<ExamAccessResponse | null>(null);
@@ -46,6 +48,7 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
         if (!controller.signal.aborted) setError(requestError instanceof Error ? requestError.message : 'No se pudieron cargar los estudiantes.');
       })
       .finally(() => { if (!controller.signal.aborted) setIsLoading(false); });
+      
     return () => controller.abort();
   }, [exam.course_group_id, attempt]);
 
@@ -83,6 +86,15 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
       if (!controller.signal.aborted) setBusy(false);
     }
   };
+  if (showDuringExam) {
+  return (
+    <ExamAccessControlView
+      exam={exam}
+      room={room}
+      onBack={() => setShowDuringExam(false)}
+    />
+  );
+}
   return (
     <main className="app-shell cp-screen cp-ingress">
       <header className="cp-topbar">
@@ -96,14 +108,21 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
         <p><ControlPointIcon name="room" />{room.room_name}</p>
       </section>
       <div className="cp-tabs" aria-label="Modo de control">
-        <span className="cp-tab-active">Ingreso</span>
-        <button type="button" disabled title="Disponible en una próxima etapa">Durante el examen</button>
+      <span className="cp-tab-active">Ingreso</span>
+
+      <button
+        type="button"
+        disabled={busy || savingObservation}
+        onClick={() => setShowDuringExam(true)}
+      >
+        Durante el examen
+       </button>
       </div>
       <ControlPointStudentSearch
         students={students}
         query={query}
         onQueryChange={changeQuery}
-        onSelect={(student) => { void checkAccess(student.studentKey || student.ci); }}
+        onSelect={(student) => { changeQuery(student.studentKey || student.ci); }}
         isLoading={isLoading}
         error={error}
         onRetry={() => { setError(null); setIsLoading(true); setAttempt((value) => value + 1); }}

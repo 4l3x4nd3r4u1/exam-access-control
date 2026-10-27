@@ -152,7 +152,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
               No hay personal académico registrado.
             </p>
           )}
-      
+       </section>
     </main>
   );
 }
