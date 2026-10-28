@@ -43,7 +43,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
 
     return (
       member.full_name.toLowerCase().includes(search) ||
-      (member.role ?? '').toLowerCase().includes(search)
+      (member.role ?? member.roles.join(', ')).toLowerCase().includes(search)
     );
   });
 
@@ -140,7 +140,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
         {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
         {!isLoading && !error && filteredStaff.map((member) => (
           <div className="academic-staff-row" key={member.user_id}>
-            <span>{formatRole(member.role ?? '')}</span>
+            <span>{formatRole(member.role ?? member.roles[0] ?? '')}</span>
             <span title={member.full_name}>{member.full_name}</span>
           </div>
         ))}
@@ -152,7 +152,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
               No hay personal académico registrado.
             </p>
           )}
-       </section>
+      </section>
     </main>
   );
 }
