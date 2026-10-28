@@ -175,19 +175,12 @@ export function AcademicUserDrawer({
         const updatedUser: AcademicStaffMember = {
           ...user,
           roles: selectedRoles,
-<<<<<<< HEAD
-          role: selectedRoles[0],
-=======
           role: selectedRoles.join(', '),
->>>>>>> 02d9c6f707e7b501b0c4fb6ad1c8edee91a433e4
         };
 
         onSaved(updatedUser);
         return;
       } else {
-<<<<<<< HEAD
-        await staffService.registerAcademicUser({ fullName, ci, email, password, roles: selectedRoles });
-=======
         await staffService.registerAcademicUser({
           fullName,
           ci,
@@ -195,7 +188,6 @@ export function AcademicUserDrawer({
           password,
           roles: selectedRoles,
         });
->>>>>>> 02d9c6f707e7b501b0c4fb6ad1c8edee91a433e4
       }
 
       setIsConfirmOpen(false);
