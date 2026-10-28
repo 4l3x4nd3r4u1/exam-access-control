@@ -174,13 +174,20 @@ export function AcademicUserDrawer({
       if (user) {
         const updatedUser: AcademicStaffMember = {
           ...user,
-          role,
+          roles: selectedRoles,
+          role: selectedRoles.join(', '),
         };
 
         onSaved(updatedUser);
         return;
       } else {
-        await staffService.registerAcademicUser({ fullName, email, password, role });
+        await staffService.registerAcademicUser({
+          fullName,
+          ci,
+          email,
+          password,
+          roles: selectedRoles,
+        });
       }
 
       setIsConfirmOpen(false);

@@ -34,24 +34,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
   const [staff, setStaff] = useState<AcademicStaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isNewUserDrawerOpen, setIsNewUserDrawerOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AcademicStaffMember | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-
-  const loadStaff = useCallback(async (showLoading = true) => {
-    if (showLoading) {
-      setIsLoading(true);
-      setError(null);
-    }
-    try {
-      const members = await staffService.getAcademicStaff();
-      setStaff(members);
-    } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar el personal académico.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
   const filteredStaff = staff.filter((member) => {
     const search = searchTerm.toLowerCase().trim();
@@ -60,7 +43,7 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
 
     return (
       member.full_name.toLowerCase().includes(search) ||
-      member.role.toLowerCase().includes(search)
+      (member.role ?? member.roles.join(', ')).toLowerCase().includes(search)
     );
   });
 
@@ -157,51 +140,10 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
         {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
         {!isLoading && !error && filteredStaff.map((member) => (
           <div className="academic-staff-row" key={member.user_id}>
-            <span>{formatRole(member.role)}</span>
+            <span>{formatRole(member.role ?? member.roles[0] ?? '')}</span>
             <span title={member.full_name}>{member.full_name}</span>
           </div>
         ))}
-      </section>
-
-        {error && (
-          <p
-            className="academic-staff-feedback academic-staff-error"
-            role="alert"
-          >
-            {error}
-          </p>
-        )}
-
-        {!isLoading &&
-          !error &&
-          staff.map((member) => (
-            <div
-              className="academic-staff-row"
-              key={member.user_id}
-            >
-              <span>
-                {formatRoles(
-                  member.roles,
-                )}
-              </span>
-
-              <span
-                title={
-                  member.full_name
-                }
-              >
-                {member.full_name}
-              </span>
-            </div>
-          ))}
-
-        {!isLoading &&
-          !error &&
-          staff.length === 0 && (
-            <p className="academic-staff-feedback">
-              No hay personal académico registrado.
-            </p>
-          )}
       </section>
     </main>
   );
