@@ -908,7 +908,7 @@ class CoreDataStorage
             ->where('estado_id', $expelledStatusId)
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn(ExamStudent $examStudent) => new ExpulsionHistoryItem(
+            ->map(fn(ExamStudent $examStudent) => (new ExpulsionHistoryItem(
                 examId: (string) $examStudent->exam_id,
                 subjectName: (string) ($examStudent->exam?->courseGroup?->course?->nombre ?? ''),
                 group: (string) ($examStudent->exam?->courseGroup?->grupo ?? ''),
@@ -917,7 +917,7 @@ class CoreDataStorage
                 date: $examStudent->exam?->fecha?->format('Y-m-d'),
                 roomName: $examStudent->room?->nombre,
                 reason: $examStudent->motivo_expulsion,
-            )->toArray())
+            ))->toArray())
             ->values()
             ->all();
     }

@@ -43,7 +43,11 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
 
     return (
       member.full_name.toLowerCase().includes(search) ||
+<<<<<<< HEAD
       (member.role ?? '').toLowerCase().includes(search)
+=======
+      (member.role ?? member.roles.join(', ')).toLowerCase().includes(search)
+>>>>>>> 02d9c6f707e7b501b0c4fb6ad1c8edee91a433e4
     );
   });
 
@@ -140,19 +144,30 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
         {error && <p className="academic-staff-feedback academic-staff-error" role="alert">{error}</p>}
         {!isLoading && !error && filteredStaff.map((member) => (
           <div className="academic-staff-row" key={member.user_id}>
+<<<<<<< HEAD
             <span>{formatRole(member.role ?? '')}</span>
+            <span title={member.full_name}>{member.full_name}</span>
+          </div >
+        ))
+}
+
+{
+  !isLoading &&
+    !error &&
+    staff.length === 0 && (
+      <p className="academic-staff-feedback">
+        No hay personal académico registrado.
+      </p>
+    )
+}
+       </section >
+=======
+            <span>{formatRole(member.role ?? member.roles[0] ?? '')}</span>
             <span title={member.full_name}>{member.full_name}</span>
           </div>
         ))}
-
-        {!isLoading &&
-          !error &&
-          staff.length === 0 && (
-            <p className="academic-staff-feedback">
-              No hay personal académico registrado.
-            </p>
-          )}
-       </section>
-    </main>
+      </section>
+>>>>>>> 02d9c6f707e7b501b0c4fb6ad1c8edee91a433e4
+    </main >
   );
 }
