@@ -3,8 +3,10 @@ import { useState } from 'react';
 import assignedCoursesIcon from './assets/icono_materia-2.svg';
 import scheduleExamIcon from './assets/programar_examen.svg';
 import scheduledExamsIcon from './assets/documento_examen.svg';
+import controlPointsIcon from './assets/puntos_control.svg';
 import enrolledStudentsIcon from './assets/estudiantes_inscritos.svg';
 import studentEligibilityIcon from './assets/estado_habilitacion.svg';
+import checkpointIcon from './assets/punto_control.svg';
 import importRosterIcon from './assets/importar_planilla.svg';
 import processedRostersIcon from './assets/planillas_importadas.svg';
 import academicStaffIcon from './assets/personal_academico.svg';
@@ -18,6 +20,7 @@ import { EditPersonalDataDrawer } from './components/EditPersonalDataDrawer';
 import { CourseGroupSearchDrawer } from './components/CourseGroupSearchDrawer';
 import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
 import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer';
+import { ExamSearchDrawer } from './components/ExamSearchDrawer';
 
 import { authService, hasFunction } from './services/authService';
 
@@ -25,6 +28,7 @@ import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
 import type { CourseGroup } from './types/course';
 import type { ProcessedRoster } from './types/processedRoster';
+import type { ControlExam, ControlExamRoom } from './types/examAccess';
 
 import { AcademicStaffView } from './views/AcademicStaffView';
 import {
@@ -32,10 +36,14 @@ import {
   type CourseFunctionMode,
 } from './views/AssignedCoursesView';
 import { EnrolledStudentsView } from './views/EnrolledStudentsView';
+import { ExamAccessControlView } from './views/ExamAccessControlView';
 import { LoginView } from './views/LoginView';
 import { ProcessedRosterDetailView } from './views/ProcessedRosterDetailView';
 import { ProcessedRostersView } from './views/ProcessedRostersView';
 import { ScheduledExamsView } from './views/ScheduledExamsView';
+import { ControlPointsView } from './views/ControlPointsView';
+import { ControlPointIngressView } from './views/ControlPointIngressView';
+import type { ControlPointSelection } from './types/controlPoint';
 import './App.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
 
@@ -46,7 +54,10 @@ type ApplicationScreen =
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL'
   | 'SCHEDULED_EXAMS'
-  | 'ENROLLED_STUDENTS';
+|   'ENROLLED_STUDENTS'
+  | 'EXAM_ACCESS_CONTROL'
+  | 'CONTROL_POINTS'
+  | 'CONTROL_POINT_INGRESS'; 
 
 /** Drawer de búsqueda de materia abierto desde el panel. */
 type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS' | 'SCHEDULE_EXAM';
@@ -77,8 +88,17 @@ export default function App() {
   const [isStudentEligibilityDrawerOpen, setIsStudentEligibilityDrawerOpen] =
     useState(false);
 
+  const [isExamSearchDrawerOpen, setIsExamSearchDrawerOpen] =
+    useState(false);
+
+  // Examen y aula (punto de control) elegidos para el control de acceso.
+  const [accessControlTarget, setAccessControlTarget] =
+    useState<{ exam: ControlExam; room: ControlExamRoom } | null>(null);
+
   const [selectedRoster, setSelectedRoster] =
     useState<ProcessedRoster | null>(null);
+
+  const [selectedControlPoint, setSelectedControlPoint] = useState<ControlPointSelection | null>(null);
 
   const [courseSearchTarget, setCourseSearchTarget] =
     useState<CourseSearchTarget | null>(null);
@@ -99,9 +119,12 @@ export default function App() {
     setSession(null);
     setScreen('DASHBOARD');
     setSelectedRoster(null);
+    setSelectedControlPoint(null);
     setSelectedCourseGroup(null);
     setCourseSearchTarget(null);
     setCourseForScheduleExam(null);
+    setAccessControlTarget(null);
+    setIsExamSearchDrawerOpen(false);
 
     setIsImportDrawerOpen(false);
     setIsAssignedCoursesDrawerOpen(false);
@@ -168,6 +191,46 @@ export default function App() {
     );
   }
 
+  if (screen === 'EXAM_ACCESS_CONTROL' && accessControlTarget) {
+    return (
+      <ExamAccessControlView
+        exam={accessControlTarget.exam}
+        room={accessControlTarget.room}
+        onBack={() => {
+          setAccessControlTarget(null);
+          setScreen('DASHBOARD');
+        }}
+      />
+    );
+  }
+
+  if (screen === 'CONTROL_POINTS') {
+    return (
+      <ControlPointsView
+        userId={session.user_id}
+        onBack={() => setScreen('DASHBOARD')}
+        onSelect={(selection) => {
+          setSelectedControlPoint(selection);
+          setScreen('CONTROL_POINT_INGRESS');
+        }}
+      />
+    );
+  }
+
+  if (screen === 'CONTROL_POINT_INGRESS' && selectedControlPoint) {
+    return (
+      <ControlPointIngressView
+        key={`${selectedControlPoint.exam.exam_id}-${selectedControlPoint.room.room_id}-${session.user_id}`}
+        selection={selectedControlPoint}
+        userId={session.user_id}
+        onBack={() => {
+          setSelectedControlPoint(null);
+          setScreen('CONTROL_POINTS');
+        }}
+      />
+    );
+  }
+
   const menuItems = [
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
@@ -225,6 +288,17 @@ export default function App() {
       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
+      label: 'Puntos de control',
+      icon: checkpointIcon,
+      iconClass: 'admin-checkpoint-icon',
+      open: () => setIsExamSearchDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
       ),
     },
     {
@@ -292,6 +366,16 @@ export default function App() {
         session,
         FUNCTION_CODES.EDIT_PERSONAL_DATA,
       ),
+    },
+    {
+      // Navigation entry: GET /exams is available to authenticated users.
+      // Room access is determined by the backend's can_interact assignment.
+      functionCode: 'control-points',
+      label: 'Puntos de control',
+      icon: controlPointsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setScreen('CONTROL_POINTS'),
+      visible: true,
     },
   ].filter((item) => item.visible);
 
@@ -427,6 +511,16 @@ export default function App() {
             onClose={() => setIsAcademicUserDrawerOpen(false)}
             onSaved={() => setIsAcademicUserDrawerOpen(false)}
             />
+
+      <ExamSearchDrawer
+        isOpen={isExamSearchDrawerOpen}
+        onClose={() => setIsExamSearchDrawerOpen(false)}
+        onSelect={(exam, room) => {
+          setAccessControlTarget({ exam, room });
+          setIsExamSearchDrawerOpen(false);
+          setScreen('EXAM_ACCESS_CONTROL');
+        }}
+      />
 
       <StudentEligibilityDrawer
         isOpen={isStudentEligibilityDrawerOpen}

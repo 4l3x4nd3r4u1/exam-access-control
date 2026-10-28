@@ -1000,20 +1000,11 @@ export function ScheduleExamDrawer({
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const roomsPayload =
-      roomAllocations.map(
-        (allocation) => ({
-          roomId: Number(
-            allocation.room
-              .room_id,
-          ),
-
-          students:
-            allocation.studentUserIds,
-
-          auxiliarId: null,
-        }),
-      );
+   const roomsPayload = roomAllocations.map((allocation) => ({
+  roomId: Number(allocation.room.room_id),
+  students: allocation.studentUserIds,
+  auxiliarId: null,
+}));
 
     for (
       const particularRule of

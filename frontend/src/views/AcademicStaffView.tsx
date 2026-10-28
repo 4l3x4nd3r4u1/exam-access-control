@@ -144,6 +144,14 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
             <span title={member.full_name}>{member.full_name}</span>
           </div>
         ))}
+
+        {!isLoading &&
+          !error &&
+          staff.length === 0 && (
+            <p className="academic-staff-feedback">
+              No hay personal académico registrado.
+            </p>
+          )}
       </section>
     </main>
   );
