@@ -117,11 +117,38 @@ interface ImportResultProps {
   isDownloading: boolean;
 }
 
+function formatObservation(observation: string): string {
+  if (/cannot access offset|bulk import transaction error/i.test(observation)) {
+    return 'La planilla para esta materia y grupo ya ha sido procesada previamente. Todos los estudiantes ya se encuentran registrados.';
+  }
+  if (/missing required column headers:\s*(.*)/i.test(observation)) {
+    const match = observation.match(/missing required column headers:\s*(.*)/i);
+    const cols = match ? match[1] : '';
+    return `Faltan las siguientes columnas obligatorias en la cabecera: ${cols}.`;
+  }
+  if (/the csv file is empty/i.test(observation)) {
+    return 'El archivo seleccionado está vacío.';
+  }
+  if (/unable to read headers from csv file/i.test(observation)) {
+    return 'No se pudieron leer los encabezados del archivo CSV.';
+  }
+  if (/unsupported file format/i.test(observation)) {
+    return 'Formato de archivo no soportado. Los formatos válidos son .csv y .xlsx.';
+  }
+  if (/malformed row/i.test(observation)) {
+    return 'Se encontraron filas con número de columnas incorrecto.';
+  }
+  return observation;
+}
+
 function ImportResult({ summary, onDownloadCorrections, onDownloadTemplate, onReset, onDone, isDownloading }: ImportResultProps) {
   const hasFailedRows = summary.failedRows.length > 0;
   const isCompleteSuccess = summary.isSuccessful && !hasFailedRows;
+  const isDuplicateRoster = summary.observations.some((observation) =>
+    /cannot access offset|bulk import transaction|ya fue importada|duplicad/i.test(observation)
+  );
   const isMissingMetadata = summary.observations.some((observation) => /metadatos/i.test(observation));
-  const isMissingColumns = summary.observations.some((observation) => /cabecera|columnas/i.test(observation));
+  const isMissingColumns = summary.observations.some((observation) => /cabecera|columnas|missing required column/i.test(observation));
   const isCourseConflict = summary.observations.some((observation) => /ya está asignada/i.test(observation));
   const needsTemplate = !summary.isSuccessful && !hasFailedRows && (isMissingMetadata || isMissingColumns);
   const issueSummary = summarizeFailedRows(summary);
@@ -129,8 +156,11 @@ function ImportResult({ summary, onDownloadCorrections, onDownloadTemplate, onRe
     ? 'Planilla importada correctamente'
     : hasFailedRows
       ? 'Planilla procesada con observaciones'
-      : isCourseConflict
-        ? 'Materia ya asignada a otro docente'
+      : isDuplicateRoster
+        ? 'Planilla ya registrada'
+        : isCourseConflict
+          ? 'Materia ya asignada a otro docente'
+
         : isMissingMetadata
           ? 'Faltan metadatos requeridos'
           : isMissingColumns
@@ -140,7 +170,9 @@ function ImportResult({ summary, onDownloadCorrections, onDownloadTemplate, onRe
       ? `${summary.successful} ${summary.successful === 1 ? 'estudiante fue registrado' : 'estudiantes fueron registrados'} correctamente.`
     : hasFailedRows
       ? 'Algunas filas no se pudieron registrar. Descárgalas para corregirlas y volver a subirlas.'
-      : needsTemplate
+      : isDuplicateRoster
+        ? 'La planilla para esta materia y grupo ya fue registrada anteriormente en el sistema.'
+        : needsTemplate
         ? 'Usa la plantilla oficial para completar la información requerida y vuelve a subirla.'
         : 'Revisa las observaciones e intenta nuevamente.';
 
@@ -164,7 +196,7 @@ function ImportResult({ summary, onDownloadCorrections, onDownloadTemplate, onRe
             <ul>
               {issueSummary.map(({ reason, rows }) => (
                 <li key={reason}>
-                  <span>{reason}</span>
+                  <span>{formatObservation(reason)}</span>
                   <small>{rows.length === 1 ? `Fila ${rows[0]}` : `Filas ${rows.join(', ')}`}</small>
                 </li>
               ))}
@@ -176,7 +208,7 @@ function ImportResult({ summary, onDownloadCorrections, onDownloadTemplate, onRe
 
       {!hasFailedRows && summary.observations.length > 0 && (
         <ul className="import-roster-observations">
-          {summary.observations.map((observation) => <li key={observation}>{observation}</li>)}
+          {summary.observations.map((observation) => <li key={observation}>{formatObservation(observation)}</li>)}
         </ul>
       )}
 
