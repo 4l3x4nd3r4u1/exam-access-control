@@ -139,6 +139,26 @@ function getLocalToday(): string {
   return `${year}-${month}-${day}`;
 }
 
+function isPastTimeSlot(
+  date: string,
+  slot: TimeSlot,
+): boolean {
+  if (date !== getLocalToday()) {
+    return false;
+  }
+
+  const now = new Date();
+  const currentMinutes =
+    now.getHours() * 60 + now.getMinutes();
+
+  const [hours, minutes] =
+    slot.start24h.split(':').map(Number);
+
+  const slotMinutes = hours * 60 + minutes;
+
+  return slotMinutes <= currentMinutes;
+}
+
 function formatDateToSpanish(
   dateString: string,
 ): string {
@@ -593,7 +613,7 @@ export function ScheduleExamDrawer({
           enrolledStudents.slice(
             studentOffset,
             studentOffset +
-              studentCount,
+            studentCount,
           );
 
         allocations.push({
@@ -613,7 +633,7 @@ export function ScheduleExamDrawer({
           Math.max(
             0,
             remainingCount -
-              studentCount,
+            studentCount,
           );
       }
 
@@ -900,8 +920,8 @@ export function ScheduleExamDrawer({
           particularRules.some(
             (item) =>
               item.studentId ===
-                result.data
-                  ?.user_id &&
+              result.data
+                ?.user_id &&
               item.rule === rule,
           );
 
@@ -957,6 +977,13 @@ export function ScheduleExamDrawer({
     if (!isAssignedTeacher) {
       setErrorMessage(
         'No tienes permiso para programar exámenes en una materia asignada a otro docente.',
+      );
+      return;
+    }
+
+    if (isPastTimeSlot(rawDate, currentSlot)) {
+      setErrorMessage(
+        'No puedes programar un examen en un horario que ya pasó. Selecciona una hora futura.',
       );
       return;
     }
@@ -1193,7 +1220,7 @@ export function ScheduleExamDrawer({
               disabled={
                 isLoadingExamTypes ||
                 examTypes.length ===
-                  0
+                0
               }
             >
               {isLoadingExamTypes && (
@@ -1204,7 +1231,7 @@ export function ScheduleExamDrawer({
 
               {!isLoadingExamTypes &&
                 examTypes.length ===
-                  0 && (
+                0 && (
                   <option value="">
                     Sin tipos
                     disponibles
@@ -1300,11 +1327,10 @@ export function ScheduleExamDrawer({
             >
               <svg
                 viewBox="0 0 24 24"
-                className={`schedule-exam-chevron-icon ${
-                  isCalendarOpen
-                    ? 'open'
-                    : ''
-                }`}
+                className={`schedule-exam-chevron-icon ${isCalendarOpen
+                  ? 'open'
+                  : ''
+                  }`}
                 aria-hidden="true"
               >
                 <polyline points="6 9 12 15 18 9" />
@@ -1333,7 +1359,7 @@ export function ScheduleExamDrawer({
                 <span className="schedule-exam-calendar-month-title">
                   {
                     MONTH_NAMES[
-                      calendarMonth
+                    calendarMonth
                     ]
                   }{' '}
                   {calendarYear}
@@ -1404,18 +1430,18 @@ export function ScheduleExamDrawer({
 
                   const isSelected =
                     currentYear ===
-                      calendarYear &&
+                    calendarYear &&
                     currentMonth ===
-                      calendarMonth +
-                        1 &&
+                    calendarMonth +
+                    1 &&
                     currentDay ===
-                      dayNumber;
+                    dayNumber;
 
                   const candidateDate =
                     `${calendarYear}-` +
                     `${String(
                       calendarMonth +
-                        1,
+                      1,
                     ).padStart(
                       2,
                       '0',
@@ -1437,11 +1463,10 @@ export function ScheduleExamDrawer({
                         dayNumber
                       }
                       type="button"
-                      className={`schedule-exam-calendar-day ${
-                        isSelected
-                          ? 'selected'
-                          : ''
-                      }`}
+                      className={`schedule-exam-calendar-day ${isSelected
+                        ? 'selected'
+                        : ''
+                        }`}
                       disabled={
                         isPast
                       }
@@ -1488,25 +1513,15 @@ export function ScheduleExamDrawer({
                   )
                 }
               >
-                {TIME_SLOTS.map(
-                  (
-                    slot,
-                    index,
-                  ) => (
-                    <option
-                      key={
-                        slot.start
-                      }
-                      value={
-                        index
-                      }
-                    >
-                      {
-                        slot.start
-                      }
-                    </option>
-                  ),
-                )}
+                {TIME_SLOTS.map((slot, index) => (
+                  <option
+                    key={slot.start}
+                    value={index}
+                    disabled={isPastTimeSlot(rawDate, slot)}
+                  >
+                    {slot.start}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -1551,11 +1566,10 @@ export function ScheduleExamDrawer({
               </span>
 
               <span
-                className={`schedule-exam-arrow-indicator ${
-                  isRoomsOpen
-                    ? 'open'
-                    : ''
-                }`}
+                className={`schedule-exam-arrow-indicator ${isRoomsOpen
+                  ? 'open'
+                  : ''
+                  }`}
                 aria-hidden="true"
               >
                 <svg
@@ -1592,14 +1606,14 @@ export function ScheduleExamDrawer({
 
             {totalCapacity <
               totalEnrolled && (
-              <span className="schedule-exam-capacity-warning">
-                {' '}
-                (Faltan{' '}
-                {totalEnrolled -
-                  totalCapacity}{' '}
-                cupos)
-              </span>
-            )}
+                <span className="schedule-exam-capacity-warning">
+                  {' '}
+                  (Faltan{' '}
+                  {totalEnrolled -
+                    totalCapacity}{' '}
+                  cupos)
+                </span>
+              )}
 
             {isCurrentSelectionOptimal &&
               selectedRooms.length > 0 && (
@@ -1682,15 +1696,13 @@ export function ScheduleExamDrawer({
                             room.room_id
                           }
                           type="button"
-                          className={`schedule-exam-room-pill ${
-                            isChecked
-                              ? 'selected'
-                              : ''
-                          } ${
-                            isSuggested
+                          className={`schedule-exam-room-pill ${isChecked
+                            ? 'selected'
+                            : ''
+                            } ${isSuggested
                               ? 'suggested-pill'
                               : ''
-                          }`}
+                            }`}
                           onClick={() =>
                             handleToggleRoom(
                               room.room_id,
@@ -1836,7 +1848,7 @@ export function ScheduleExamDrawer({
 
           <div className="schedule-exam-rules-list">
             {generalRules.length ===
-            0 ? (
+              0 ? (
               <p className="schedule-exam-empty-rules">
                 No hay normas
                 generales agregadas.
@@ -1853,12 +1865,11 @@ export function ScheduleExamDrawer({
                     key={
                       index
                     }
-                    className={`schedule-exam-rule-item ${
-                      index % 2 ===
+                    className={`schedule-exam-rule-item ${index % 2 ===
                       1
-                        ? 'schedule-exam-rule-pill'
-                        : ''
-                    }`}
+                      ? 'schedule-exam-rule-pill'
+                      : ''
+                      }`}
                   >
                     <span>
                       {rule}
