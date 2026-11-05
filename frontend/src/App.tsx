@@ -375,7 +375,7 @@ export default function App() {
       icon: controlPointsIcon,
       iconClass: 'admin-exams-icon',
       open: () => setScreen('CONTROL_POINTS'),
-      visible: true,
+      visible: false,
     },
   ].filter((item) => item.visible);
 

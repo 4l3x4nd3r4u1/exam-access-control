@@ -353,6 +353,16 @@ class CoreDataStorage
                     throw new \Exception("Ya existe un examen programado para esta materia, tipo y fecha.");
                 }
 
+                // The exam start (date + start time) must be later than the current time
+                try {
+                    $startsAt = \Carbon\Carbon::parse($data->date . ' ' . $data->startTime);
+                } catch (\Throwable $e) {
+                    throw new \Exception("La fecha o la hora de inicio no tienen un formato válido.");
+                }
+                if ($startsAt->lessThanOrEqualTo(now())) {
+                    throw new \Exception("La hora de inicio del examen debe ser mayor a la hora actual.");
+                }
+
                 // Calculate end time (start + 1:30h)
                 $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
 
@@ -392,7 +402,7 @@ class CoreDataStorage
                         'examen_id' => $exam->id,
                         'aula_id' => $room->roomId,
                         'cupo_asignado' => count($room->students),
-                        'auxiliar_id' => $room->auxiliarId,
+                        'auxiliar_id' => $room->auxiliarId ?? $courseGroup->docente_id,
                     ]);
 
                     // Assign students to this room

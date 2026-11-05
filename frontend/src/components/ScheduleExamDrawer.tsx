@@ -1003,7 +1003,8 @@ export function ScheduleExamDrawer({
    const roomsPayload = roomAllocations.map((allocation) => ({
   roomId: Number(allocation.room.room_id),
   students: allocation.studentUserIds,
-  auxiliarId: null,
+  // ID del docente: se registra en examen_aula.auxiliar_id
+  auxiliarId: course.teacher_id ?? currentSession?.user_id ?? null,
 }));
 
     for (
