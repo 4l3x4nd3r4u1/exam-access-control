@@ -353,13 +353,17 @@ class CoreDataStorage
                     throw new \Exception("Ya existe un examen programado para esta materia, tipo y fecha.");
                 }
 
-                // The exam start (date + start time) must be later than the current time
+                // When the exam is scheduled for today, the start time must be later than the current time
+                // Uses the institution's timezone, independent of APP_TIMEZONE
+                $examTz = 'America/La_Paz';
                 try {
-                    $startsAt = \Carbon\Carbon::parse($data->date . ' ' . $data->startTime);
+                    $examDate = \Carbon\Carbon::parse($data->date, $examTz);
+                    $startsAt = \Carbon\Carbon::parse($examDate->toDateString() . ' ' . $data->startTime, $examTz);
                 } catch (\Throwable $e) {
                     throw new \Exception("La fecha o la hora de inicio no tienen un formato válido.");
                 }
-                if ($startsAt->lessThanOrEqualTo(now())) {
+                $nowLocal = \Carbon\Carbon::now($examTz);
+                if ($examDate->toDateString() === $nowLocal->toDateString() && $startsAt->lessThanOrEqualTo($nowLocal)) {
                     throw new \Exception("La hora de inicio del examen debe ser mayor a la hora actual.");
                 }
 
@@ -402,6 +406,7 @@ class CoreDataStorage
                         'examen_id' => $exam->id,
                         'aula_id' => $room->roomId,
                         'cupo_asignado' => count($room->students),
+                        // Teacher id sent by the frontend; falls back to the course group's teacher
                         'auxiliar_id' => $room->auxiliarId ?? $courseGroup->docente_id,
                     ]);
 
