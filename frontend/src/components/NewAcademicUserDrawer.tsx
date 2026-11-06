@@ -175,6 +175,7 @@ export function AcademicUserDrawer({
         const updatedUser: AcademicStaffMember = {
           ...user,
           roles: selectedRoles,
+          role: selectedRoles.join(', '),
         };
 
         onSaved(updatedUser);

@@ -36,7 +36,6 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-
   const filteredStaff = staff.filter((member) => {
     const search = searchTerm.toLowerCase().trim();
 
@@ -157,7 +156,15 @@ export function AcademicStaffView({ onBack }: AcademicStaffViewProps) {
             <span title={member.full_name}>{member.full_name}</span>
           </div>
         ))}
-      </section>
-    </main>
+
+        {!isLoading &&
+          !error &&
+          staff.length === 0 && (
+            <p className="academic-staff-feedback">
+              No hay personal académico registrado.
+            </p>
+          )}
+      </section >
+    </main >
   );
 }

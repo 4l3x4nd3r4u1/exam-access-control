@@ -9,6 +9,7 @@ import editRolesIcon from '../assets/editar_roles.svg';
 import coursesIcon from '../assets/icono_materia-2.svg';
 import registerStaffIcon from '../assets/registrar_personal.svg';
 import studentEligibilityIcon from '../assets/estado_habilitacion.svg';
+import checkpointIcon from '../assets/punto_control.svg';
 
 export type AppScreenId =
   | 'DASHBOARD'
@@ -113,6 +114,14 @@ export const systemFunctionsRegistry: Record<string, SystemFunctionConfig> = {
     iconType: 'img',
     iconSrc: studentEligibilityIcon,
     action: 'STUDENT_STATUS',
+  },
+  GESTIONAR_PUNTOS_CONTROL_EXAMEN: {
+    key: 'GESTIONAR_PUNTOS_CONTROL_EXAMEN',
+    title: 'Puntos de control',
+    description: 'Controlar el ingreso y la permanencia de estudiantes en un examen',
+    iconType: 'img',
+    iconSrc: checkpointIcon,
+    action: 'EXAM_CHECKPOINT',
   },
 };
 
