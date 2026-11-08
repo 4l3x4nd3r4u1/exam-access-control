@@ -64,6 +64,7 @@ Route::middleware('auth.jwt')->group(function () {
         ->where('courseGroupId', '[0-9]+');
     Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
     Route::get('/exams', [ExamController::class, 'all']);
+    Route::get('/exam-reports/assigned-exams', [ExamController::class, 'assignedForReports']);
     Route::post('/exam-access/check', [ExamAccessController::class, 'check']);
     Route::post('/exam-access/observations', [ExamStudentObservationController::class, 'store']);
     Route::post('/exam-access/exceptional-entry', [ExceptionalEntryController::class, 'store']);

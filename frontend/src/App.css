@@ -5740,3 +5740,370 @@
   }
 }
 
+/* ==========================================
+   REPORTES DE EXAMENES
+   ========================================== */
+
+.er-screen {
+  min-height: 100dvh;
+  background: #fff;
+  color: #111;
+}
+
+.er-title {
+  margin: 28px 0 30px;
+  font-family: 'SF Pro Display', sans-serif;
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.7px;
+  text-align: center;
+}
+
+.er-content {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Buscador */
+
+.er-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 4px;
+  border-bottom: 1px solid #e4e4e7;
+  margin-bottom: 22px;
+}
+
+.er-search svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #555;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.er-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: #111;
+}
+
+.er-search input::placeholder {
+  color: #999;
+}
+
+/* Lista de examenes */
+
+.er-list-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.er-count {
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e9e9eb;
+  font-size: 11px;
+}
+
+.er-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.er-exam-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 43px;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.er-exam-row:nth-child(even) {
+  background: #ebebeb;
+}
+
+.er-exam-row:hover {
+  background: #dedee1;
+}
+
+.er-exam-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.er-exam-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.er-tag {
+  padding: 2px 5px;
+  border: 1px solid #d5d5d5;
+  border-radius: 5px;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.er-type {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.er-exam-row > svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #555;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Detalle del examen */
+
+.er-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  margin-bottom: 22px;
+  border: 0;
+  background: none;
+  color: #333;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.er-back-link span {
+  font-size: 25px;
+  line-height: 0.8;
+}
+
+.er-exam-detail {
+  padding: 18px 16px;
+  border-radius: 12px;
+  background: #f5f5f7;
+  margin-bottom: 27px;
+}
+
+.er-exam-detail h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.er-exam-detail > p {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: #555;
+}
+
+.er-detail-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+  font-size: 12px;
+}
+
+.er-detail-line span {
+  color: #666;
+}
+
+.er-detail-line strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Formulario e historial */
+
+.er-section {
+  padding: 0 0 25px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.er-section h2 {
+  margin: 0 0 10px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.er-section-description {
+  margin: 0 0 15px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #555;
+}
+
+.er-textarea {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  padding: 15px;
+  border: 1px solid #d1d1d6;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.er-textarea:focus {
+  border-color: #666;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.er-textarea::placeholder {
+  color: #aaa;
+}
+
+.er-counter {
+  margin: 7px 0 0;
+  color: #888;
+  font-size: 11px;
+  text-align: right;
+}
+
+.er-button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 25px;
+}
+
+.er-primary-button {
+  min-width: 190px;
+  min-height: 43px;
+  padding: 11px 25px;
+  border: 0;
+  border-radius: 9px;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.er-primary-button:hover:not(:disabled) {
+  background: #292929;
+}
+
+.er-primary-button:disabled {
+  background: #a5a5a5;
+  cursor: not-allowed;
+}
+
+.er-empty,
+.er-feedback {
+  padding: 20px 10px;
+  color: #777;
+  font-size: 13px;
+  text-align: center;
+}
+
+.er-error {
+  margin-top: 12px;
+  color: #b42318;
+  font-size: 13px;
+}
+
+.er-success {
+  margin-top: 12px;
+  color: #16803c;
+  font-size: 13px;
+  text-align: center;
+}
+
+.er-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.er-history-item {
+  padding: 14px;
+  border-radius: 10px;
+  background: #f5f5f7;
+}
+
+.er-history-item strong {
+  font-size: 13px;
+}
+
+.er-history-item p {
+  margin: 8px 0 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #555;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.er-download-button {
+  display: block;
+  margin-left: auto;
+  padding: 9px 14px;
+  border: 1px solid #222;
+  border-radius: 7px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.er-download-button:hover {
+  background: #e8e8e8;
+}
+
+.er-exam-row:focus-visible,
+.er-primary-button:focus-visible,
+.er-download-button:focus-visible,
+.er-back-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+

@@ -59,6 +59,15 @@ export const controlPointService = {
     return response.data;
   },
 
+  async getExamsForReports(signal?: AbortSignal): Promise<ControlPointExam[]> {
+    const response = await apiRequest<ApiResponse<ControlPointExam[]>>(
+      '/exam-reports/assigned-exams',
+      { signal },
+    );
+
+    return response.data;
+  }, 
+
   async getCourseGroups(signal?: AbortSignal): Promise<CourseGroup[]> {
     const response = await apiRequest<ApiResponse<CourseGroup[]>>('/course-groups', { signal });
     return response.data;

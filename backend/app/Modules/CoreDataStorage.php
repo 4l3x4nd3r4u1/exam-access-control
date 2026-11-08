@@ -569,6 +569,75 @@ class CoreDataStorage
             })
             ->all();
     }
+    
+   /**
+ * Obtiene los exámenes activos asignados al usuario autenticado.
+ * Un examen estará disponible cuando el usuario sea el docente
+ * responsable de la materia o un auxiliar asignado a una de sus aulas.
+ *
+ * @return array<AllExamSummary>
+ */ 
+    public function getAssignedExamsForReports(): array
+    {
+        $authenticatedUserId = (int) auth()->id();
+
+       return Exam::with([
+                'courseGroup.course',
+                'examType',
+                'rules',
+                'examRooms.room',
+            ])
+            ->where('activo', true)
+            ->where(function ($query) use ($authenticatedUserId) {
+                $query
+                    ->whereHas('courseGroup', function ($courseQuery) use ($authenticatedUserId) {
+                        $courseQuery->where('docente_id', $authenticatedUserId);
+                    })
+                    ->orWhereHas('examRooms', function ($roomQuery) use ($authenticatedUserId) {
+                        $roomQuery->where('auxiliar_id', $authenticatedUserId);
+                    });
+            })
+                ->orderBy('fecha', 'asc')
+                ->orderBy('hora_inicio', 'asc')
+                ->get()
+                ->map(function (Exam $exam) use ($authenticatedUserId) {
+                    $isTeacher = (int) ($exam->courseGroup?->docente_id ?? 0)
+                        === $authenticatedUserId;
+
+                    $rooms = $exam->examRooms
+                        ->map(fn(ExamRoom $examRoom) => new AllExamRoomSummary(
+                            roomId: (string) $examRoom->aula_id,
+                            roomName: (string) ($examRoom->room?->nombre ?? ''),
+                            assistantId: $examRoom->auxiliar_id !== null
+                                ? (int) $examRoom->auxiliar_id
+                                : null,
+                            canInteract: $isTeacher ||
+                                (
+                                    $examRoom->auxiliar_id !== null &&
+                                    (int) $examRoom->auxiliar_id === $authenticatedUserId
+                                ),
+                            ))
+                                ->values()
+                                ->all();
+
+                return new AllExamSummary(
+                    examId: (string) $exam->id,
+                    courseGroupId: (string) $exam->materia_grupo_id,
+                    subjectName: (string) ($exam->courseGroup?->course?->nombre ?? ''),
+                    group: (string) ($exam->courseGroup?->grupo ?? ''),
+                    examType: (string) ($exam->examType?->nombre ?? ''),
+                    date: $exam->fecha?->format('Y-m-d') ?? '',
+                    startTime: (string) $exam->hora_inicio,
+                    endTime: (string) $exam->hora_fin,
+                    rooms: $rooms,
+                    generalRules: $exam->rules
+                        ->pluck('descripcion')
+                        ->values()
+                        ->all(),
+                );
+            })
+            ->all();
+    }
 
     /**
      * Checks a student's eligibility and exam room assignment without

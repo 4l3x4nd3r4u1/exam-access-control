@@ -1,0 +1,39 @@
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 100 100"
+     width="128"
+     height="128"
+     preserveAspectRatio="xMidYMid meet"
+     role="img"
+     aria-label="Generar reporte de incidente">
+    <g transform="translate(-4 0)">
+        <rect x="22" y="16" width="56" height="74" rx="8"
+              fill="#ffffff" stroke="#9aa0ab" stroke-width="1.5"/>
+        <rect x="38" y="8" width="24" height="14" rx="5"
+              fill="#3d4a5c"/>
+        <circle cx="50" cy="13" r="2.5" fill="#ffffff"/>
+
+        <rect x="32" y="29" width="24" height="4" rx="2"
+              fill="#2b5fa8"/>
+
+        <circle cx="34" cy="44" r="2.8" fill="none"
+                stroke="#e8a317" stroke-width="1.6"/>
+        <rect x="42" y="42.2" width="26" height="3.6" rx="1.8"
+              fill="#6b7280"/>
+
+        <circle cx="34" cy="56" r="2.8" fill="none"
+                stroke="#e8a317" stroke-width="1.6"/>
+        <rect x="42" y="54.2" width="20" height="3.6" rx="1.8"
+              fill="#6b7280"/>
+
+        <circle cx="34" cy="68" r="2.8" fill="none"
+                stroke="#e8a317" stroke-width="1.6"/>
+        <rect x="42" y="66.2" width="14" height="3.6" rx="1.8"
+              fill="#6b7280"/>
+
+        <circle cx="72" cy="77" r="15" fill="#f59e0b"/>
+        <rect x="70.5" y="68" width="3" height="10" rx="1.5"
+              fill="#ffffff"/>
+        <circle cx="72" cy="83.5" r="2" fill="#ffffff"/>
+    </g>
+</svg>

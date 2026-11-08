@@ -32,7 +32,7 @@ class ExamReportController extends Controller
             ], 404);
         }
 
-        if (!$this->userCanAccessExam()) {
+        if (!$this->userCanAccessExam($exam)) {
             return response()->json([
                 'success' => false,
                 'message' => 'No tiene autorización para generar reportes de este examen.',
@@ -84,7 +84,7 @@ class ExamReportController extends Controller
             ], 404);
         }
 
-        if (!$this->userCanAccessExam()) {
+        if (!$this->userCanAccessExam($exam)) {
             return response()->json([
                 'success' => false,
                 'message' => 'No tiene autorización para consultar los reportes de este examen.',
@@ -130,7 +130,7 @@ class ExamReportController extends Controller
             ], 404);
         }
 
-        if (!$this->userCanAccessExam()) {
+        if (!$this->userCanAccessExam($exam)) {
             return response()->json([
                 'success' => false,
                 'message' => 'No tiene autorización para consultar este reporte.',
@@ -171,12 +171,35 @@ class ExamReportController extends Controller
 /**
  * Comprueba si el usuario tiene autorización para gestionar puntos de control.
  */
-    private function userCanAccessExam(): bool
+    /**
+ * Comprueba si el usuario autenticado tiene autorización
+ * para acceder a los reportes de un examen específico.
+ *
+ * El usuario debe contar con el permiso general y estar
+ * asignado como docente responsable o auxiliar del examen.
+ */
+    private function userCanAccessExam(Exam $exam): bool
     {
         $user = auth()->user();
 
-        return $user !== null
-            && $user->hasFunction('GESTIONAR_PUNTOS_CONTROL_EXAMEN');
+        if (!$user || !$user->hasFunction('GESTIONAR_PUNTOS_CONTROL_EXAMEN')) {
+            return false;
+        }
+
+        $userId = (int) $user->id;
+
+        return Exam::query()
+            ->whereKey($exam->id)
+            ->where(function ($query) use ($userId) {
+                $query
+                    ->whereHas('courseGroup', function ($courseQuery) use ($userId) {
+                        $courseQuery->where('docente_id', $userId);
+                    })
+                    ->orWhereHas('examRooms', function ($roomQuery) use ($userId) {
+                        $roomQuery->where('auxiliar_id', $userId);
+                    });
+            })
+            ->exists();
     }
 
 
