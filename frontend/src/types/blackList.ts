@@ -21,6 +21,7 @@ export interface BlackListAntecedent {
   docente: string | null;
   motivo: string | null;
   fecha: string;
+  origen?: 'GESTION_HABILITACIONES' | 'PUNTOS_CONTROL';
 }
 
 export interface BlackListDetail {

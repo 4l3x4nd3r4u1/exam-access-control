@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Exam;
 
 class BlackListController extends Controller
 {
@@ -31,10 +32,15 @@ class BlackListController extends Controller
         ]);
 
         $records = $this->getInhabilitationRecords();
+        $expulsions = $this->getExpulsionRecords();
 
         $studentIds = $records->map(function ($record) {
             return $this->decodeDetails($record->detalles)['estudiante_id'] ?? null;
-        })->filter()->unique()->values();
+        })
+            ->concat($expulsions->pluck('user_id_estudiante'))
+            ->filter()
+            ->unique()
+            ->values();
 
         $students = Student::with('user')
             ->whereIn('usuario_id', $studentIds)
@@ -45,16 +51,22 @@ class BlackListController extends Controller
             return $this->decodeDetails($record->detalles)['estudiante_id'] ?? null;
         });
 
-        $data = $students->map(function ($student, $userId) use ($groupedRecords) {
+        $groupedExpulsions = $expulsions->groupBy('user_id_estudiante');
+
+        $data = $students->map(function ($student, $userId) use ($groupedRecords, $groupedExpulsions) {
             return [
                 'user_id' => $userId,
                 'nombre' => $student->user?->nombre,
                 'codigo_sis' => $student->codigo_sis,
                 'ci' => $student->user?->ci,
-                'total_inhabilitaciones' => $groupedRecords->get($userId, collect())->count(),
+                'total_inhabilitaciones' =>
+                    $groupedRecords->get($userId, collect())->count()
+                    + $groupedExpulsions->get($userId, collect())->count(),
             ];
         });
-
+        $data = $data
+        ->sortByDesc('total_inhabilitaciones')
+        ->values();
         $search = trim((string) $request->query('search'));
 
         if ($search !== '') {
@@ -80,8 +92,9 @@ class BlackListController extends Controller
         ], 200);
     }
 
-    /**
-     * Obtiene los antecedentes de inhabilitación de un estudiante.
+        /**
+     * Obtiene los antecedentes de un estudiante, incluyendo
+     * inhabilitaciones y expulsiones desde Puntos de control.
      */
     public function show(int $userId): JsonResponse
     {
@@ -103,10 +116,15 @@ class BlackListController extends Controller
                 return (int) ($details['estudiante_id'] ?? 0) === $userId;
             });
 
-        if ($records->isEmpty()) {
+        $expulsions = $this->getExpulsionRecords()
+            ->filter(function ($record) use ($userId) {
+                return (int) $record->user_id_estudiante === $userId;
+            });
+
+        if ($records->isEmpty() && $expulsions->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'El estudiante no tiene antecedentes de inhabilitación.',
+                'message' => 'El estudiante no tiene antecedentes registrados.',
             ], 404);
         }
 
@@ -131,8 +149,40 @@ class BlackListController extends Controller
                 'docente' => $courseGroup?->teacher?->nombre,
                 'motivo' => $details['motivo'] ?? null,
                 'fecha' => $record->fecha,
+                'origen' => 'GESTION_HABILITACIONES',
             ];
-        })->values();
+        });
+
+        $examIds = $expulsions->pluck('exam_id')->unique();
+
+        $exams = Exam::with([
+            'courseGroup.course',
+            'courseGroup.teacher',
+        ])
+            ->whereIn('id', $examIds)
+            ->get()
+            ->keyBy('id');
+
+        $expulsionAntecedents = $expulsions->map(function ($record) use ($exams) {
+            $exam = $exams->get($record->exam_id);
+            $courseGroup = $exam?->courseGroup;
+
+            return [
+                'materia' => $courseGroup?->course?->sigla,
+                'nombre_materia' => $courseGroup?->course?->nombre,
+                'grupo' => $courseGroup?->grupo,
+                'gestion' => $courseGroup?->gestion,
+                'docente' => $courseGroup?->teacher?->nombre,
+                'motivo' => $record->observacion,
+                'fecha' => $record->created_at,
+                'origen' => 'PUNTOS_CONTROL',
+            ];
+        });
+
+        $antecedents = $antecedents
+            ->concat($expulsionAntecedents)
+            ->sortByDesc('fecha')
+            ->values();
 
         return response()->json([
             'success' => true,
@@ -179,5 +229,19 @@ class BlackListController extends Controller
         }
 
         return json_decode($details ?? '{}', true) ?: [];
+    }
+
+        /**
+     * Obtiene las expulsiones registradas desde Puntos de control.
+     *
+     * Cada registro corresponde a una expulsión de un estudiante
+     * durante un examen y se considera un antecedente para Lista Negra.
+     */
+    private function getExpulsionRecords()
+    {
+        return DB::table('registro_acceso_examen')
+            ->where('resultado', 'EXPULSION')
+            ->orderByDesc('created_at')
+            ->get();
     }
 }

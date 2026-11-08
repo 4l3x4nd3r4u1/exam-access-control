@@ -155,8 +155,8 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
             <p>
               {studentDetail.total_inhabilitaciones}{' '}
               {studentDetail.total_inhabilitaciones === 1
-                ? 'inhabilitación'
-                : 'inhabilitaciones'}
+                 ? 'antecedente'
+                 : 'antecedentes'}
             </p>
           )}
         </section>
@@ -200,7 +200,7 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
               </div>
             </div>
 
-            <h2>Historial de inhabilitaciones</h2>
+            <h2>Historial de antecedentes</h2>
 
             {studentDetail.antecedentes.map((antecedent, index) => (
               <article
@@ -239,9 +239,13 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
                 </div>
 
                 <div className="blacklist-antecedent-reason">
-                  <span>Motivo de inhabilitación</span>
+                 <span>
+                  {antecedent.origen === 'PUNTOS_CONTROL'
+                   ? 'Motivo de expulsión desde Puntos de control'
+                   : 'Motivo de inhabilitación'}
+                  </span>
                   <p>
-                    {antecedent.motivo || 'Sin motivo registrado'}
+                   {antecedent.motivo || 'Sin motivo registrado'}
                   </p>
                 </div>
               </article>
@@ -287,7 +291,7 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
         </header>
 
         <section className="blacklist-heading">
-          <h1>Estudiantes inhabilitados</h1>
+          <h1>Estudiantes con antecedentes</h1>
           <p>
             {students.length}{' '}
             {students.length === 1 ? 'estudiante' : 'estudiantes'}
@@ -316,12 +320,12 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
 
         <section
           className="blacklist-list"
-          aria-label="Estudiantes inhabilitados"
+          aria-label="Estudiantes con antecedentes"
         >
           <div className="blacklist-list-header">
             <span>Estudiante</span>
             <span>Código SIS</span>
-            <span>Inhabilitaciones</span>
+            <span>Antecedentes</span>
           </div>
 
           {isLoading && (
