@@ -272,7 +272,7 @@ export function downloadRosterXlsx(metadata: ProcessedRoster, students: RosterSt
     { name: 'xl/worksheets/sheet1.xml', data: encoder.encode(sheet1Xml) },
   ]);
 
-  const blob = new Blob([zipBytes], {
+  const blob = new Blob([zipBytes.buffer as ArrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
   triggerBrowserDownload(blob, `${getSafeFilenameBase(metadata)}.xlsx`);
