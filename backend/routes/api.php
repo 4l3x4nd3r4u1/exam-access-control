@@ -20,6 +20,8 @@ use App\Http\Controllers\ProcessedRosterController;
 use App\Http\Controllers\StudentStatusController;
 use App\Http\Controllers\StudentCourseGroupController;
 use App\Http\Controllers\BlackListController;
+use App\Http\Controllers\ExamReportController;
+
 
 Route::get('/health', function () {
     return response()->json([
@@ -45,6 +47,9 @@ Route::middleware('auth.jwt')->group(function () {
     Route::get('/blacklist', [BlackListController::class, 'index']);
     Route::get('/blacklist/{userId}', [BlackListController::class, 'show'])
         ->where('userId', '[0-9]+');
+    Route::post('/exams/{examId}/reports', [ExamReportController::class, 'store']);
+    Route::get('/exams/{examId}/reports', [ExamReportController::class, 'index']);
+    Route::get('/exams/{examId}/reports/{reportId}/pdf', [ExamReportController::class, 'download']);
 });
 
 Route::get('/academic-staff', [AcademicStaffController::class, 'list']);
