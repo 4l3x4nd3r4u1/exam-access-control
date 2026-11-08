@@ -16,30 +16,38 @@ Formato general de peticiones:
 - **Body:**
 ```json
 {
-  "email": "admin@umss.edu.bo",
+  "identifier": "30000001",
   "password": "password123"
 }
 ```
+- `identifier`: CI o correo de un usuario existente. Se envia como texto para
+  conservar ceros iniciales y complementos. Se eliminan espacios de los extremos;
+  solo el correo se convierte a minusculas. La contraseña no se recorta.
+- Tambien se puede enviar `"identifier": "ana.morales@umss.edu.bo"`.
+- Por compatibilidad, las peticiones anteriores con `email` y `password` siguen
+  funcionando. Debe enviarse **solo `identifier` o `email`**, no ambos.
+- Este cambio no reemplaza el identificador interno del usuario ni modifica sus
+  roles, permisos o el formato del token.
 - **Respuesta Exitosa (200 OK):**
 ```json
 {
   "success": true,
   "data": {
-    "userId": 1,
-    "role": "ADMIN",
-    "fullName": "Administrador del Sistema",
-    "email": "admin@umss.edu.bo",
     "token": "eyJ0eXAi...",
-    "isActive": true,
-    "tokenType": "bearer",
-    "expiresIn": 21600
+    "is_active": true,
+    "token_type": "bearer",
+    "expires_in": 21600
   },
-  "message": "Autenticación exitosa."
+  "message": "Inicio de sesión exitoso"
 }
 ```
 - **Errores:**
   - `401 Unauthorized`: `{"success": false, "message": "Credenciales incorrectas"}`
-  - `422 Unprocessable Entity`: Error de validacion de campos.
+  - `401 Unauthorized`: `{"success": false, "message": "Usuario inactivo o deshabilitado"}`
+  - `422 Unprocessable Entity`: Falta el identificador o la contraseña, el
+    identificador no es texto, supera 150 caracteres o se envian ambos campos.
+
+Pruebas manuales y alcance: [Login con CI o correo](login-ci-correo.md).
 
 ---
 
