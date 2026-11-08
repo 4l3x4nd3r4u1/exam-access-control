@@ -392,7 +392,7 @@ class CoreDataStorage
                         'examen_id' => $exam->id,
                         'aula_id' => $room->roomId,
                         'cupo_asignado' => count($room->students),
-                        'auxiliar_id' => $room->auxiliarId,
+                        'auxiliar_id' => $room->auxiliarId ?? $courseGroup->docente_id,
                     ]);
 
                     // Assign students to this room
