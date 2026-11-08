@@ -55,24 +55,6 @@ class EligibilityEngine
             );
         }
 
-        $enrollment = StudentCourseEnrollment::where('usuario_id', $userId)
-            ->where('materia_grupo_id', $courseGroup->id)
-            ->first();
-
-        if (!$enrollment) {
-            return new StatusUpdateResult(
-                isSuccessful: false,
-                message: 'El estudiante no está inscrito en este grupo de materia.'
-            );
-        }
-
-        if (!$enrollment) {
-            return new StatusUpdateResult(
-                isSuccessful: false,
-                message: 'El estudiante no está inscrito en este grupo de materia.'
-            );
-        }
-
         $statusModel = EnrollmentStatus::where('nombre', $cleanStatus)->first();
 
         if (!$statusModel) {
@@ -83,41 +65,77 @@ class EligibilityEngine
         }
 
         try {
-            DB::transaction(function () use ($userId, $courseGroup, $statusModel, $cleanStatus, $cleanReason, $auditUserId, $enrollment) {
-                StudentCourseEnrollment::where('usuario_id', $userId)
-                    ->where('materia_grupo_id', $courseGroup->id)
-                    ->update([
-                        'estado_inscripcion_id' => $statusModel->id,
-                        'motivo_inhabilitacion' => ($cleanStatus === 'INHABILITADO') ? $cleanReason : null,
-                        'updated_at' => now(),
-                    ]);
+            $updated = DB::transaction(function () use ($userId,$courseGroup,$statusModel,$cleanStatus,$cleanReason,$auditUserId
+    ) {
+        $enrollment = StudentCourseEnrollment::where('usuario_id', $userId)
+            ->where('materia_grupo_id', $courseGroup->id)
+            ->lockForUpdate()
+            ->first();
 
-                DB::table('registro_auditoria')->insert([
-                    'usuario_id' => $auditUserId,
-                    'accion' => 'CAMBIAR_ESTADO_HABILITACION',
-                    'entidad_tipo' => 'inscripcion',
-                    'entidad_id' => $enrollment->id,
-                    'detalles' => json_encode([
-                        'estudiante_id' => $userId,
-                        'course_group_id' => $courseGroup->id,
-                        'estado_anterior' => $enrollment->estado_inscripcion_id,
-                        'estado_nuevo' => $statusModel->id,
-                        'motivo' => $cleanReason,
-                    ]),
-                    'fecha' => now(),
-                ]);
-            });
-
-            return new StatusUpdateResult(
-                isSuccessful: true,
-                message: 'Estado del estudiante actualizado correctamente.'
-            );
-        } catch (Throwable $e) {
-            Log::error('Error updating student status: ' . $e->getMessage());
-            return new StatusUpdateResult(
-                isSuccessful: false,
-                message: 'Error al actualizar el estado. Contacte al administrador.'
+        if (!$enrollment) {
+            throw new \RuntimeException(
+                'El estudiante no está inscrito en este grupo de materia.'
             );
         }
+
+        $previousStatusId = (int) $enrollment->estado_inscripcion_id;
+        $newStatusId = (int) $statusModel->id;
+
+        // Evitar registrar nuevamente un estado que no ha cambiado.
+        if ($previousStatusId === $newStatusId) {
+            return false;
+        }
+
+        StudentCourseEnrollment::where('usuario_id', $userId)
+            ->where('materia_grupo_id', $courseGroup->id)
+            ->update([
+                'estado_inscripcion_id' => $newStatusId,
+                'motivo_inhabilitacion' => $cleanStatus === 'INHABILITADO'
+                    ? $cleanReason
+                    : null,
+                'updated_at' => now(),
+            ]);
+
+        // Registrar permanentemente el cambio de estado.
+        DB::table('registro_auditoria')->insert([
+            'usuario_id' => $auditUserId,
+            'accion' => 'CAMBIAR_ESTADO_HABILITACION',
+            'entidad_tipo' => 'inscripcion',
+            'entidad_id' => null,
+            'detalles' => json_encode([
+                'estudiante_id' => $userId,
+                'course_group_id' => $courseGroup->id,
+                'estado_anterior' => $previousStatusId,
+                'estado_nuevo' => $newStatusId,
+                'estado_nuevo_nombre' => $cleanStatus,
+                'motivo' => $cleanStatus === 'INHABILITADO'
+                    ? $cleanReason
+                    : null,
+            ], JSON_UNESCAPED_UNICODE),
+            'fecha' => now(),
+        ]);
+
+        return true;
+    });
+
+    return new StatusUpdateResult(
+        isSuccessful: true,
+        message: $updated
+            ? 'Estado del estudiante actualizado correctamente.'
+            : 'El estudiante ya tiene el estado solicitado.'
+    );
+
+} catch (Throwable $e) {
+    Log::error('Error updating student status: ' . $e->getMessage());
+
+    $message = $e instanceof \RuntimeException
+        ? $e->getMessage()
+        : 'Error al actualizar el estado. Contacte al administrador.';
+
+    return new StatusUpdateResult(
+        isSuccessful: false,
+        message: $message
+    );
+}
     }
 }

@@ -23,6 +23,7 @@ import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer'
 import { ExamSearchDrawer } from './components/ExamSearchDrawer';
 
 import { authService, hasFunction } from './services/authService';
+import { BlackListView } from './views/BlackListView';
 
 import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
@@ -46,7 +47,11 @@ import { ControlPointIngressView } from './views/ControlPointIngressView';
 import type { ControlPointSelection } from './types/controlPoint';
 import './App.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
-
+import blackListIcon from './assets/lista_negra.svg';
+import { ExamReportsView } from './views/ExamReportsView';
+import examReportsIcon from './assets/icono-reporte-incidente.svg';
+import { ExamReportsSearchDrawer } from './components/ExamReportsSearchDrawer';
+import type { ControlPointExam } from './types/controlPoint';
 
 type ApplicationScreen =
   | 'DASHBOARD'
@@ -54,8 +59,9 @@ type ApplicationScreen =
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL'
   | 'SCHEDULED_EXAMS'
-|   'ENROLLED_STUDENTS'
+  | 'ENROLLED_STUDENTS'
   | 'EXAM_ACCESS_CONTROL'
+  | 'EXAM_REPORTS'
   | 'CONTROL_POINTS'
   | 'CONTROL_POINT_INGRESS'; 
 
@@ -72,6 +78,14 @@ export default function App() {
 
   const [screen, setScreen] =
     useState<ApplicationScreen>('DASHBOARD');
+
+   const [isExamReportsDrawerOpen, setIsExamReportsDrawerOpen] =
+     useState(false);
+
+   const [selectedReportExam, setSelectedReportExam] =
+     useState<ControlPointExam | null>(null);
+
+  const [isBlackListOpen, setIsBlackListOpen] = useState(false);
 
   const [isImportDrawerOpen, setIsImportDrawerOpen] =
     useState(false);
@@ -114,26 +128,28 @@ export default function App() {
     useState<CourseGroup | null>(null);
 
   const handleLogout = () => {
-    authService.clearSession();
-    
-    setSession(null);
-    setScreen('DASHBOARD');
-    setSelectedRoster(null);
-    setSelectedControlPoint(null);
-    setSelectedCourseGroup(null);
-    setCourseSearchTarget(null);
-    setCourseForScheduleExam(null);
-    setAccessControlTarget(null);
-    setIsExamSearchDrawerOpen(false);
+  authService.clearSession();
 
-    setIsImportDrawerOpen(false);
-    setIsAssignedCoursesDrawerOpen(false);
-    setIsEditRolesDrawerOpen(false);
-    setIsEditPersonalDataDrawerOpen(false);
-    setIsAcademicUserDrawerOpen(false);
+  setSession(null);
+  setScreen('DASHBOARD');
+  setIsBlackListOpen(false);
 
-    setCourseFunctionMode('VIEW');
-  };
+  setSelectedRoster(null);
+  setSelectedControlPoint(null);
+  setSelectedCourseGroup(null);
+  setCourseSearchTarget(null);
+  setCourseForScheduleExam(null);
+  setAccessControlTarget(null);
+  setIsExamSearchDrawerOpen(false);
+
+  setIsImportDrawerOpen(false);
+  setIsAssignedCoursesDrawerOpen(false);
+  setIsEditRolesDrawerOpen(false);
+  setIsEditPersonalDataDrawerOpen(false);
+  setIsAcademicUserDrawerOpen(false);
+
+  setCourseFunctionMode('VIEW');
+};
 
   if (!session) {
     return <LoginView onLoginSuccess={setSession} />;
@@ -170,7 +186,30 @@ export default function App() {
       />
     );
   }
+   if (screen === 'EXAM_REPORTS') {
+  if (!selectedReportExam) {
+  return (
+    <main className="app-shell">
+      <p>No se ha seleccionado ningún examen.</p>
+      <button type="button" onClick={() => setScreen('DASHBOARD')}>
+        Volver al panel
+      </button>
+    </main>
+  );
+}
 
+  return (
+    <ExamReportsView
+      exam={selectedReportExam}
+      onBack={() => {
+        setSelectedReportExam(null);
+        setScreen('DASHBOARD');
+        setIsExamReportsDrawerOpen(true);
+      }}
+      onLogout={handleLogout}
+    />
+  );
+}
   if (screen === 'SCHEDULED_EXAMS' && selectedCourseGroup) {
     return (
       <ScheduledExamsView
@@ -190,7 +229,7 @@ export default function App() {
       />
     );
   }
-
+ 
   if (screen === 'EXAM_ACCESS_CONTROL' && accessControlTarget) {
     return (
       <ExamAccessControlView
@@ -288,6 +327,28 @@ export default function App() {
       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      label: 'Registro de infractores',
+      icon: blackListIcon,
+      iconClass: 'admin-eligibility-icon',
+      open: () => setIsBlackListOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      ),
+    },
+        {
+      functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
+      label: 'Reportes de exámenes',
+      icon: examReportsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setIsExamReportsDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
       ),
     },
     {
@@ -410,7 +471,7 @@ export default function App() {
               type="button"
               className="admin-menu-card"
               onClick={item.open}
-              key={item.functionCode}
+              key={`${item.functionCode}-${item.label}`}
             >
               <div className="admin-menu-card-frame">
                 <img
@@ -511,7 +572,7 @@ export default function App() {
             onClose={() => setIsAcademicUserDrawerOpen(false)}
             onSaved={() => setIsAcademicUserDrawerOpen(false)}
             />
-
+      
       <ExamSearchDrawer
         isOpen={isExamSearchDrawerOpen}
         onClose={() => setIsExamSearchDrawerOpen(false)}
@@ -522,11 +583,29 @@ export default function App() {
         }}
       />
 
+      <ExamReportsSearchDrawer
+       isOpen={isExamReportsDrawerOpen}
+       onClose={() => setIsExamReportsDrawerOpen(false)}
+       onSelect={(exam) => {
+       setSelectedReportExam(exam);
+       setIsExamReportsDrawerOpen(false);
+       setScreen('EXAM_REPORTS');
+      }}
+     />
+
       <StudentEligibilityDrawer
-        isOpen={isStudentEligibilityDrawerOpen}
-        session={session}
-        onClose={() => setIsStudentEligibilityDrawerOpen(false)}
-      />
-    </main>
+  isOpen={isStudentEligibilityDrawerOpen}
+  session={session}
+  onClose={() => setIsStudentEligibilityDrawerOpen(false)}
+/>
+
+{isBlackListOpen && (
+  <BlackListView
+    onBack={() => setIsBlackListOpen(false)}
+    onLogout={handleLogout}
+  />
+)}
+
+</main>
   );
 }

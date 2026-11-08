@@ -73,6 +73,33 @@ class ExamController extends Controller
             'message' => 'Exámenes obtenidos exitosamente.',
         ], 200);
     }
+    
+         /**
+     * Obtiene los exámenes activos asignados al usuario autenticado
+     * para el módulo de reportes.
+     */
+    public function assignedForReports(): JsonResponse
+    {
+        $user = auth()->user();
+
+        if (!$user || !$user->hasFunction('GESTIONAR_PUNTOS_CONTROL_EXAMEN')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tiene autorización para consultar estos exámenes.',
+            ], 403);
+        }
+
+        $exams = $this->storage->getAssignedExamsForReports();
+
+        return response()->json([
+            'success' => true,
+            'data' => array_map(
+                fn(AllExamSummary $exam) => $exam->toArray(),
+                $exams
+            ),
+            'message' => 'Exámenes asignados obtenidos correctamente.',
+        ], 200);
+    }
 
     /**
      * Endpoint to register a new exam.
