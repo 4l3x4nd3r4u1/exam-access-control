@@ -22,7 +22,7 @@ class AuthController extends Controller
     {
         try {
             $session = $this->coreDataStorage->authenticate(
-                $request->input('email'),
+                $request->validated('identifier') ?? $request->validated('email'),
                 $request->input('password')
             );
 
