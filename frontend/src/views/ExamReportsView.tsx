@@ -231,7 +231,7 @@ export function ExamReportsView({
                   key={report.id}
                 >
                   <div>
-                    <strong>Reporte #{report.id}</strong>
+                    <strong>Reporte de incidencia</strong>
                     <p>{report.descripcion}</p>
                   </div>
 
