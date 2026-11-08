@@ -56,7 +56,6 @@ type ApplicationScreen =
   | 'PROCESSED_ROSTER_DETAIL'
   | 'SCHEDULED_EXAMS'
   | 'ENROLLED_STUDENTS'
-  | 'BLACK_LIST'
   | 'EXAM_ACCESS_CONTROL'
   | 'CONTROL_POINTS'
   | 'CONTROL_POINT_INGRESS'; 
@@ -74,6 +73,8 @@ export default function App() {
 
   const [screen, setScreen] =
     useState<ApplicationScreen>('DASHBOARD');
+
+const [isBlackListOpen, setIsBlackListOpen] = useState(false);
 
   const [isImportDrawerOpen, setIsImportDrawerOpen] =
     useState(false);
@@ -116,26 +117,28 @@ export default function App() {
     useState<CourseGroup | null>(null);
 
   const handleLogout = () => {
-    authService.clearSession();
-    
-    setSession(null);
-    setScreen('DASHBOARD');
-    setSelectedRoster(null);
-    setSelectedControlPoint(null);
-    setSelectedCourseGroup(null);
-    setCourseSearchTarget(null);
-    setCourseForScheduleExam(null);
-    setAccessControlTarget(null);
-    setIsExamSearchDrawerOpen(false);
+  authService.clearSession();
 
-    setIsImportDrawerOpen(false);
-    setIsAssignedCoursesDrawerOpen(false);
-    setIsEditRolesDrawerOpen(false);
-    setIsEditPersonalDataDrawerOpen(false);
-    setIsAcademicUserDrawerOpen(false);
+  setSession(null);
+  setScreen('DASHBOARD');
+  setIsBlackListOpen(false);
 
-    setCourseFunctionMode('VIEW');
-  };
+  setSelectedRoster(null);
+  setSelectedControlPoint(null);
+  setSelectedCourseGroup(null);
+  setCourseSearchTarget(null);
+  setCourseForScheduleExam(null);
+  setAccessControlTarget(null);
+  setIsExamSearchDrawerOpen(false);
+
+  setIsImportDrawerOpen(false);
+  setIsAssignedCoursesDrawerOpen(false);
+  setIsEditRolesDrawerOpen(false);
+  setIsEditPersonalDataDrawerOpen(false);
+  setIsAcademicUserDrawerOpen(false);
+
+  setCourseFunctionMode('VIEW');
+};
 
   if (!session) {
     return <LoginView onLoginSuccess={setSession} />;
@@ -193,15 +196,6 @@ export default function App() {
     );
   }
  
-    if (screen === 'BLACK_LIST') {
-    return (
-      <BlackListView
-        onBack={() => setScreen('DASHBOARD')}
-        onLogout={handleLogout}
-      />
-    );
-  }
-
   if (screen === 'EXAM_ACCESS_CONTROL' && accessControlTarget) {
     return (
       <ExamAccessControlView
@@ -306,7 +300,7 @@ export default function App() {
       label: 'Registro de infractores',
       icon: blackListIcon,
       iconClass: 'admin-eligibility-icon',
-      open: () => setScreen('BLACK_LIST'),
+      open: () => setIsBlackListOpen(true),
       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
@@ -545,10 +539,18 @@ export default function App() {
       />
 
       <StudentEligibilityDrawer
-        isOpen={isStudentEligibilityDrawerOpen}
-        session={session}
-        onClose={() => setIsStudentEligibilityDrawerOpen(false)}
-      />
-    </main>
+  isOpen={isStudentEligibilityDrawerOpen}
+  session={session}
+  onClose={() => setIsStudentEligibilityDrawerOpen(false)}
+/>
+
+{isBlackListOpen && (
+  <BlackListView
+    onBack={() => setIsBlackListOpen(false)}
+    onLogout={handleLogout}
+  />
+)}
+
+</main>
   );
 }
