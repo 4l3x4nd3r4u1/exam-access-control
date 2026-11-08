@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512">
+  <!-- Portapapeles -->
+  <rect x="56" y="42" width="144" height="184" rx="18" fill="#F7F7F9" stroke="#D5D8DF" stroke-width="2"/>
+  <!-- Clip -->
+  <rect x="98" y="28" width="60" height="26" rx="9" fill="#4B5263"/>
+  <circle cx="128" cy="38" r="4.5" fill="#F7F7F9"/>
+  <!-- Encabezado -->
+  <rect x="78" y="76" width="64" height="9" rx="4.5" fill="#2B2F3A"/>
+  <!-- Fila 1 -->
+  <circle cx="88" cy="112" r="8" fill="none" stroke="#E5383B" stroke-width="3"/>
+  <path d="M84.5 108.5l7 7M91.5 108.5l-7 7" stroke="#E5383B" stroke-width="3" stroke-linecap="round"/>
+  <rect x="106" y="108" width="66" height="8" rx="4" fill="#6B7280"/>
+  <!-- Fila 2 -->
+  <circle cx="88" cy="140" r="8" fill="none" stroke="#E5383B" stroke-width="3"/>
+  <path d="M84.5 136.5l7 7M91.5 136.5l-7 7" stroke="#E5383B" stroke-width="3" stroke-linecap="round"/>
+  <rect x="106" y="136" width="52" height="8" rx="4" fill="#6B7280"/>
+  <!-- Fila 3 -->
+  <circle cx="88" cy="168" r="8" fill="none" stroke="#E5383B" stroke-width="3"/>
+  <path d="M84.5 164.5l7 7M91.5 164.5l-7 7" stroke="#E5383B" stroke-width="3" stroke-linecap="round"/>
+  <rect x="106" y="164" width="40" height="8" rx="4" fill="#A0A5B1"/>
+  <!-- Insignia de bloqueo -->
+  <circle cx="176" cy="188" r="34" fill="#E5383B" stroke="#F7F7F9" stroke-width="5"/>
+  <circle cx="176" cy="188" r="19" fill="none" stroke="#FFFFFF" stroke-width="7"/>
+  <path d="M162.5 201.5l27-27" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+</svg>

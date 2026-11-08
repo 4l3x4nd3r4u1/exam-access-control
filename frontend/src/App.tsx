@@ -23,6 +23,7 @@ import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer'
 import { ExamSearchDrawer } from './components/ExamSearchDrawer';
 
 import { authService, hasFunction } from './services/authService';
+import { BlackListView } from './views/BlackListView';
 
 import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
@@ -46,7 +47,7 @@ import { ControlPointIngressView } from './views/ControlPointIngressView';
 import type { ControlPointSelection } from './types/controlPoint';
 import './App.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
-
+import blackListIcon from './assets/lista_negra.svg';
 
 type ApplicationScreen =
   | 'DASHBOARD'
@@ -54,7 +55,8 @@ type ApplicationScreen =
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL'
   | 'SCHEDULED_EXAMS'
-|   'ENROLLED_STUDENTS'
+  | 'ENROLLED_STUDENTS'
+  | 'BLACK_LIST'
   | 'EXAM_ACCESS_CONTROL'
   | 'CONTROL_POINTS'
   | 'CONTROL_POINT_INGRESS'; 
@@ -190,6 +192,15 @@ export default function App() {
       />
     );
   }
+ 
+    if (screen === 'BLACK_LIST') {
+    return (
+      <BlackListView
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   if (screen === 'EXAM_ACCESS_CONTROL' && accessControlTarget) {
     return (
@@ -285,6 +296,17 @@ export default function App() {
       icon: studentEligibilityIcon,
       iconClass: 'admin-eligibility-icon',
       open: () => setIsStudentEligibilityDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
+      label: 'Registro de infractores',
+      icon: blackListIcon,
+      iconClass: 'admin-eligibility-icon',
+      open: () => setScreen('BLACK_LIST'),
       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
@@ -410,7 +432,7 @@ export default function App() {
               type="button"
               className="admin-menu-card"
               onClick={item.open}
-              key={item.functionCode}
+              key={`${item.functionCode}-${item.label}`}
             >
               <div className="admin-menu-card-frame">
                 <img
