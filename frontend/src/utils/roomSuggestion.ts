@@ -115,3 +115,74 @@ export function suggestOptimalRooms(
     wastedCapacity: Math.max(0, totalAvailable - target),
   };
 }
+
+/**
+ * Distribuye estudiantes de manera equitativa entre un conjunto de aulas,
+ * respetando estrictamente la capacidad máxima de cada aula.
+ *
+ * Si un aula más pequeña no puede albergar la parte proporcional, se llena a su
+ * capacidad máxima y los estudiantes restantes se distribuyen equitativamente entre las aulas mayores.
+ *
+ * @param rooms Lista de aulas disponibles con su capacidad
+ * @param totalStudents Número total de estudiantes a distribuir
+ * @returns Arreglo con la cantidad de estudiantes asignados a cada aula en el mismo orden de entrada
+ */
+export function distributeStudentsEqually(
+  rooms: { capacity: number }[],
+  totalStudents: number,
+): number[] {
+  const n = rooms.length;
+  if (n === 0) {
+    return [];
+  }
+  if (n === 1) {
+    return [Math.min(totalStudents, rooms[0].capacity)];
+  }
+
+  const totalCap = rooms.reduce((sum, r) => sum + r.capacity, 0);
+  const toDistribute = Math.min(totalStudents, totalCap);
+
+  const allocation = new Array(n).fill(0);
+  let remaining = toDistribute;
+  const activeIndices = new Set(rooms.map((_, i) => i));
+
+  while (remaining > 0 && activeIndices.size > 0) {
+    const share = Math.floor(remaining / activeIndices.size);
+    const extra = remaining % activeIndices.size;
+
+    let anyCapped = false;
+    const sortedActive = Array.from(activeIndices).sort(
+      (a, b) => rooms[a].capacity - rooms[b].capacity,
+    );
+
+    for (const idx of sortedActive) {
+      const roomCap = rooms[idx].capacity;
+      const currentAssigned = allocation[idx];
+      const maxCanAdd = roomCap - currentAssigned;
+
+      if (maxCanAdd <= share) {
+        allocation[idx] = roomCap;
+        remaining -= maxCanAdd;
+        activeIndices.delete(idx);
+        anyCapped = true;
+        break;
+      }
+    }
+
+    if (!anyCapped) {
+      let extraLeft = extra;
+      for (const idx of sortedActive) {
+        const add = share + (extraLeft > 0 ? 1 : 0);
+        if (extraLeft > 0) {
+          extraLeft--;
+        }
+        allocation[idx] += add;
+        remaining -= add;
+        activeIndices.delete(idx);
+      }
+      break;
+    }
+  }
+
+  return allocation;
+}
