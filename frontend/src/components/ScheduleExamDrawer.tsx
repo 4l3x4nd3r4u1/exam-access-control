@@ -139,6 +139,64 @@ function getLocalToday(): string {
   return `${year}-${month}-${day}`;
 }
 
+function getLocalTomorrow(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const year = tomorrow.getFullYear();
+
+  const month = String(
+    tomorrow.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const day = String(
+    tomorrow.getDate(),
+  ).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function isTimeSlotPast(dateString: string, slot24h: string): boolean {
+  if (!dateString || !slot24h) {
+    return false;
+  }
+
+  const [year, month, day] = dateString.split('-').map(Number);
+  const [hours, minutes] = slot24h.split(':').map(Number);
+  const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+  return slotDate.getTime() <= Date.now();
+}
+
+function isDateCompletelyPast(dateString: string): boolean {
+  const today = getLocalToday();
+
+  if (dateString < today) {
+    return true;
+  }
+
+  if (dateString > today) {
+    return false;
+  }
+
+  const lastSlot = TIME_SLOTS[TIME_SLOTS.length - 1];
+  return isTimeSlotPast(dateString, lastSlot.start24h);
+}
+
+function getInitialDateAndSlot(): { date: string; slotIndex: number } {
+  const today = getLocalToday();
+
+  const firstAvailableIndex = TIME_SLOTS.findIndex(
+    (slot) => !isTimeSlotPast(today, slot.start24h),
+  );
+
+  if (firstAvailableIndex !== -1) {
+    return { date: today, slotIndex: firstAvailableIndex };
+  }
+
+  return { date: getLocalTomorrow(), slotIndex: 0 };
+}
+
 function formatDateToSpanish(
   dateString: string,
 ): string {
@@ -212,13 +270,15 @@ export function ScheduleExamDrawer({
     setIsLoadingExamTypes,
   ] = useState(false);
 
+  const [initialSchedule] = useState(getInitialDateAndSlot);
+
   const [rawDate, setRawDate] =
-    useState(getLocalToday);
+    useState(() => initialSchedule.date);
 
   const [
     startTimeIndex,
     setStartTimeIndex,
-  ] = useState(0);
+  ] = useState(() => initialSchedule.slotIndex);
 
   const [
     isCalendarOpen,
@@ -229,14 +289,14 @@ export function ScheduleExamDrawer({
     calendarYear,
     setCalendarYear,
   ] = useState(
-    () => new Date().getFullYear(),
+    () => Number(initialSchedule.date.split('-')[0]),
   );
 
   const [
     calendarMonth,
     setCalendarMonth,
   ] = useState(
-    () => new Date().getMonth(),
+    () => Number(initialSchedule.date.split('-')[1]) - 1,
   );
 
   const [
@@ -350,6 +410,13 @@ export function ScheduleExamDrawer({
       return;
     }
 
+    const initial = getInitialDateAndSlot();
+    setRawDate(initial.date);
+    setStartTimeIndex(initial.slotIndex);
+    const [initY, initM] = initial.date.split('-').map(Number);
+    setCalendarYear(initY);
+    setCalendarMonth(initM - 1);
+    setErrorMessage(null);
     setHasManuallyChangedRooms(false);
 
     let isMounted = true;
@@ -806,15 +873,23 @@ export function ScheduleExamDrawer({
         '0',
       )}`;
 
-    if (
-      formatted <
-      getLocalToday()
-    ) {
+    if (isDateCompletelyPast(formatted)) {
       return;
     }
 
     setRawDate(formatted);
     setIsCalendarOpen(false);
+
+    const currentSlot24h = TIME_SLOTS[startTimeIndex]?.start24h || '';
+    if (isTimeSlotPast(formatted, currentSlot24h)) {
+      const nextValidIndex = TIME_SLOTS.findIndex(
+        (slot) => !isTimeSlotPast(formatted, slot.start24h),
+      );
+      if (nextValidIndex !== -1) {
+        setStartTimeIndex(nextValidIndex);
+      }
+    }
+    setErrorMessage(null);
   };
 
   const handleAddGeneralRule =
@@ -961,6 +1036,13 @@ export function ScheduleExamDrawer({
       return;
     }
 
+    if (isTimeSlotPast(rawDate, currentSlot.start24h)) {
+      setErrorMessage(
+        'No se puede programar un examen en un horario pasado a la hora actual.',
+      );
+      return;
+    }
+
     if (
       selectedExamTypeId === null
     ) {
@@ -997,6 +1079,13 @@ export function ScheduleExamDrawer({
   };
 
   const executeSave = async () => {
+    if (isTimeSlotPast(rawDate, currentSlot.start24h)) {
+      setErrorMessage(
+        'No se puede programar un examen en un horario pasado a la hora actual.',
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -1419,8 +1508,7 @@ export function ScheduleExamDrawer({
                     )}`;
 
                   const isPast =
-                    candidateDate <
-                    getLocalToday();
+                    isDateCompletelyPast(candidateDate);
 
                   return (
                     <button
@@ -1470,37 +1558,50 @@ export function ScheduleExamDrawer({
                 value={
                   startTimeIndex
                 }
-                onChange={(event) =>
-                  setStartTimeIndex(
-                    Number(
-                      event.target
-                        .value,
-                    ),
-                  )
-                }
+                onChange={(event) => {
+                  const newIndex = Number(
+                    event.target
+                      .value,
+                  );
+                  const selectedSlot = TIME_SLOTS[newIndex];
+                  if (selectedSlot && isTimeSlotPast(rawDate, selectedSlot.start24h)) {
+                    setErrorMessage('No se puede seleccionar un horario que ya ha pasado.');
+                    return;
+                  }
+                  setStartTimeIndex(newIndex);
+                  setErrorMessage(null);
+                }}
               >
                 {TIME_SLOTS.map(
                   (
                     slot,
                     index,
-                  ) => (
-                    <option
-                      key={
-                        slot.start
-                      }
-                      value={
-                        index
-                      }
-                    >
-                      {
-                        slot.start
-                      }
-                    </option>
-                  ),
+                  ) => {
+                    const isPast = isTimeSlotPast(rawDate, slot.start24h);
+                    return (
+                      <option
+                        key={
+                          slot.start
+                        }
+                        value={
+                          index
+                        }
+                        disabled={isPast}
+                      >
+                        {slot.start} {isPast ? '(Horario pasado)' : ''}
+                      </option>
+                    );
+                  },
                 )}
               </select>
             </div>
           </div>
+
+          {isTimeSlotPast(rawDate, currentSlot.start24h) && (
+            <p className="schedule-exam-time-past-alert" role="alert" style={{ color: '#dc2626', fontSize: '0.8125rem', margin: '4px 0 0 0' }}>
+              ⚠️ El horario seleccionado ya ha pasado. Por favor selecciona un horario posterior.
+            </p>
+          )}
 
           <div className="schedule-exam-spread-row">
             <span className="schedule-exam-label">
@@ -2123,7 +2224,7 @@ export function ScheduleExamDrawer({
             className="schedule-exam-submit-btn"
             onClick={handleSave}
             disabled={
-              isSubmitting || !isAssignedTeacher
+              isSubmitting || !isAssignedTeacher || isTimeSlotPast(rawDate, currentSlot.start24h)
             }
           >
             {isSubmitting

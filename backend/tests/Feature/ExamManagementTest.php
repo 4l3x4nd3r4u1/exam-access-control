@@ -129,7 +129,7 @@ class ExamManagementTest extends TestCase
 
         $payload = [
             'examTypeId' => $examType->id,
-            'date' => '2026-10-15',
+            'date' => \Carbon\Carbon::now('America/La_Paz')->addDays(3)->format('Y-m-d'),
             'startTime' => '08:15',
             'rooms' => [
                 ['roomId' => $room1->id, 'students' => $room1Students, 'auxiliarId' => null],
@@ -161,7 +161,7 @@ class ExamManagementTest extends TestCase
 
         $createdExam = Examen::where('materia_grupo_id', $courseGroup->id)->first();
         $this->assertNotNull($createdExam);
-        $this->assertEquals('2026-10-15', date('Y-m-d', strtotime((string)$createdExam->fecha)));
+        $this->assertEquals(\Carbon\Carbon::now('America/La_Paz')->addDays(3)->format('Y-m-d'), date('Y-m-d', strtotime((string)$createdExam->fecha)));
         $this->assertTrue((bool)$createdExam->activo);
 
         $this->assertDatabaseHas('aula', ['nombre' => 'Aula 691A']);
@@ -246,5 +246,63 @@ class ExamManagementTest extends TestCase
         $response = $this->withHeaders($headers)->postJson("/api/courses/{$courseGroup->id}/exams", []);
 
         $response->assertStatus(422);
+    }
+
+    public function test_cannot_schedule_exam_in_past_date(): void
+    {
+        $courseGroup = $this->createCourseGroup();
+        $headers = $this->getAuthHeaders($courseGroup->docente);
+        $examType = TipoExamen::where('nombre', 'PRIMER PARCIAL')->first();
+        $room = Aula::where('nombre', 'Aula 691A')->first();
+
+        $yesterday = \Carbon\Carbon::now('America/La_Paz')->subDay();
+
+        $payload = [
+            'examTypeId' => $examType->id,
+            'date' => $yesterday->format('Y-m-d'),
+            'startTime' => '08:15',
+            'rooms' => [
+                ['roomId' => $room->id, 'students' => [], 'auxiliarId' => null],
+            ],
+            'generalRules' => [],
+            'studentRules' => [],
+        ];
+
+        $response = $this->withHeaders($headers)->postJson("/api/courses/{$courseGroup->id}/exams", $payload);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'No se puede programar un examen en un horario pasado a la hora actual.',
+            ]);
+    }
+
+    public function test_cannot_schedule_exam_past_hour_today(): void
+    {
+        $courseGroup = $this->createCourseGroup();
+        $headers = $this->getAuthHeaders($courseGroup->docente);
+        $examType = TipoExamen::where('nombre', 'PRIMER PARCIAL')->first();
+        $room = Aula::where('nombre', 'Aula 691A')->first();
+
+        $pastTime = \Carbon\Carbon::now('America/La_Paz')->subMinute();
+
+        $payload = [
+            'examTypeId' => $examType->id,
+            'date' => $pastTime->format('Y-m-d'),
+            'startTime' => $pastTime->format('H:i'),
+            'rooms' => [
+                ['roomId' => $room->id, 'students' => [], 'auxiliarId' => null],
+            ],
+            'generalRules' => [],
+            'studentRules' => [],
+        ];
+
+        $response = $this->withHeaders($headers)->postJson("/api/courses/{$courseGroup->id}/exams", $payload);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'No se puede programar un examen en un horario pasado a la hora actual.',
+            ]);
     }
 }

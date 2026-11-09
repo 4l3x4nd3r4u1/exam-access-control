@@ -123,6 +123,26 @@ class ExamController extends Controller
             'studentRules.*.rule' => 'required|string',
         ]);
 
+        $timezone = 'America/La_Paz';
+        try {
+            $date = $request->input('date');
+            $startTime = $request->input('startTime');
+            $examDateTime = \Carbon\Carbon::parse("{$date} {$startTime}", $timezone);
+            $now = \Carbon\Carbon::now($timezone);
+
+            if ($examDateTime->lessThanOrEqualTo($now)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede programar un examen en un horario pasado a la hora actual.',
+                ], 422);
+            }
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La fecha u hora de inicio del examen no tienen un formato válido.',
+            ], 422);
+        }
+
         $data = new ExamRegistrationData(
             courseGroupId: $courseGroupId,
             examTypeId: (int) $request->input('examTypeId'),
