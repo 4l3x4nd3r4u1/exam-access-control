@@ -87,6 +87,10 @@ export default function App() {
   const [courseFunctionMode, setCourseFunctionMode] =
     useState<CourseFunctionMode>('VIEW');
 
+  // Acordeón del panel: una sola sección abierta a la vez.
+  const [expandedSection, setExpandedSection] =
+    useState<DashboardSection | null>('ACADEMIC');
+
   const [session, setSession] = useState<UserSession | null>(
     () => authService.getStoredSession(),
   );
@@ -518,39 +522,61 @@ export default function App() {
 
             return (
               <section
-                className="dashboard-section"
+                className={`dashboard-section ${
+                  expandedSection === section.id ? 'is-expanded' : 'is-collapsed'
+                }`}
                 key={section.id}
                 aria-labelledby={`dashboard-section-${section.id}`}
               >
-                <h2
-                  className="dashboard-section-title"
-                  id={`dashboard-section-${section.id}`}
-                >
-                  {section.title}
+                <h2 className="dashboard-section-title">
+                  <button
+                    type="button"
+                    className="dashboard-section-toggle"
+                    id={`dashboard-section-${section.id}`}
+                    aria-expanded={expandedSection === section.id}
+                    aria-controls={`dashboard-section-content-${section.id}`}
+                    onClick={() =>
+                      setExpandedSection((current) =>
+                        current === section.id ? null : section.id,
+                      )
+                    }
+                  >
+                    <span>{section.title}</span>
+                    <svg
+                      className="dashboard-section-chevron"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
                 </h2>
 
-                <nav
-                  className="admin-menu-grid dashboard-section-grid"
-                  aria-label={section.title}
-                >
-                  {items.map((item) => (
-                    <button
-                      type="button"
-                      className="admin-menu-card"
-                      onClick={item.open}
-                      key={`${item.functionCode}-${item.label}`}
-                    >
-                      <div className="admin-menu-card-frame">
-                        <img
-                          src={item.icon}
-                          alt=""
-                          className={`admin-menu-icon ${item.iconClass}`}
-                        />
-                      </div>
-                      <span className="admin-menu-card-label">{item.label}</span>
-                    </button>
-                  ))}
-                </nav>
+                {expandedSection === section.id && (
+                  <nav
+                    className="admin-menu-grid dashboard-section-grid"
+                    id={`dashboard-section-content-${section.id}`}
+                    aria-label={section.title}
+                  >
+                    {items.map((item) => (
+                      <button
+                        type="button"
+                        className="admin-menu-card"
+                        onClick={item.open}
+                        key={`${item.functionCode}-${item.label}`}
+                      >
+                        <div className="admin-menu-card-frame">
+                          <img
+                            src={item.icon}
+                            alt=""
+                            className={`admin-menu-icon ${item.iconClass}`}
+                          />
+                        </div>
+                        <span className="admin-menu-card-label">{item.label}</span>
+                      </button>
+                    ))}
+                  </nav>
+                )}
               </section>
             );
           })}

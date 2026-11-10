@@ -101,3 +101,59 @@
   line-height: 1.15;
   -webkit-line-clamp: unset;
 }
+
+
+/* Acordeón de secciones del panel */
+.app-dashboard .dashboard-section {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+}
+
+.app-dashboard .dashboard-section.is-collapsed {
+  padding-bottom: 14px;
+}
+
+.app-dashboard .dashboard-section-title {
+  margin: 0;
+}
+
+.app-dashboard .dashboard-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-dashboard .dashboard-section-toggle:focus-visible {
+  outline: 2px solid #2875ed;
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+
+.app-dashboard .dashboard-section-chevron {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms ease;
+}
+
+.app-dashboard .dashboard-section.is-expanded .dashboard-section-chevron {
+  transform: rotate(180deg);
+}
+
+.app-dashboard .dashboard-section-grid {
+  margin-top: 14px;
+}
