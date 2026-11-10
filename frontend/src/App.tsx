@@ -46,6 +46,7 @@ import { ControlPointsView } from './views/ControlPointsView';
 import { ControlPointIngressView } from './views/ControlPointIngressView';
 import type { ControlPointSelection } from './types/controlPoint';
 import './App.css';
+import './AppDashboard.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
 import blackListIcon from './assets/lista_negra.svg';
 import { ExamReportsView } from './views/ExamReportsView';
@@ -64,6 +65,20 @@ type ApplicationScreen =
   | 'EXAM_REPORTS'
   | 'CONTROL_POINTS'
   | 'CONTROL_POINT_INGRESS'; 
+
+type DashboardSection =
+  | 'ACADEMIC'
+  | 'EXAMS'
+  | 'CONTROL'
+  | 'USERS';
+
+/** Secciones del panel, en el orden del mockup. */
+const DASHBOARD_SECTIONS: { id: DashboardSection; title: string }[] = [
+  { id: 'ACADEMIC', title: 'Gestión Académica' },
+  { id: 'EXAMS', title: 'Gestión de Exámenes' },
+  { id: 'CONTROL', title: 'Control y seguimiento' },
+  { id: 'USERS', title: 'Administración de Usuarios' },
+];
 
 /** Drawer de búsqueda de materia abierto desde el panel. */
 type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS' | 'SCHEDULE_EXAM';
@@ -274,6 +289,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
       label: 'Visualizar materias',
+      section: 'ACADEMIC' as DashboardSection,
+      order: 1,
       icon: assignedCoursesIcon,
       iconClass: 'app-courses-icon',
       open: () => {
@@ -288,6 +305,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
       label: 'Programar Examen',
+      section: 'EXAMS' as DashboardSection,
+      order: 1,
       icon: scheduleExamIcon,
       iconClass: 'admin-schedule-exam-icon',
       open: () => setCourseSearchTarget('SCHEDULE_EXAM'),
@@ -299,6 +318,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.LIST_COURSE_EXAMS,
       label: 'Exámenes programados',
+      section: 'EXAMS' as DashboardSection,
+      order: 2,
       icon: scheduledExamsIcon,
       iconClass: 'admin-exams-icon',
       open: () => setCourseSearchTarget('SCHEDULED_EXAMS'),
@@ -310,6 +331,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.LIST_COURSE_STUDENTS,
       label: 'Estudiantes inscritos en una materia',
+      section: 'CONTROL' as DashboardSection,
+      order: 3,
       icon: enrolledStudentsIcon,
       iconClass: 'admin-enrolled-icon',
       open: () => setCourseSearchTarget('ENROLLED_STUDENTS'),
@@ -321,6 +344,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
       label: 'Estado de Habilitación',
+      section: 'CONTROL' as DashboardSection,
+      order: 1,
       icon: studentEligibilityIcon,
       iconClass: 'admin-eligibility-icon',
       open: () => setIsStudentEligibilityDrawerOpen(true),
@@ -332,6 +357,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
       label: 'Registro de infractores',
+      section: 'CONTROL' as DashboardSection,
+      order: 4,
       icon: blackListIcon,
       iconClass: 'admin-eligibility-icon',
       open: () => setIsBlackListOpen(true),
@@ -343,6 +370,8 @@ export default function App() {
         {
       functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
       label: 'Reportes de exámenes',
+      section: 'EXAMS' as DashboardSection,
+      order: 4,
       icon: examReportsIcon,
       iconClass: 'admin-exams-icon',
       open: () => setIsExamReportsDrawerOpen(true),
@@ -354,6 +383,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
       label: 'Puntos de control',
+      section: 'CONTROL' as DashboardSection,
+      order: 2,
       icon: checkpointIcon,
       iconClass: 'admin-checkpoint-icon',
       open: () => setIsExamSearchDrawerOpen(true),
@@ -365,6 +396,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.IMPORT_ROSTER,
       label: 'Importar padrón',
+      section: 'ACADEMIC' as DashboardSection,
+      order: 2,
       icon: importRosterIcon,
       iconClass: 'admin-import-icon',
       open: () => setIsImportDrawerOpen(true),
@@ -376,6 +409,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.LIST_PROCESSED_ROSTERS,
       label: 'Planillas importadas',
+      section: 'EXAMS' as DashboardSection,
+      order: 3,
       icon: processedRostersIcon,
       iconClass: 'admin-rosters-icon',
       open: () => setScreen('PROCESSED_ROSTERS'),
@@ -387,6 +422,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.LIST_ACADEMIC_STAFF,
       label: 'Personal académico',
+      section: 'USERS' as DashboardSection,
+      order: 1,
       icon: academicStaffIcon,
       iconClass: 'admin-staff-icon',
       open: () => setScreen('ACADEMIC_STAFF'),
@@ -398,6 +435,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.REGISTER_ACADEMIC_STAFF,
       label: 'Registrar personal académico',
+      section: 'USERS' as DashboardSection,
+      order: 2,
       icon: registerAcademicStaffIcon,
       iconClass: 'admin-register-staff-icon',
       open: () => setIsAcademicUserDrawerOpen(true),
@@ -409,6 +448,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.EDIT_ROLES,
       label: 'Editar roles',
+      section: 'USERS' as DashboardSection,
+      order: 3,
       icon: editRolesIcon,
       iconClass: 'admin-roles-icon',
       open: () => setIsEditRolesDrawerOpen(true),
@@ -420,6 +461,8 @@ export default function App() {
     {
       functionCode: FUNCTION_CODES.EDIT_PERSONAL_DATA,
       label: 'Editar datos Personales',
+      section: 'USERS' as DashboardSection,
+      order: 4,
       icon: editPersonalDataIcon,
       iconClass: 'admin-personal-data-icon',
       open: () => setIsEditPersonalDataDrawerOpen(true),
@@ -433,6 +476,8 @@ export default function App() {
       // Room access is determined by the backend's can_interact assignment.
       functionCode: 'control-points',
       label: 'Puntos de control',
+      section: 'CONTROL' as DashboardSection,
+      order: 5,
       icon: controlPointsIcon,
       iconClass: 'admin-exams-icon',
       open: () => setScreen('CONTROL_POINTS'),
@@ -455,41 +500,67 @@ export default function App() {
           aria-label="Cerrar sesión"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="8" r="4.25" />
-            <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="9.5" r="3" />
+            <path d="M6.2 18.6c1-2.6 3.1-3.9 5.8-3.9s4.8 1.3 5.8 3.9" />
           </svg>
         </button>
       </header>
 
       {menuItems.length > 0 ? (
-        <nav
-          className="admin-menu-grid"
-          aria-label="Funciones disponibles"
-        >
-          {menuItems.map((item) => (
-            <button
-              type="button"
-              className="admin-menu-card"
-              onClick={item.open}
-              key={`${item.functionCode}-${item.label}`}
-            >
-              <div className="admin-menu-card-frame">
-                <img
-                  src={item.icon}
-                  alt=""
-                  className={`admin-menu-icon ${item.iconClass}`}
-                />
-              </div>
-              <span className="admin-menu-card-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
+        <div className="dashboard-sections">
+          {DASHBOARD_SECTIONS.map((section) => {
+            const items = menuItems
+              .filter((item) => item.section === section.id)
+              .sort((a, b) => a.order - b.order);
+
+            if (items.length === 0) return null;
+
+            return (
+              <section
+                className="dashboard-section"
+                key={section.id}
+                aria-labelledby={`dashboard-section-${section.id}`}
+              >
+                <h2
+                  className="dashboard-section-title"
+                  id={`dashboard-section-${section.id}`}
+                >
+                  {section.title}
+                </h2>
+
+                <nav
+                  className="admin-menu-grid dashboard-section-grid"
+                  aria-label={section.title}
+                >
+                  {items.map((item) => (
+                    <button
+                      type="button"
+                      className="admin-menu-card"
+                      onClick={item.open}
+                      key={`${item.functionCode}-${item.label}`}
+                    >
+                      <div className="admin-menu-card-frame">
+                        <img
+                          src={item.icon}
+                          alt=""
+                          className={`admin-menu-icon ${item.iconClass}`}
+                        />
+                      </div>
+                      <span className="admin-menu-card-label">{item.label}</span>
+                    </button>
+                  ))}
+                </nav>
+              </section>
+            );
+          })}
+        </div>
       ) : (
         <p className="app-dashboard-empty">
           Tu cuenta no tiene funciones disponibles.
         </p>
       )}
-      
+
       <CourseGroupSearchDrawer
         isOpen={courseSearchTarget !== null}
         onClose={() => setCourseSearchTarget(null)}
