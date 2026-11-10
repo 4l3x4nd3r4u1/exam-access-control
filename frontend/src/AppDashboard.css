@@ -157,3 +157,40 @@
 .app-dashboard .dashboard-section-grid {
   margin-top: 14px;
 }
+
+
+/* Apertura y cierre suaves del acordeón */
+.app-dashboard .dashboard-section-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    grid-template-rows 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease,
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.app-dashboard .dashboard-section-content.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.app-dashboard .dashboard-section-content-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-dashboard .dashboard-section-grid {
+  margin-top: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-dashboard .dashboard-section-content,
+  .app-dashboard .dashboard-section-chevron {
+    transition: none;
+  }
+}

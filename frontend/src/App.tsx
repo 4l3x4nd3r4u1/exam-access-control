@@ -552,31 +552,39 @@ export default function App() {
                   </button>
                 </h2>
 
-                {expandedSection === section.id && (
-                  <nav
-                    className="admin-menu-grid dashboard-section-grid"
-                    id={`dashboard-section-content-${section.id}`}
-                    aria-label={section.title}
-                  >
-                    {items.map((item) => (
-                      <button
-                        type="button"
-                        className="admin-menu-card"
-                        onClick={item.open}
-                        key={`${item.functionCode}-${item.label}`}
-                      >
-                        <div className="admin-menu-card-frame">
-                          <img
-                            src={item.icon}
-                            alt=""
-                            className={`admin-menu-icon ${item.iconClass}`}
-                          />
-                        </div>
-                        <span className="admin-menu-card-label">{item.label}</span>
-                      </button>
-                    ))}
-                  </nav>
-                )}
+                <div
+                  className={`dashboard-section-content ${
+                    expandedSection === section.id ? 'is-open' : ''
+                  }`}
+                  id={`dashboard-section-content-${section.id}`}
+                  aria-hidden={expandedSection !== section.id}
+                  inert={expandedSection !== section.id}
+                >
+                  <div className="dashboard-section-content-inner">
+                    <nav
+                      className="admin-menu-grid dashboard-section-grid"
+                      aria-label={section.title}
+                    >
+                      {items.map((item) => (
+                        <button
+                          type="button"
+                          className="admin-menu-card"
+                          onClick={item.open}
+                          key={`${item.functionCode}-${item.label}`}
+                        >
+                          <div className="admin-menu-card-frame">
+                            <img
+                              src={item.icon}
+                              alt=""
+                              className={`admin-menu-icon ${item.iconClass}`}
+                            />
+                          </div>
+                          <span className="admin-menu-card-label">{item.label}</span>
+                        </button>
+                      ))}
+                    </nav>
+                  </div>
+                </div>
               </section>
             );
           })}
