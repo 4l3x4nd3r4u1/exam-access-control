@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import logoSvg from '../assets/Group 9.svg';
 import { authService } from '../services/authService';
 import type { UserSession } from '../types/auth';
@@ -8,23 +8,26 @@ interface LoginViewProps {
 }
 
 export function LoginView({ onLoginSuccess }: LoginViewProps) {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const submitting = useRef(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!email || !password) return;
+    if (!identifier.trim() || !password || submitting.current) return;
 
+    submitting.current = true;
     setError(null);
     setIsLoading(true);
     try {
-      const session = await authService.login(email, password);
+      const session = await authService.login(identifier, password);
       onLoginSuccess(session);
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'No se pudo iniciar sesión.');
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };
@@ -42,24 +45,27 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
 
       <form className="login-form" onSubmit={handleSubmit}>
         <div className="input-card">
-          <label htmlFor="email-input" className="input-label">Correo</label>
+          <label htmlFor="identifier-input" className="input-label">CI o correo</label>
           <div className="input-field-wrapper">
             <input
-              id="email-input"
-              type="email"
+              id="identifier-input"
+              type="text"
               className="text-input"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="docente@umss.edu.bo"
-              autoComplete="email"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              placeholder="CI o correo electrónico"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={150}
               required
             />
-            {email && (
+            {identifier && (
               <button
                 type="button"
                 className="clear-btn"
-                onClick={() => setEmail('')}
-                aria-label="Limpiar correo"
+                onClick={() => setIdentifier('')}
+                aria-label="Limpiar CI o correo"
               >
                 ✕
               </button>
@@ -83,7 +89,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
           </div>
         </div>
 
-        <button type="submit" className="submit-btn" disabled={isLoading || !email || !password}>
+        <button type="submit" className="submit-btn" disabled={isLoading || !identifier.trim() || !password}>
           {isLoading ? 'Iniciando sesión...' : 'Empezar'}
         </button>
 

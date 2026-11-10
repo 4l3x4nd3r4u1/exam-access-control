@@ -52,16 +52,19 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 class CoreDataStorage
 {
     /**
-     * Authenticates a user by email and password, returning an authenticated UserSession with JWT.
+     * Authenticates a user by CI or email and password, returning an authenticated UserSession with JWT.
      *
-     * @param string $email User email
+     * @param string $identifier User CI or email
      * @param string $password Plaintext password
      * @return UserSession
      * @throws InvalidCredentialsException
      */
-    public function authenticate(string $email, string $password): UserSession
+    public function authenticate(string $identifier, string $password): UserSession
     {
-        $user = User::where('email', strtolower(trim($email)))->first();
+        $identifier = trim($identifier);
+        $field = str_contains($identifier, '@') ? 'email' : 'ci';
+        $value = $field === 'email' ? strtolower($identifier) : $identifier;
+        $user = User::where($field, $value)->first();
 
         if (!$user) {
             throw new InvalidCredentialsException('Credenciales incorrectas');
