@@ -321,6 +321,14 @@ class CoreDataStorage
             DB::transaction(function () use ($data, $auditUserId) {
                 $now = now();
 
+                $timezone = 'America/La_Paz';
+                $examDateTime = \Carbon\Carbon::parse("{$data->date} {$data->startTime}", $timezone);
+                $nowBolivia = \Carbon\Carbon::now($timezone);
+
+                if ($examDateTime->lessThanOrEqualTo($nowBolivia)) {
+                    throw new \Exception("No se puede programar un examen en un horario pasado a la hora actual.");
+                }
+
                 // Validate course group exists
                 $courseGroup = CourseGroup::find($data->courseGroupId);
                 if (!$courseGroup) {

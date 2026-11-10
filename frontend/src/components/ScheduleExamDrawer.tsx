@@ -10,11 +10,14 @@ import { ConfirmModal } from './ConfirmModal';
 import { examService } from '../services/examService';
 import { courseService } from '../services/courseService';
 import { authService } from '../services/authService';
+import { staffService } from '../services/staffService';
 
 import type {
   TeacherCourse,
   EnrolledStudent,
 } from '../types/course';
+
+import type { AcademicStaffMember } from '../types/staff';
 
 import type {
   AvailableRoom,
@@ -22,7 +25,7 @@ import type {
   ScheduleExamPayload,
 } from '../types/exam';
 
-import { suggestOptimalRooms } from '../utils/roomSuggestion';
+import { suggestOptimalRooms, distributeStudentsEqually } from '../utils/roomSuggestion';
 
 interface TimeSlot {
   start: string;
@@ -139,6 +142,64 @@ function getLocalToday(): string {
   return `${year}-${month}-${day}`;
 }
 
+function getLocalTomorrow(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const year = tomorrow.getFullYear();
+
+  const month = String(
+    tomorrow.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const day = String(
+    tomorrow.getDate(),
+  ).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function isTimeSlotPast(dateString: string, slot24h: string): boolean {
+  if (!dateString || !slot24h) {
+    return false;
+  }
+
+  const [year, month, day] = dateString.split('-').map(Number);
+  const [hours, minutes] = slot24h.split(':').map(Number);
+  const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+  return slotDate.getTime() <= Date.now();
+}
+
+function isDateCompletelyPast(dateString: string): boolean {
+  const today = getLocalToday();
+
+  if (dateString < today) {
+    return true;
+  }
+
+  if (dateString > today) {
+    return false;
+  }
+
+  const lastSlot = TIME_SLOTS[TIME_SLOTS.length - 1];
+  return isTimeSlotPast(dateString, lastSlot.start24h);
+}
+
+function getInitialDateAndSlot(): { date: string; slotIndex: number } {
+  const today = getLocalToday();
+
+  const firstAvailableIndex = TIME_SLOTS.findIndex(
+    (slot) => !isTimeSlotPast(today, slot.start24h),
+  );
+
+  if (firstAvailableIndex !== -1) {
+    return { date: today, slotIndex: firstAvailableIndex };
+  }
+
+  return { date: getLocalTomorrow(), slotIndex: 0 };
+}
+
 function formatDateToSpanish(
   dateString: string,
 ): string {
@@ -212,13 +273,15 @@ export function ScheduleExamDrawer({
     setIsLoadingExamTypes,
   ] = useState(false);
 
+  const [initialSchedule] = useState(getInitialDateAndSlot);
+
   const [rawDate, setRawDate] =
-    useState(getLocalToday);
+    useState(() => initialSchedule.date);
 
   const [
     startTimeIndex,
     setStartTimeIndex,
-  ] = useState(0);
+  ] = useState(() => initialSchedule.slotIndex);
 
   const [
     isCalendarOpen,
@@ -229,14 +292,14 @@ export function ScheduleExamDrawer({
     calendarYear,
     setCalendarYear,
   ] = useState(
-    () => new Date().getFullYear(),
+    () => Number(initialSchedule.date.split('-')[0]),
   );
 
   const [
     calendarMonth,
     setCalendarMonth,
   ] = useState(
-    () => new Date().getMonth(),
+    () => Number(initialSchedule.date.split('-')[1]) - 1,
   );
 
   const [
@@ -312,6 +375,21 @@ export function ScheduleExamDrawer({
   ] = useState<string | null>(null);
 
   const [
+    academicStaff,
+    setAcademicStaff,
+  ] = useState<AcademicStaffMember[]>([]);
+
+  const [
+    selectedAuxiliarId,
+    setSelectedAuxiliarId,
+  ] = useState<number | null>(null);
+
+  const [
+    auxiliarRoomId,
+    setAuxiliarRoomId,
+  ] = useState<string | number | null>(null);
+
+  const [
     isCheckingStudent,
     setIsCheckingStudent,
   ] = useState(false);
@@ -350,9 +428,31 @@ export function ScheduleExamDrawer({
       return;
     }
 
+    const initial = getInitialDateAndSlot();
+    setRawDate(initial.date);
+    setStartTimeIndex(initial.slotIndex);
+    const [initY, initM] = initial.date.split('-').map(Number);
+    setCalendarYear(initY);
+    setCalendarMonth(initM - 1);
+    setErrorMessage(null);
     setHasManuallyChangedRooms(false);
+    setSelectedAuxiliarId(null);
+    setAuxiliarRoomId(null);
 
     let isMounted = true;
+
+    staffService
+      .getAcademicStaff()
+      .then((staff) => {
+        if (isMounted) {
+          setAcademicStaff(staff);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAcademicStaff([]);
+        }
+      });
 
     setIsLoadingExamTypes(true);
 
@@ -569,6 +669,10 @@ export function ScheduleExamDrawer({
 
   const roomAllocations =
     useMemo(() => {
+      const counts = hasManuallyChangedRooms
+        ? distributeStudentsEqually(selectedRooms, totalEnrolled)
+        : null;
+
       let remainingCount =
         totalEnrolled;
 
@@ -580,14 +684,14 @@ export function ScheduleExamDrawer({
         studentUserIds: number[];
       }> = [];
 
-      for (
-        const room of selectedRooms
-      ) {
-        const studentCount =
-          Math.min(
-            room.capacity,
-            remainingCount,
-          );
+      for (let i = 0; i < selectedRooms.length; i++) {
+        const room = selectedRooms[i];
+        const studentCount = counts
+          ? counts[i]
+          : Math.min(
+              room.capacity,
+              remainingCount,
+            );
 
         const students =
           enrolledStudents.slice(
@@ -622,6 +726,7 @@ export function ScheduleExamDrawer({
       selectedRooms,
       totalEnrolled,
       enrolledStudents,
+      hasManuallyChangedRooms,
     ]);
 
   const distributionSummary =
@@ -661,6 +766,28 @@ export function ScheduleExamDrawer({
       examTypes,
       selectedExamTypeId,
     ]);
+
+  const availableAuxiliaries = useMemo(() => {
+    return academicStaff.filter(
+      (m) =>
+        m.is_active !== false &&
+        Array.isArray(m.roles) &&
+        m.roles.some((r) => r.toUpperCase() === 'AUXILIAR'),
+    );
+  }, [academicStaff]);
+
+  useEffect(() => {
+    if (selectedRooms.length > 1) {
+      const stillValid = selectedRooms.some(
+        (r) => String(r.room_id) === String(auxiliarRoomId),
+      );
+      if (!stillValid && selectedAuxiliarId) {
+        setAuxiliarRoomId(selectedRooms[1]?.room_id ?? selectedRooms[0]?.room_id ?? null);
+      }
+    } else {
+      setAuxiliarRoomId(null);
+    }
+  }, [selectedRooms, auxiliarRoomId, selectedAuxiliarId]);
 
   const optimalSuggestion = useMemo(() => {
     return suggestOptimalRooms(availableRooms, totalEnrolled);
@@ -806,15 +933,23 @@ export function ScheduleExamDrawer({
         '0',
       )}`;
 
-    if (
-      formatted <
-      getLocalToday()
-    ) {
+    if (isDateCompletelyPast(formatted)) {
       return;
     }
 
     setRawDate(formatted);
     setIsCalendarOpen(false);
+
+    const currentSlot24h = TIME_SLOTS[startTimeIndex]?.start24h || '';
+    if (isTimeSlotPast(formatted, currentSlot24h)) {
+      const nextValidIndex = TIME_SLOTS.findIndex(
+        (slot) => !isTimeSlotPast(formatted, slot.start24h),
+      );
+      if (nextValidIndex !== -1) {
+        setStartTimeIndex(nextValidIndex);
+      }
+    }
+    setErrorMessage(null);
   };
 
   const handleAddGeneralRule =
@@ -961,6 +1096,13 @@ export function ScheduleExamDrawer({
       return;
     }
 
+    if (isTimeSlotPast(rawDate, currentSlot.start24h)) {
+      setErrorMessage(
+        'No se puede programar un examen en un horario pasado a la hora actual.',
+      );
+      return;
+    }
+
     if (
       selectedExamTypeId === null
     ) {
@@ -986,7 +1128,7 @@ export function ScheduleExamDrawer({
       totalEnrolled
     ) {
       setErrorMessage(
-        'La capacidad de las aulas seleccionadas no alcanza para todos los estudiantes inscritos.',
+        'La capacidad de las aulas seleccionadas (' + totalCapacity + ' cupos) no alcanza para los ' + totalEnrolled + ' estudiantes inscritos. Debes seleccionar al menos un aula más para abastecer a todos los estudiantes.',
       );
 
       return;
@@ -997,13 +1139,24 @@ export function ScheduleExamDrawer({
   };
 
   const executeSave = async () => {
+    if (isTimeSlotPast(rawDate, currentSlot.start24h)) {
+      setErrorMessage(
+        'No se puede programar un examen en un horario pasado a la hora actual.',
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
 
    const roomsPayload = roomAllocations.map((allocation) => ({
   roomId: Number(allocation.room.room_id),
   students: allocation.studentUserIds,
-  auxiliarId: null,
+  auxiliarId:
+    selectedAuxiliarId !== null &&
+    String(allocation.room.room_id) === String(auxiliarRoomId)
+      ? selectedAuxiliarId
+      : null,
 }));
 
     for (
@@ -1419,8 +1572,7 @@ export function ScheduleExamDrawer({
                     )}`;
 
                   const isPast =
-                    candidateDate <
-                    getLocalToday();
+                    isDateCompletelyPast(candidateDate);
 
                   return (
                     <button
@@ -1470,37 +1622,50 @@ export function ScheduleExamDrawer({
                 value={
                   startTimeIndex
                 }
-                onChange={(event) =>
-                  setStartTimeIndex(
-                    Number(
-                      event.target
-                        .value,
-                    ),
-                  )
-                }
+                onChange={(event) => {
+                  const newIndex = Number(
+                    event.target
+                      .value,
+                  );
+                  const selectedSlot = TIME_SLOTS[newIndex];
+                  if (selectedSlot && isTimeSlotPast(rawDate, selectedSlot.start24h)) {
+                    setErrorMessage('No se puede seleccionar un horario que ya ha pasado.');
+                    return;
+                  }
+                  setStartTimeIndex(newIndex);
+                  setErrorMessage(null);
+                }}
               >
                 {TIME_SLOTS.map(
                   (
                     slot,
                     index,
-                  ) => (
-                    <option
-                      key={
-                        slot.start
-                      }
-                      value={
-                        index
-                      }
-                    >
-                      {
-                        slot.start
-                      }
-                    </option>
-                  ),
+                  ) => {
+                    const isPast = isTimeSlotPast(rawDate, slot.start24h);
+                    return (
+                      <option
+                        key={
+                          slot.start
+                        }
+                        value={
+                          index
+                        }
+                        disabled={isPast}
+                      >
+                        {slot.start} {isPast ? '(Horario pasado)' : ''}
+                      </option>
+                    );
+                  },
                 )}
               </select>
             </div>
           </div>
+
+          {isTimeSlotPast(rawDate, currentSlot.start24h) && (
+            <p className="schedule-exam-time-past-alert" role="alert" style={{ color: '#dc2626', fontSize: '0.8125rem', margin: '4px 0 0 0' }}>
+              ⚠️ El horario seleccionado ya ha pasado. Por favor selecciona un horario posterior.
+            </p>
+          )}
 
           <div className="schedule-exam-spread-row">
             <span className="schedule-exam-label">
@@ -1599,6 +1764,26 @@ export function ScheduleExamDrawer({
                 </span>
               )}
           </p>
+
+          {hasManuallyChangedRooms && totalCapacity < totalEnrolled && (
+            <div
+              className="schedule-exam-capacity-alert"
+              role="alert"
+              style={{
+                backgroundColor: '#fef2f2',
+                border: '1px solid #f87171',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                marginTop: '10px',
+                marginBottom: '10px',
+                color: '#991b1b',
+                fontSize: '0.85rem',
+                lineHeight: '1.4',
+              }}
+            >
+              <strong>⚠️ Capacidad insuficiente:</strong> Las aulas que elegiste ({totalCapacity} plazas) no abastecen a los {totalEnrolled} estudiantes inscritos (faltan {totalEnrolled - totalCapacity} cupos). <strong>Debes seleccionar al menos un aula más</strong> para abastecer a todos los estudiantes.
+            </div>
+          )}
 
           {isRoomsOpen && (
             <div
@@ -1727,6 +1912,106 @@ export function ScheduleExamDrawer({
             </div>
           )}
         </div>
+
+        {selectedRooms.length > 1 && (
+          <div
+            className="schedule-exam-section schedule-exam-auxiliar-section"
+            style={{
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '10px',
+              padding: '14px',
+              marginBottom: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '1.1rem' }}>👤</span>
+              <span className="schedule-exam-label" style={{ fontWeight: 600 }}>
+                Asignación de Auxiliar de Docencia:
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 12px 0' }}>
+              Al haber más de un aula, puedes elegir a qué aula asistirá el auxiliar de la materia para el control en puerta.
+            </p>
+
+            <div className="schedule-exam-spread-row" style={{ marginBottom: selectedAuxiliarId ? '12px' : '0' }}>
+              <label htmlFor="schedule-exam-auxiliar-select" className="schedule-exam-label" style={{ fontSize: '0.85rem' }}>
+                Auxiliar:
+              </label>
+
+              <div className="schedule-exam-select-wrapper" style={{ minWidth: '220px' }}>
+                <select
+                  id="schedule-exam-auxiliar-select"
+                  className="schedule-exam-select"
+                  value={selectedAuxiliarId ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : null;
+                    setSelectedAuxiliarId(val);
+                    if (val && !auxiliarRoomId && selectedRooms.length > 1) {
+                      setAuxiliarRoomId(selectedRooms[1].room_id);
+                    }
+                  }}
+                >
+                  <option value="">Sin auxiliar (Docente supervisa todas las aulas)</option>
+                  {availableAuxiliaries.map((aux) => (
+                    <option key={aux.user_id} value={aux.user_id}>
+                      {aux.full_name} ({aux.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {selectedAuxiliarId !== null && (
+              <div className="schedule-exam-spread-row">
+                <label htmlFor="schedule-exam-auxiliar-room-select" className="schedule-exam-label" style={{ fontSize: '0.85rem' }}>
+                  Aula asignada al auxiliar:
+                </label>
+
+                <div className="schedule-exam-select-wrapper" style={{ minWidth: '220px' }}>
+                  <select
+                    id="schedule-exam-auxiliar-room-select"
+                    className="schedule-exam-select"
+                    value={auxiliarRoomId ?? ''}
+                    onChange={(e) => setAuxiliarRoomId(e.target.value)}
+                  >
+                    <option value="" disabled>Selecciona el aula...</option>
+                    {roomAllocations.map((alloc) => (
+                      <option key={alloc.room.room_id} value={alloc.room.room_id}>
+                        {alloc.room.room_name} ({alloc.studentCount} alumnos)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {selectedAuxiliarId !== null && auxiliarRoomId && (
+              <div
+                style={{
+                  marginTop: '10px',
+                  fontSize: '0.8rem',
+                  color: '#1e40af',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                }}
+              >
+                ℹ️ <strong>Supervisión:</strong> El auxiliar{' '}
+                <strong>
+                  {availableAuxiliaries.find((a) => a.user_id === selectedAuxiliarId)?.full_name}
+                </strong>{' '}
+                estará a cargo de{' '}
+                <strong>
+                  {selectedRooms.find((r) => String(r.room_id) === String(auxiliarRoomId))?.room_name}
+                </strong>
+                . Las demás aulas estarán a cargo del docente titular.
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="schedule-exam-section schedule-exam-rules-section">
           <div className="schedule-exam-spread-row">
@@ -2123,7 +2408,10 @@ export function ScheduleExamDrawer({
             className="schedule-exam-submit-btn"
             onClick={handleSave}
             disabled={
-              isSubmitting || !isAssignedTeacher
+              isSubmitting ||
+              !isAssignedTeacher ||
+              isTimeSlotPast(rawDate, currentSlot.start24h) ||
+              totalCapacity < totalEnrolled
             }
           >
             {isSubmitting
@@ -2146,7 +2434,33 @@ export function ScheduleExamDrawer({
               <div><strong>Evaluación:</strong> {selectedExamType?.label ?? 'Examen'}</div>
               <div><strong>Fecha:</strong> {formatDateToSpanish(rawDate)}</div>
               <div><strong>Horario:</strong> {currentSlot.start} - {currentSlot.end}</div>
-              <div><strong>Aulas:</strong> {roomsSummary || 'Ninguna'}</div>
+              <div>
+                <strong>Aulas y Supervisión:</strong>
+                <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                  {roomAllocations.map((alloc) => {
+                    const isAuxRoom =
+                      selectedAuxiliarId !== null &&
+                      String(alloc.room.room_id) === String(auxiliarRoomId);
+                    const auxName = availableAuxiliaries.find(
+                      (a) => a.user_id === selectedAuxiliarId,
+                    )?.full_name;
+                    return (
+                      <li key={alloc.room.room_id} style={{ marginBottom: '2px' }}>
+                        <strong>{alloc.room.room_name}</strong>: {alloc.studentCount} estudiantes —{' '}
+                        {isAuxRoom ? (
+                          <span style={{ color: '#2563eb', fontWeight: 600 }}>
+                            Auxiliar: {auxName}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#059669', fontWeight: 600 }}>
+                            Docente Titular
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
               <div><strong>Estudiantes:</strong> {totalEnrolled} asignados</div>
             </div>
           </div>

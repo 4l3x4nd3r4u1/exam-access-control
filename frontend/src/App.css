@@ -3550,6 +3550,12 @@
   transition: background-color 0.15s ease;
 }
 
+.schedule-exam-calendar-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .schedule-exam-calendar-nav-btn:hover {
   background: #e5e7eb;
 }
@@ -3591,6 +3597,12 @@
   color: #1f2937;
   cursor: pointer;
   transition: all 0.12s ease;
+}
+
+.schedule-exam-calendar-day:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .schedule-exam-calendar-day:hover {
