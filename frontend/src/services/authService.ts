@@ -121,7 +121,7 @@ export const authService = {
   },
 
   async login(
-    email: string,
+    identifier: string,
     password: string,
   ): Promise<UserSession> {
     const response = await apiRequest<LoginResponse>(
@@ -132,7 +132,7 @@ export const authService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          identifier: identifier.trim(),
           password,
         }),
       },
