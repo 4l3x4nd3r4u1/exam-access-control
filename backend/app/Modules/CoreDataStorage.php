@@ -976,7 +976,7 @@ class CoreDataStorage
                 ];
             }
 
-            $entryTime = now();
+            $entryTime = now('America/La_Paz');
 
             DB::table('examen_estudiante')
                 ->where('examen_id', $examId)
