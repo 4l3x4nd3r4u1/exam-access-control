@@ -121,7 +121,7 @@
   width: 100%;
   min-height: 42px;
   padding: 10px 16px;
-  background: #202020;
+  background: #2e7d32;
   color: white;
   border: none;
   border-radius: 7px;
@@ -131,7 +131,7 @@
 }
 
 .exam-time-extension-button:hover:not(:disabled) {
-  background: #383838;
+  background: #256628;
 }
 
 .exam-time-extension-button:disabled {

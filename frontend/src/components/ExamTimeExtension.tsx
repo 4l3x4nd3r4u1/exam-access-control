@@ -177,7 +177,7 @@ export function ExamTimeExtension({
         disabled={!canExtend || saving}
         onClick={() => void openConfirmation()}
       >
-        Aumentar tiempo +15 min
+        Aumentar +15 minutos
       </button>
 
       {!canExtend && (
