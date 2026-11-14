@@ -49,6 +49,30 @@ async function post<T>(endpoint: string, payload: unknown, signal?: AbortSignal)
 }
 
 export const controlPointService = {
+
+
+  async extendExamTime(examId: number): Promise<{
+    examId: number;
+    previousEndTime: string;
+    newEndTime: string;
+    addedMinutes: number;
+  }> {
+    const response = await apiRequest<{
+      success: boolean;
+      message: string;
+      data: {
+        examId: number;
+        previousEndTime: string;
+        newEndTime: string;
+        addedMinutes: number;
+      };
+    }>(`/exams/${examId}/extend-time`, {
+      method: 'POST',
+    });
+
+    return response.data;
+  },
+
   async getExamTypes(signal?: AbortSignal): Promise<CatalogItem[]> {
     const response = await apiRequest<ApiResponse<CatalogItem[]>>('/catalog/exam-types', { signal });
     return response.data;

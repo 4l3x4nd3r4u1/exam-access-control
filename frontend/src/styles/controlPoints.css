@@ -94,3 +94,66 @@
 .cp-save-notice { color: #176d42; font-size: 12px; padding: 5px 0; }
 .cp-observation .cp-feedback { padding: 5px 0; }
 @media (max-width: 350px) { .cp-screen { padding-inline: 12px; } .cp-chip { max-width: 75px; } }
+
+.exam-time-extension {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.exam-time-extension-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+.exam-time-extension-info strong {
+  color: #202020;
+  font-size: 16px;
+}
+
+.exam-time-extension-button {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 16px;
+  background: #202020;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.exam-time-extension-button:hover:not(:disabled) {
+  background: #383838;
+}
+
+.exam-time-extension-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.exam-time-extension-warning,
+.exam-time-extension-error,
+.exam-time-extension-success {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.exam-time-extension-warning {
+  color: #777;
+}
+
+.exam-time-extension-error {
+  color: #b42318;
+}
+
+.exam-time-extension-success {
+  color: #16803c;
+}

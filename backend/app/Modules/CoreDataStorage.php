@@ -527,6 +527,101 @@ class CoreDataStorage
                 ))->toArray(),
             ))->all();
     }
+    
+    
+    public function extendExamTime(int $examId): array
+    {
+        $teacherId = (int) auth()->id();
+        $timezone = 'America/La_Paz';
+
+        return DB::transaction(function () use (
+            $examId,
+            $teacherId,
+            $timezone
+        ) {
+            $exam = Exam::with('courseGroup.course')
+                ->lockForUpdate()
+                ->findOrFail($examId);
+
+            if ((int) ($exam->courseGroup?->docente_id ?? 0) !== $teacherId) {
+               throw new \Illuminate\Auth\Access\AuthorizationException(
+                    'Solo el docente responsable puede ampliar el tiempo del examen.'
+                );
+            }
+
+            if (!$exam->activo) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'exam' => 'El examen no está activo.',
+                ]);
+            }
+
+            $now = \Carbon\Carbon::now($timezone);
+
+            $start = \Carbon\Carbon::parse(
+                $exam->fecha->format('Y-m-d') . ' ' . $exam->hora_inicio,
+                $timezone
+            );
+
+            $previousEnd = \Carbon\Carbon::parse(
+                $exam->fecha->format('Y-m-d') . ' ' . $exam->hora_fin,
+                $timezone
+            );
+
+            if ($now->lt($start)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'exam' => 'El examen todavía no ha comenzado.',
+                ]);
+            }
+
+            if ($now->gte($previousEnd->copy()->addMinutes(15))) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'exam' => 'El plazo de 15 minutos para ampliar el examen ha terminado.',
+                ]);
+            }
+
+            $newEnd = $previousEnd->copy()->addMinutes(15);
+
+            // Evitar que una columna TIME pierda el cambio de fecha.
+            if ($newEnd->toDateString() !== $previousEnd->toDateString()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'exam' => 'La ampliación cruza la medianoche y requiere manejar la fecha de finalización.',
+                ]);
+            }
+
+            $exam->hora_fin = $newEnd->format('H:i:s');
+            $exam->save();
+
+            $teacher = User::find($teacherId);
+
+            DB::table('registro_auditoria')->insert([
+                'usuario_id' => $teacherId,
+                'accion' => 'EXTEND_EXAM_TIME',
+                'entidad_tipo' => 'examen',
+                'entidad_id' => $exam->id,
+                'detalles' => json_encode([
+                    'examen_id' => $exam->id,
+                    'materia' => $exam->courseGroup?->course?->nombre,
+                    'docente_id' => $teacherId,
+                    'docente' => $teacher?->nombre,
+                    'minutos_agregados' => 15,
+                    'hora_fin_anterior' => $previousEnd->format('H:i:s'),
+                    'hora_fin_nueva' => $newEnd->format('H:i:s'),
+                    'fecha_operacion' => $now->toIso8601String(),
+                ], JSON_UNESCAPED_UNICODE),
+                    'fecha' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+            return [
+                'examId' => $exam->id,
+                'previousEndTime' => $previousEnd->format('H:i:s'),
+                'newEndTime' => $newEnd->format('H:i:s'),
+                'addedMinutes' => 15,
+            ];
+        });
+    }
+
 
     /**
      * Retrieves all active exams with their course and assigned control rooms.
@@ -1091,6 +1186,15 @@ class CoreDataStorage
 
         $cleanObservation = trim($observation);
 
+        DB::transaction(function () use (
+            $examId,
+            $student,
+            $exam,
+            $examStudent,
+            $authenticatedUserId,
+            $cleanObservation
+        ) {
+
         DB::table('examen_estudiante')
             ->where('examen_id', $examId)
             ->where('usuario_id', $student->usuario_id)
@@ -1098,6 +1202,35 @@ class CoreDataStorage
                 'observaciones' => $cleanObservation,
                 'updated_at' => now(),
             ]);
+
+                $student->loadMissing('user');
+                $exam->loadMissing('courseGroup.course');
+
+                $docente = User::find($authenticatedUserId);
+                $aula = Room::find($examStudent->aula_id);
+
+            DB::table('registro_auditoria')->insert([
+                'usuario_id' => $authenticatedUserId,
+                'accion' => 'REGISTRAR_INFORMACION_RELATIVA',
+                'entidad_tipo' => 'examen_estudiante',
+                'entidad_id' => $student->usuario_id,
+                'detalles' => json_encode([
+                    'estudiante_id' => $student->usuario_id,
+                    'nombre_estudiante' => $student->user?->nombre,
+                    'ci' => $student->user?->ci,
+                    'codigo_sis' => $student->codigo_sis,
+                    'examen_id' => $examId,
+                    'materia' => $exam->courseGroup?->course?->nombre,
+                    'aula' => $aula?->nombre,
+                    'responsable' => $docente?->nombre,
+                    'descripcion' => $cleanObservation,
+                    'fecha_hora' => now()->toIso8601String(),
+                    ], JSON_UNESCAPED_UNICODE),
+                'fecha' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
 
         return new ExamStudentObservationResult(
             isSuccessful: true,
@@ -1227,7 +1360,9 @@ class CoreDataStorage
         $cleanObservation = trim($observation);
         $entryTime = now();
 
-        DB::transaction(function () use ($examStudent, $exceptionalStatusId, $cleanObservation, $entryTime, $authenticatedUserId) {
+        
+        DB::transaction(function () use ($examStudent,$exceptionalStatusId,$cleanObservation,$entryTime,$authenticatedUserId,$student,$exam) {
+
             DB::table('examen_estudiante')
                 ->where('examen_id', $examStudent->examen_id)
                 ->where('usuario_id', $examStudent->usuario_id)
@@ -1250,6 +1385,35 @@ class CoreDataStorage
                 'created_at' => $entryTime,
                 'updated_at' => $entryTime,
             ]);
+
+            $student->loadMissing('user');
+            $exam->loadMissing('courseGroup.course');
+
+            $docente = User::find($authenticatedUserId);
+            $aula = Room::find($examStudent->aula_id);
+
+            DB::table('registro_auditoria')->insert([
+                'usuario_id' => $authenticatedUserId,
+                'accion' => 'AUTORIZAR_INGRESO_EXCEPCIONAL',
+                'entidad_tipo' => 'examen_estudiante',
+                'entidad_id' => $student->usuario_id,
+                'detalles' => json_encode([
+                    'estudiante_id' => $student->usuario_id,
+                    'nombre_estudiante' => $student->user?->nombre,
+                    'ci' => $student->user?->ci,
+                    'codigo_sis' => $student->codigo_sis,
+                    'examen_id' => $exam->id,
+                    'materia' => $exam->courseGroup?->course?->nombre,
+                    'aula' => $aula?->nombre,
+                    'responsable' => $docente?->nombre,
+                    'descripcion' => $cleanObservation,
+                    'fecha_hora' => $entryTime->toIso8601String(),
+                ], JSON_UNESCAPED_UNICODE),
+                'fecha' => $entryTime,
+                'created_at' => $entryTime,
+                'updated_at' => $entryTime,
+            ]);
+
         });
 
         return new ExceptionalEntryResult(
@@ -1355,7 +1519,8 @@ class CoreDataStorage
         $cleanReason = trim($reason);
         $eventTime = now();
 
-        DB::transaction(function () use ($examStudent, $expelledStatusId, $cleanReason, $eventTime, $authenticatedUserId) {
+        DB::transaction(function () use ($examStudent, $expelledStatusId, $cleanReason, $eventTime, $authenticatedUserId, $student,$exam) 
+        {
             DB::table('examen_estudiante')
                 ->where('examen_id', $examStudent->examen_id)
                 ->where('usuario_id', $examStudent->usuario_id)
@@ -1377,6 +1542,35 @@ class CoreDataStorage
                 'created_at' => $eventTime,
                 'updated_at' => $eventTime,
             ]);
+
+            $student->loadMissing('user');
+            $exam->loadMissing('courseGroup.course');
+
+            $docente = User::find($authenticatedUserId);
+            $aula = Room::find($examStudent->aula_id);
+
+            DB::table('registro_auditoria')->insert([
+                'usuario_id' => $authenticatedUserId,
+                'accion' => 'EXPULSAR_ESTUDIANTE',
+                'entidad_tipo' => 'examen_estudiante',
+                'entidad_id' => $student->usuario_id,
+                'detalles' => json_encode([
+                    'estudiante_id' => $student->usuario_id,
+                    'nombre_estudiante' => $student->user?->nombre,
+                    'ci' => $student->user?->ci,
+                    'codigo_sis' => $student->codigo_sis,
+                    'examen_id' => $exam->id,
+                    'materia' => $exam->courseGroup?->course?->nombre,
+                    'aula' => $aula?->nombre,
+                    'responsable' => $docente?->nombre,
+                    'descripcion' => $cleanReason,
+                    'fecha_hora' => $eventTime->toIso8601String(),
+                    ], JSON_UNESCAPED_UNICODE),
+                'fecha' => $eventTime,
+                'created_at' => $eventTime,
+                'updated_at' => $eventTime,
+            ]);
+
         });
 
         return new ExamStudentExpulsionResult(
