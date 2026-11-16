@@ -101,9 +101,9 @@ function ResultCard({ tone, title, detail, extra, history }: ResultCardProps) {
 function StudentLine({ student }: { student: AccessStudent | null }) {
   if (!student) return null;
 
-  return (
+  return (    
     <p className="ec-student-line">
-      {student.full_name} · {student.codigo_sis}
+      {student.full_name} - CI: {student.ci} - COD SIS: {student.codigo_sis}
     </p>
   );
 }
@@ -145,7 +145,7 @@ export function ExamAccessControlView({
         if (isMounted) setStudents(items);
       })
       .catch(() => {
-        /* Sin sugerencias: se puede buscar igual escribiendo SIS o CI completo. */
+        /* Sin sugerencias: se puede buscar igual escribiendo CI completo. */
       });
 
     return () => {
@@ -154,16 +154,12 @@ export function ExamAccessControlView({
   }, [exam.course_group_id]);
 
   const suggestions = useMemo(() => {
-    const text = normalizeText(query);
-    if (!showSuggestions || text.length < 2) return [];
+  const text = normalizeText(query);
+  if (!showSuggestions || text.length < 2) return [];
 
-    return students
-      .filter((student) =>
-        normalizeText(
-          `${student.fullName} ${student.studentKey} ${student.ci}`,
-        ).includes(text),
-      )
-      .slice(0, MAX_SUGGESTIONS);
+  return students
+    .filter((student) => normalizeText(student.ci).includes(text))
+    .slice(0, MAX_SUGGESTIONS);
   }, [students, query, showSuggestions]);
 
   const resetResult = () => {
@@ -240,16 +236,16 @@ export function ExamAccessControlView({
   };
 
   const handleSelectSuggestion = (student: EnrolledStudent) => {
-    setQuery(student.studentKey);
+    setQuery(student.ci);
     setShowSuggestions(false);
-    void runSearch(student.studentKey);
+    void runSearch(student.ci);
   };
 
   /** Identificador confiable del estudiante en pantalla (SIS devuelto por la API). */
   const activeIdentifier =
-    outcome && outcome.kind !== 'MESSAGE' && outcome.payload.student
-      ? outcome.payload.student.codigo_sis
-      : query;
+  outcome && outcome.kind !== 'MESSAGE' && outcome.payload.student
+    ? outcome.payload.student.ci
+    : query;
 
   const registerObservation = async () => {
     if (!note.trim()) return;
@@ -602,7 +598,7 @@ export function ExamAccessControlView({
             <path d="m16 16 5 5" />
           </svg>
 
-          <input
+         <input
             type="search"
             inputMode="search"
             value={query}
@@ -611,8 +607,8 @@ export function ExamAccessControlView({
               setShowSuggestions(true);
               if (outcome || feedback) resetResult();
             }}
-            placeholder="Código SIS o CI"
-            aria-label="Código SIS o CI del estudiante"
+            placeholder="Cédula de identidad (CI)"
+            aria-label="CI del estudiante"
             autoComplete="off"
           />
 
@@ -632,7 +628,6 @@ export function ExamAccessControlView({
                   onClick={() => handleSelectSuggestion(student)}
                 >
                   <span>{student.fullName}</span>
-                  <span>{student.studentKey}</span>
                   <span>{student.ci}</span>
                 </button>
               </li>
