@@ -100,6 +100,51 @@ class ExamController extends Controller
             'message' => 'Exámenes asignados obtenidos correctamente.',
         ], 200);
     }
+    
+     /**
+     * Extiende 15 minutos el horario de un examen.
+     */
+    public function extendTime(int $examId): JsonResponse
+    {
+        try {
+            $result = $this->storage->extendExamTime($examId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'El tiempo del examen se amplió 15 minutos correctamente.',
+                'data' => $result,
+            ], 200);
+
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 403);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->validator->errors()->first(),
+            ], 422);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró el examen solicitado.',
+            ], 404);
+
+        } catch (\Throwable $e) {
+            Log::error('Error extending exam time', [
+                'exam_id' => $examId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo ampliar el tiempo del examen.',
+            ], 500);
+        }
+    }
 
     /**
      * Endpoint to register a new exam.
