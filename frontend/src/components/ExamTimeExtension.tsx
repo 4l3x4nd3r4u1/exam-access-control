@@ -171,6 +171,15 @@ export function ExamTimeExtension({
         <strong>{formatTime(currentEnd)}</strong>
       </div>
 
+      <button
+        type="button"
+        className="exam-time-extension-button"
+        onClick={() => void openConfirmation()}
+        disabled={!canExtend || saving}
+      >
+        Ampliar 15 minutos
+      </button>
+
       {!canExtend && (
         <p className="exam-time-extension-warning">
           Ampliación no disponible fuera del horario permitido.
