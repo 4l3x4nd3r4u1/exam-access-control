@@ -9,7 +9,6 @@ import { formatExamType } from '../utils/examFormat';
 import type { ControlPointSelection, ExamAccessResponse } from '../types/controlPoint';
 import type { EnrolledStudent } from '../types/course';
 import { ExamAccessControlView } from './ExamAccessControlView';
-import { ExamTimeExtension } from '../components/ExamTimeExtension';
 import '../styles/controlPoints.css';
 
 interface ControlPointIngressViewProps {
@@ -20,8 +19,7 @@ interface ControlPointIngressViewProps {
 
 export function ControlPointIngressView({ selection, userId, onBack }: ControlPointIngressViewProps) {
   const { exam, room } = selection;
-  const [endTime, setEndTime] = useState(exam.end_time);
-  const currentExam = { ...exam, end_time: endTime };
+  const currentExam = exam;
   const [showDuringExam, setShowDuringExam] = useState(false);
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [query, setQuery] = useState('');
@@ -110,15 +108,6 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
         <p><ControlPointIcon name="exam" />{formatExamType(exam.exam_type)} · G{exam.group}</p>
         <p><ControlPointIcon name="room" />{room.room_name}</p>
       </section>
-
-      <ExamTimeExtension
-       examId={Number(exam.exam_id)}
-       courseGroupId={exam.course_group_id}
-       examDate={exam.date}
-       startTime={exam.start_time}
-       endTime={endTime}
-       onExtended={setEndTime}
-      />
 
       <div className="cp-tabs" aria-label="Modo de control">
       <span className="cp-tab-active">Ingreso</span>

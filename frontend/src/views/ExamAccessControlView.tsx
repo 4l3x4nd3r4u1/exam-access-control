@@ -11,7 +11,6 @@ import {
 } from '../utils/examFormat';
 import { EXAM_STATUS_LABEL, getExamStatus } from '../utils/examStatus';
 import { normalizeText } from '../utils/searchHelper';
-import { ExamTimeExtension } from '../components/ExamTimeExtension';
 import type { EnrolledStudent } from '../types/course';
 import type {AccessStudent,ControlExam,ControlExamRoom,DuringExamResponse, EntryCheckResponse,ExpulsionHistoryItem,} from '../types/examAccess';
 
@@ -114,7 +113,6 @@ export function ExamAccessControlView({
   onBack,
 }: ExamAccessControlViewProps) {
   const [tab, setTab] = useState<AccessTab>('ENTRY');
-  const [endTime, setEndTime] = useState(exam.end_time);
   const [query, setQuery] = useState('');
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -133,7 +131,7 @@ export function ExamAccessControlView({
   // Descarta respuestas de búsquedas anteriores si ya se lanzó otra.
   const requestId = useRef(0);
 
-  const examStatus = getExamStatus({ ...exam, end_time: endTime });
+  const examStatus = getExamStatus(exam);
 
   // Lista de estudiantes del grupo: solo sirve para sugerir mientras se escribe.
   useEffect(() => {
@@ -560,15 +558,6 @@ export function ExamAccessControlView({
           {room.room_name}
         </p>
       </section>
-       
-      <ExamTimeExtension
-        examId={Number(exam.exam_id)}
-        courseGroupId={exam.course_group_id}
-        examDate={exam.date}
-        startTime={exam.start_time}
-        endTime={endTime}
-        onExtended={setEndTime}
-      />
 
       <div className="ec-tabs" role="tablist" aria-label="Tipo de control">
         <button
