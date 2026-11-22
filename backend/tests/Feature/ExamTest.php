@@ -49,11 +49,9 @@ class ExamTest extends TestCase
 
     public function test_register_exam_invalid_exam_type()
     {
-        $futureDate = \Carbon\Carbon::now('America/La_Paz')->addDays(10)->format('Y-m-d');
-
         $payload = [
             'examTypeId' => 999,
-            'date' => $futureDate,
+            'date' => '2026-11-15',
             'startTime' => '08:00',
             'rooms' => [['roomId' => 1, 'students' => [10]]],
         ];
@@ -66,11 +64,9 @@ class ExamTest extends TestCase
 
     public function test_register_exam_invalid_room()
     {
-        $futureDate = \Carbon\Carbon::now('America/La_Paz')->addDays(10)->format('Y-m-d');
-
         $payload = [
             'examTypeId' => 1,
-            'date' => $futureDate,
+            'date' => '2026-11-15',
             'startTime' => '08:00',
             'rooms' => [['roomId' => 999, 'students' => [10]]],
         ];
@@ -83,11 +79,9 @@ class ExamTest extends TestCase
 
     public function test_register_exam_invalid_student()
     {
-        $futureDate = \Carbon\Carbon::now('America/La_Paz')->addDays(10)->format('Y-m-d');
-
         $payload = [
             'examTypeId' => 1,
-            'date' => $futureDate,
+            'date' => '2026-11-15',
             'startTime' => '08:00',
             'rooms' => [['roomId' => 1, 'students' => [99999]]],
         ];
@@ -101,11 +95,9 @@ class ExamTest extends TestCase
 
     public function test_register_exam_duplicate_students_in_rooms()
     {
-        $futureDate = \Carbon\Carbon::now('America/La_Paz')->addDays(10)->format('Y-m-d');
-
         $payload = [
             'examTypeId' => 1,
-            'date' => $futureDate,
+            'date' => '2026-11-15',
             'startTime' => '08:00',
             'rooms' => [
                 ['roomId' => 1, 'students' => [10, 11]],

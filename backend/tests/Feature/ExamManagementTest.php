@@ -183,11 +183,9 @@ class ExamManagementTest extends TestCase
         $examType = TipoExamen::where('nombre', 'SEGUNDO PARCIAL')->first();
         $room = Aula::where('nombre', 'Auditorio')->first();
 
-        $futureDate = \Carbon\Carbon::now('America/La_Paz')->addDays(5)->format('Y-m-d');
-
         $payload = [
             'examTypeId' => $examType->id,
-            'date' => $futureDate,
+            'date' => '2026-11-20',
             'startTime' => '18:45',
             'rooms' => [
                 ['roomId' => $room->id, 'students' => array_slice($studentIds, 0, 2), 'auxiliarId' => null],
@@ -208,7 +206,7 @@ class ExamManagementTest extends TestCase
 
         $response->assertJsonFragment([
             'exam_type' => 'SEGUNDO PARCIAL',
-            'date' => $futureDate,
+            'date' => '2026-11-20',
         ]);
     }
 
