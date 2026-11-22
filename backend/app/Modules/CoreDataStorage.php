@@ -41,6 +41,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\DTOs\UserRegistrationData;
 use App\DTOs\UserRolesData;
@@ -341,11 +342,87 @@ class CoreDataStorage
                     throw new \Exception("El tipo de examen con ID {$data->examTypeId} no existe.");
                 }
 
-                // Validate rooms exist
-                $roomIds = array_column($data->rooms, 'roomId');
-                $existingRooms = Room::whereIn('id', $roomIds)->count();
-                if ($existingRooms !== count($roomIds)) {
-                    throw new \Exception("Una o más aulas no existen.");
+                // Calculate / validate end time (default start + 1:30h if omitted)
+                if (!empty($data->endTime)) {
+                    $endDateTime = \Carbon\Carbon::parse("{$data->date} {$data->endTime}", $timezone);
+                    if ($endDateTime->lessThanOrEqualTo($examDateTime)) {
+                        throw new \Exception("La hora de finalización debe ser posterior a la hora de inicio.");
+                    }
+                    $endTime = $endDateTime->format('H:i');
+                } else {
+                    $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
+                }
+
+                // Resolve rooms (preloaded or manually entered by teacher)
+                $resolvedRooms = [];
+                $seenRoomIds = [];
+                foreach ($data->rooms as $roomInput) {
+                    if ($roomInput->roomId !== null) {
+                        $roomModel = Room::find($roomInput->roomId);
+                        if (!$roomModel) {
+                            throw new \Exception("Una o más aulas seleccionadas no existen.");
+                        }
+                    } else {
+                        $customName = trim((string) ($roomInput->customRoomName ?? ''));
+                        if ($customName === '') {
+                            throw new \Exception("Cada aula debe tener un identificador o nombre válido.");
+                        }
+
+                        $requestedCap = max(
+                            1,
+                            (int) ($roomInput->customRoomCapacity
+                                ?? $roomInput->assignedCapacity
+                                ?? max(count($roomInput->students), 1))
+                        );
+
+                        $roomModel = Room::whereRaw('LOWER(nombre) = ?', [mb_strtolower($customName)])->first();
+                        if (!$roomModel) {
+                            $roomModel = Room::create([
+                                'nombre' => $customName,
+                                'capacidad' => $requestedCap,
+                            ]);
+                        }
+                    }
+
+                    if (in_array((int) $roomModel->id, $seenRoomIds, true)) {
+                        throw new \Exception("El aula {$roomModel->nombre} está repetida en el examen.");
+                    }
+                    $seenRoomIds[] = (int) $roomModel->id;
+
+                    $isOverlapping = ExamRoom::where('aula_id', $roomModel->id)
+                        ->whereHas('exam', function ($query) use ($data, $endTime) {
+                            $query->where('activo', true)
+                                ->where('fecha', $data->date)
+                                ->where('hora_inicio', '<', $endTime)
+                                ->where('hora_fin', '>', $data->startTime);
+                        })
+                        ->exists();
+
+                    if ($isOverlapping) {
+                        throw new \Exception("El aula {$roomModel->nombre} ya está reservada en ese horario.");
+                    }
+
+                    $assignedCap = $roomInput->assignedCapacity !== null
+                        ? (int) $roomInput->assignedCapacity
+                        : count($roomInput->students);
+
+                    if ($assignedCap > (int) $roomModel->capacidad) {
+                        throw new \Exception(
+                            "La capacidad elegida para {$roomModel->nombre} ({$assignedCap}) supera su capacidad máxima ({$roomModel->capacidad})."
+                        );
+                    }
+
+                    if ($assignedCap > 0 && count($roomInput->students) > $assignedCap) {
+                        throw new \Exception(
+                            "Los estudiantes asignados a {$roomModel->nombre} superan los cupos elegidos ({$assignedCap})."
+                        );
+                    }
+
+                    $resolvedRooms[] = [
+                        'model' => $roomModel,
+                        'input' => $roomInput,
+                        'assignedCapacity' => $assignedCap,
+                    ];
                 }
 
                 // Validate exam type ID
@@ -363,9 +440,6 @@ class CoreDataStorage
                 if ($existingExam) {
                     throw new \Exception("Ya existe un examen programado para esta materia, tipo y fecha.");
                 }
-
-                // Calculate end time (start + 1:30h)
-                $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
 
                 // Get default status: AUSENTE
                 $ausenteStatus = ExamStudentStatus::where('nombre', 'AUSENTE')->first();
@@ -389,8 +463,8 @@ class CoreDataStorage
 
                 // Validate student IDs exist in database
                 $allStudentIds = [];
-                foreach ($data->rooms as $room) {
-                    $allStudentIds = array_merge($allStudentIds, $room->students);
+                foreach ($resolvedRooms as $resolved) {
+                    $allStudentIds = array_merge($allStudentIds, $resolved['input']->students);
                 }
                 $existingStudents = User::whereIn('id', array_unique($allStudentIds))->count();
                 if ($existingStudents !== count(array_unique($allStudentIds))) {
@@ -398,20 +472,23 @@ class CoreDataStorage
                 }
 
                 // Assign rooms with students
-                foreach ($data->rooms as $room) {
-                    $examRoom = ExamRoom::create([
+                foreach ($resolvedRooms as $resolved) {
+                    $roomModel = $resolved['model'];
+                    $roomInput = $resolved['input'];
+
+                    ExamRoom::create([
                         'examen_id' => $exam->id,
-                        'aula_id' => $room->roomId,
-                        'cupo_asignado' => count($room->students),
-                        'auxiliar_id' => $room->auxiliarId ?? $courseGroup->docente_id,
+                        'aula_id' => $roomModel->id,
+                        'cupo_asignado' => $resolved['assignedCapacity'],
+                        'auxiliar_id' => $roomInput->auxiliarId ?? $courseGroup->docente_id,
                     ]);
 
                     // Assign students to this room
-                    foreach ($room->students as $studentId) {
+                    foreach ($roomInput->students as $studentId) {
                         ExamStudent::create([
                             'examen_id' => $exam->id,
                             'usuario_id' => $studentId,
-                            'aula_id' => $room->roomId,
+                            'aula_id' => $roomModel->id,
                             'estado_id' => $ausenteStatus->id,
                             'observaciones' => null,
                         ]);
@@ -448,7 +525,7 @@ class CoreDataStorage
                             'date' => $data->date,
                             'start_time' => $data->startTime,
                             'end_time' => $endTime,
-                            'rooms_count' => count($data->rooms),
+                            'rooms_count' => count($resolvedRooms),
                             'general_rules_count' => count($data->generalRules),
                             'student_rules_count' => count($data->studentRules),
                         ]),
@@ -478,14 +555,17 @@ class CoreDataStorage
      * @param string $startTime
      * @return array<RoomSummary>
      */
-    public function getAvailableRooms(string $date, string $startTime): array
+    public function getAvailableRooms(string $date, string $startTime, ?string $endTime = null): array
     {
-        $endTime = \Carbon\Carbon::parse($startTime)->addMinutes(90)->format('H:i');
+        $resolvedEndTime = !empty($endTime)
+            ? \Carbon\Carbon::parse($endTime)->format('H:i')
+            : \Carbon\Carbon::parse($startTime)->addMinutes(90)->format('H:i');
 
         // Find rooms that have exams overlapping with the requested time slot
-        $reservedRoomIds = ExamRoom::whereHas('exam', function ($query) use ($date, $startTime, $endTime) {
-            $query->where('fecha', $date)
-                ->where('hora_inicio', '<', $endTime)
+        $reservedRoomIds = ExamRoom::whereHas('exam', function ($query) use ($date, $startTime, $resolvedEndTime) {
+            $query->where('activo', true)
+                ->where('fecha', $date)
+                ->where('hora_inicio', '<', $resolvedEndTime)
                 ->where('hora_fin', '>', $startTime);
         })->pluck('aula_id');
 
