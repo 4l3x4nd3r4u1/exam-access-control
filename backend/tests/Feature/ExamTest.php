@@ -51,7 +51,7 @@ class ExamTest extends TestCase
     {
         $payload = [
             'examTypeId' => 999,
-            'date' => '2026-11-15',
+            'date' => now('America/La_Paz')->addDay()->format('Y-m-d'),
             'startTime' => '08:00',
             'rooms' => [['roomId' => 1, 'students' => [10]]],
         ];
@@ -81,7 +81,7 @@ class ExamTest extends TestCase
     {
         $payload = [
             'examTypeId' => 1,
-            'date' => '2026-11-15',
+            'date' => now('America/La_Paz')->addDay()->format('Y-m-d'),
             'startTime' => '08:00',
             'rooms' => [['roomId' => 1, 'students' => [99999]]],
         ];
@@ -97,7 +97,7 @@ class ExamTest extends TestCase
     {
         $payload = [
             'examTypeId' => 1,
-            'date' => '2026-11-15',
+            'date' => now('America/La_Paz')->addDay()->format('Y-m-d'),
             'startTime' => '08:00',
             'rooms' => [
                 ['roomId' => 1, 'students' => [10, 11]],

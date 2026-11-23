@@ -19,6 +19,7 @@ interface ControlPointIngressViewProps {
 
 export function ControlPointIngressView({ selection, userId, onBack }: ControlPointIngressViewProps) {
   const { exam, room } = selection;
+  const currentExam = exam;
   const [showDuringExam, setShowDuringExam] = useState(false);
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [query, setQuery] = useState('');
@@ -33,7 +34,7 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const status = getControlPointStatus(exam, now);
+  const status = getControlPointStatus(currentExam, now);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -89,7 +90,7 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
   if (showDuringExam) {
   return (
     <ExamAccessControlView
-      exam={exam}
+      exam={currentExam}
       room={room}
       onBack={() => setShowDuringExam(false)}
     />
@@ -107,6 +108,7 @@ export function ControlPointIngressView({ selection, userId, onBack }: ControlPo
         <p><ControlPointIcon name="exam" />{formatExamType(exam.exam_type)} · G{exam.group}</p>
         <p><ControlPointIcon name="room" />{room.room_name}</p>
       </section>
+
       <div className="cp-tabs" aria-label="Modo de control">
       <span className="cp-tab-active">Ingreso</span>
 
