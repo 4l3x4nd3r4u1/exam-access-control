@@ -30,7 +30,7 @@ class SecuritySeeder extends Seeder
             $roleIds[$r['nombre']] = DB::table('rol')->where('nombre', $r['nombre'])->value('id');
         }
 
-        // 2. The 12 System Functions (funcion)
+        // 2. System Functions (funcion)
         $funciones = [
             ['numero' => 'LISTAR_PERSONAL_ACADEMICO', 'nombre' => 'Listar personal académico registrado'],
             ['numero' => 'LISTAR_PLANILLAS_PROCESADAS', 'nombre' => 'Listar planillas procesadas y detalle'],
@@ -44,6 +44,7 @@ class SecuritySeeder extends Seeder
             ['numero' => 'LISTAR_EXAMENES_MATERIA', 'nombre' => 'Listar exámenes programados de una materia'],
             ['numero' => 'GESTIONAR_HABILITACION_ESTUDIANTE', 'nombre' => 'Cambiar estado de habilitación de un estudiante con motivo académico'],
             ['numero' => 'GESTIONAR_PUNTOS_CONTROL_EXAMEN', 'nombre' => 'Gestionar puntos de control y acceso de exámenes'],
+            ['numero' => 'INVITAR_DOCENTE_EXAMEN', 'nombre' => 'Invitar docentes a colaborar en un examen'],
         ];
 
         $funcionIds = [];
@@ -65,6 +66,7 @@ class SecuritySeeder extends Seeder
                 'EDITAR_DATOS_PERSONALES',
                 'REGISTRAR_PERSONAL_ACADEMICO',
                 'GESTIONAR_PUNTOS_CONTROL_EXAMEN',
+                'INVITAR_DOCENTE_EXAMEN',
             ],
             'DOCENTE' => [
                 'EDITAR_DATOS_PERSONALES',
@@ -74,6 +76,7 @@ class SecuritySeeder extends Seeder
                 'LISTAR_EXAMENES_MATERIA',
                 'GESTIONAR_HABILITACION_ESTUDIANTE',
                 'GESTIONAR_PUNTOS_CONTROL_EXAMEN',
+                'INVITAR_DOCENTE_EXAMEN',
             ],
             'AUXILIAR' => [
                 'EDITAR_DATOS_PERSONALES',
