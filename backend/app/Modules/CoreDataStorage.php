@@ -588,9 +588,25 @@ class CoreDataStorage
      */
     public function getExamsByCourseGroup(int $courseGroupId): array
     {
-        return Exam::with(['examType', 'rooms'])
+        $user = auth()->user();
+        $courseGroup = CourseGroup::find($courseGroupId);
+
+        if (!$user || !$courseGroup) {
+            return [];
+        }
+
+        $query = Exam::with(['examType', 'rooms'])
             ->where('materia_grupo_id', $courseGroupId)
-            ->where('activo', true)
+            ->where('activo', true);
+
+        $isResponsible = (int) $courseGroup->docente_id === (int) $user->id;
+        if (!$isResponsible && !$user->hasRole('ADMIN')) {
+            $query->whereHas('invitations', function ($invitationQuery) use ($user) {
+                $invitationQuery->where('docente_invitado_id', $user->id);
+            });
+        }
+
+        return $query
             ->orderBy('fecha', 'asc')
             ->get()
             ->map(fn(Exam $exam) => new ExamSummary(
@@ -1853,7 +1869,17 @@ class CoreDataStorage
 
         $query = CourseGroup::with('course')
             ->withCount('enrollments')
-            ->where('docente_id', $teacherId);
+            ->where(function ($courseQuery) use ($teacherId) {
+                $courseQuery
+                    ->where('docente_id', $teacherId)
+                    ->orWhereHas('exams', function ($examQuery) use ($teacherId) {
+                        $examQuery
+                            ->where('activo', true)
+                            ->whereHas('invitations', function ($invitationQuery) use ($teacherId) {
+                                $invitationQuery->where('docente_invitado_id', $teacherId);
+                            });
+                    });
+            });
 
         if ($gestion !== null) {
             $query->where('gestion', $gestion);
@@ -1861,16 +1887,25 @@ class CoreDataStorage
 
         return $query->orderBy('grupo', 'asc')
             ->get()
-            ->map(fn(CourseGroup $c) => new CourseGroupSummary(
-                courseGroupId: (string) $c->id,
-                subjectCode: (string) ($c->course?->sigla ?? ''),
-                subjectName: (string) ($c->course?->nombre ?? ''),
-                groupCode: (string) $c->grupo,
-                academicTerm: (string) $c->gestion,
-                totalEnrolled: (int) ($c->enrollments_count ?? 0),
-                teacherId: $c->docente_id,
-                canInteract: $c->docente_id === $currentUserId,
-            ))->all();
+            ->map(function (CourseGroup $courseGroup) use ($currentUserId) {
+                $isInvited = $courseGroup->exams()
+                    ->where('activo', true)
+                    ->whereHas('invitations', function ($invitationQuery) use ($currentUserId) {
+                        $invitationQuery->where('docente_invitado_id', $currentUserId);
+                    })
+                    ->exists();
+
+                return new CourseGroupSummary(
+                    courseGroupId: (string) $courseGroup->id,
+                    subjectCode: (string) ($courseGroup->course?->sigla ?? ''),
+                    subjectName: (string) ($courseGroup->course?->nombre ?? ''),
+                    groupCode: (string) $courseGroup->grupo,
+                    academicTerm: (string) $courseGroup->gestion,
+                    totalEnrolled: (int) ($courseGroup->enrollments_count ?? 0),
+                    teacherId: $courseGroup->docente_id,
+                    canInteract: (int) $courseGroup->docente_id === (int) $currentUserId || $isInvited,
+                );
+            })->all();
     }
 
     /**
