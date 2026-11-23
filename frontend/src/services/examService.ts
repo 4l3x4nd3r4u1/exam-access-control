@@ -55,11 +55,16 @@ export const examService = {
   async getAvailableRooms(
     date: string,
     startTime: string,
+    endTime?: string,
   ): Promise<AvailableRoom[]> {
     const params = new URLSearchParams({
       date,
       startTime,
     });
+
+    if (endTime) {
+      params.set('endTime', endTime);
+    }
 
     const response =
       await apiRequest<AvailableRoomsResponse>(

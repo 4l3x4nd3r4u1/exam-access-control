@@ -4143,6 +4143,510 @@
   transform: scale(0.98);
 }
 
+.schedule-exam-submit-btn:disabled,
+.schedule-exam-cancel-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ORGANIZED SCHEDULE EXAM CARDS & NEW CONTROLS */
+.se-organized-drawer {
+  padding: 6px 18px 0 20px;
+  gap: 0;
+}
+
+.se-drawer-header {
+  margin-bottom: 14px;
+}
+
+.se-drawer-title {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.se-drawer-subtitle {
+  margin: 0;
+  font-family: 'SF Pro Text', -apple-system, sans-serif;
+  font-size: 13px;
+  color: #52525b;
+}
+
+.se-sections-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 16px;
+}
+
+.se-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 15px;
+  background: #f8f9fb;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+
+.se-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.se-card-heading {
+  margin: 0;
+  font-family: 'SF Pro Display', -apple-system, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.se-meta-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.se-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.se-meta-value {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.se-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.se-field-label {
+  font-family: 'SF Pro Text', -apple-system, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.se-field-caption {
+  font-family: 'SF Pro Text', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.se-helper-text {
+  margin: 0;
+  font-family: 'SF Pro Text', -apple-system, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #4b5563;
+}
+
+.se-full-select {
+  width: 100%;
+  min-width: 0;
+  font-size: 14.5px;
+  height: 40px;
+  border-radius: 9px;
+}
+
+.se-date-box {
+  margin-top: 0;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  padding: 9px 12px;
+}
+
+.se-date-box:hover {
+  background: #f3f4f6;
+}
+
+.se-time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.se-time-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  font-family: 'SF Pro Text', -apple-system, sans-serif;
+  font-size: 15px;
+  color: #111827;
+  background: #ffffff;
+  border: 1px solid #c9c9c9;
+  border-radius: 9px;
+  box-sizing: border-box;
+}
+
+.se-time-input:focus {
+  outline: none;
+  border-color: #2873ed;
+  box-shadow: 0 0 0 2px rgba(40, 115, 237, 0.15);
+}
+
+.se-duration-chip {
+  padding: 3px 9px;
+  background: #eaf1fd;
+  color: #1d4ed8;
+  border-radius: 999px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Switch toggle */
+.se-switch-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.se-switch-label {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.se-switch-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  padding: 2px;
+  border: none;
+  border-radius: 999px;
+  background: #cbd5e1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.se-switch-track.is-on {
+  background: #2873ed;
+}
+
+.se-switch-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.se-switch-track.is-on .se-switch-thumb {
+  transform: translateX(18px);
+}
+
+.se-capacity-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.se-capacity-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.se-capacity-badge.is-ok {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.se-capacity-badge.is-short {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.se-auto-tag {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.se-dist-summary {
+  margin: 0;
+  font-size: 13px;
+}
+
+.se-auto-rooms-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.se-auto-room-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.se-auto-room-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13.5px;
+}
+
+.se-auto-room-chip span {
+  font-size: 12.5px;
+  color: #4b5563;
+}
+
+.se-manual-rooms-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.se-manual-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.se-secondary-mini-btn {
+  padding: 5px 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d4ed8;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.se-secondary-mini-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.se-manual-add-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px dashed #93c5fd;
+  border-radius: 10px;
+}
+
+.se-manual-add-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.se-compact-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  color: #111827;
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.se-compact-input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #2873ed;
+}
+
+.se-manual-pill-tag {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.se-capacity-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.se-capacity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.se-capacity-row.is-invalid {
+  border-color: #f87171;
+  background: #fef2f2;
+}
+
+.se-capacity-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.se-capacity-row-info strong {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13.5px;
+  color: #111827;
+}
+
+.se-capacity-row-info span {
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+.se-capacity-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.se-cap-number-input {
+  width: 68px;
+  height: 34px;
+  padding: 0 8px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  color: #111827;
+  background: #f9fafb;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.se-cap-number-input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #2873ed;
+}
+
+.se-rules-subblock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.se-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 2px 0;
+}
+
+.se-alert-banner {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.se-alert-banner.is-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.se-info-banner {
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.se-inline-alert {
+  margin: 0;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #dc2626;
+}
+
+.se-error-banner {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  font-family: 'SF Pro Text', sans-serif;
+  font-size: 13px;
+  text-align: center;
+}
+
+.se-sticky-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 4px;
+  padding: 12px 0 16px;
+  background: linear-gradient(to top, #ffffff 82%, rgba(255, 255, 255, 0));
+  z-index: 5;
+}
+
 /* ==========================================================================
    EDIT ROLES VIEW (Frames 168 y 170)
    ========================================================================== */

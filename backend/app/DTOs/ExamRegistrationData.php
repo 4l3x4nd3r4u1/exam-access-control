@@ -17,5 +17,6 @@ class ExamRegistrationData
         public readonly array $rooms,
         public readonly array $generalRules,
         public readonly array $studentRules,
+        public readonly ?string $endTime = null,
     ) {}
 }
