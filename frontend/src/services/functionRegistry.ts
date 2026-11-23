@@ -10,6 +10,7 @@ import coursesIcon from '../assets/icono_materia-2.svg';
 import registerStaffIcon from '../assets/registrar_personal.svg';
 import studentEligibilityIcon from '../assets/estado_habilitacion.svg';
 import checkpointIcon from '../assets/punto_control.svg';
+import inviteTeacherIcon from '../assets/invitar_docente.svg';
 
 export type AppScreenId =
   | 'DASHBOARD'
@@ -122,6 +123,14 @@ export const systemFunctionsRegistry: Record<string, SystemFunctionConfig> = {
     iconType: 'img',
     iconSrc: checkpointIcon,
     action: 'EXAM_CHECKPOINT',
+  },
+  INVITAR_DOCENTE_EXAMEN: {
+    key: 'INVITAR_DOCENTE_EXAMEN',
+    title: 'Invitar Docente a Examen',
+    description: 'Invitar a un docente a colaborar en un examen programado',
+    iconType: 'img',
+    iconSrc: inviteTeacherIcon,
+    action: 'INVITE_EXAM_TEACHER',
   },
 };
 

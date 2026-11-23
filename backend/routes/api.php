@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CourseGroupController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamInvitationController;
 use App\Http\Controllers\ExamAccessController;
 use App\Http\Controllers\ExamStudentObservationController;
 use App\Http\Controllers\ExceptionalEntryController;
@@ -51,6 +52,8 @@ Route::middleware('auth.jwt')->group(function () {
     Route::post('/exams/{examId}/reports', [ExamReportController::class, 'store']);
     Route::get('/exams/{examId}/reports', [ExamReportController::class, 'index']);
     Route::get('/exams/{examId}/reports/{reportId}/pdf', [ExamReportController::class, 'download']);
+    Route::post('/exams/{exam}/invitations', [ExamInvitationController::class, 'store'])
+        ->where('exam', '[0-9]+');
 });
 
 Route::get('/academic-staff', [AcademicStaffController::class, 'list']);
@@ -65,6 +68,7 @@ Route::middleware('auth.jwt')->group(function () {
         ->where('courseGroupId', '[0-9]+');
     Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
     Route::get('/exams', [ExamController::class, 'all']);
+    Route::post('/exams/{examId}/extend-time', [ExamController::class, 'extendTime']) ->where('examId', '[0-9]+');
     Route::get('/exam-reports/assigned-exams', [ExamController::class, 'assignedForReports']);
     Route::post('/exam-access/check', [ExamAccessController::class, 'check']);
     Route::post('/exam-access/observations', [ExamStudentObservationController::class, 'store']);

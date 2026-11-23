@@ -51,7 +51,9 @@ import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
 import blackListIcon from './assets/lista_negra.svg';
 import { ExamReportsView } from './views/ExamReportsView';
 import examReportsIcon from './assets/icono-reporte-incidente.svg';
+import inviteTeacherIcon from './assets/invitar_docente.svg';
 import { ExamReportsSearchDrawer } from './components/ExamReportsSearchDrawer';
+import { InviteTeacherDrawer } from './components/InviteTeacherDrawer';
 import type { ControlPointExam } from './types/controlPoint';
 import { SharedExamsView } from './views/SharedExamsView';
 import sharedExamsIcon from './assets/documento_examen.svg';
@@ -127,6 +129,9 @@ export default function App() {
   const [isExamSearchDrawerOpen, setIsExamSearchDrawerOpen] =
     useState(false);
 
+  const [isInviteTeacherDrawerOpen, setIsInviteTeacherDrawerOpen] =
+    useState(false);
+
   // Examen y aula (punto de control) elegidos para el control de acceso.
   const [accessControlTarget, setAccessControlTarget] =
     useState<{ exam: ControlExam; room: ControlExamRoom } | null>(null);
@@ -163,6 +168,7 @@ export default function App() {
   setCourseForScheduleExam(null);
   setAccessControlTarget(null);
   setIsExamSearchDrawerOpen(false);
+  setIsInviteTeacherDrawerOpen(false);
 
   setIsImportDrawerOpen(false);
   setIsAssignedCoursesDrawerOpen(false);
@@ -421,6 +427,19 @@ export default function App() {
       visible: hasFunction(
         session,
         FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.INVITE_EXAM_TEACHER,
+      label: 'Invitar Docente a Examen',
+      section: 'EXAMS' as DashboardSection,
+      order: 5,
+      icon: inviteTeacherIcon,
+      iconClass: 'admin-invite-teacher-icon',
+      open: () => setIsInviteTeacherDrawerOpen(true),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.INVITE_EXAM_TEACHER,
       ),
     },
     {
@@ -723,6 +742,14 @@ export default function App() {
        setScreen('EXAM_REPORTS');
       }}
      />
+
+      {isInviteTeacherDrawerOpen && (
+        <InviteTeacherDrawer
+          isOpen={isInviteTeacherDrawerOpen}
+          onClose={() => setIsInviteTeacherDrawerOpen(false)}
+          session={session}
+        />
+      )}
 
       <StudentEligibilityDrawer
   isOpen={isStudentEligibilityDrawerOpen}
