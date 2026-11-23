@@ -21,6 +21,7 @@ use App\Http\Controllers\StudentStatusController;
 use App\Http\Controllers\StudentCourseGroupController;
 use App\Http\Controllers\BlackListController;
 use App\Http\Controllers\ExamReportController;
+use App\Http\Controllers\SharedExamController;
 
 
 Route::get('/health', function () {
@@ -80,6 +81,16 @@ Route::middleware('auth.jwt')->group(function () {
         ->where('userId', '[0-9]+');
     Route::get('/courses/{courseGroupId}/check-enrollment', [StudentCourseGroupController::class, 'checkEnrollment'])
         ->where('courseGroupId', '[0-9]+');
+    Route::get('/shared-exams', [SharedExamController::class, 'index']);
+    Route::get('/shared-exams/{sharedExamId}/available-rooms', [SharedExamController::class, 'availableRooms'])
+        ->where('sharedExamId', '[0-9]+');
+    Route::put('/shared-exams/{sharedExamId}/allocation', [SharedExamController::class, 'updateAllocation'])
+        ->where('sharedExamId', '[0-9]+');
+    Route::get('/shared-exams/invitations', [SharedExamController::class, 'invitations']);
+    Route::get('/shared-exams/invitations/{invitationId}/available-rooms', [SharedExamController::class, 'availableRooms'])
+        ->where('invitationId', '[0-9]+');
+    Route::post('/shared-exams/invitations/{invitationId}/accept', [SharedExamController::class, 'accept'])
+        ->where('invitationId', '[0-9]+');
 });
 
 /**

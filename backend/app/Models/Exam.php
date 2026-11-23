@@ -71,6 +71,11 @@ class Exam extends Model
         return $this->hasMany(AccessAuditLog::class, 'exam_id');
     }
 
+    public function sharedInvitations(): HasMany
+    {
+        return $this->hasMany(SharedExamInvitation::class, 'examen_id');
+    }
+
     // Accessors for backward compatibility
     public function getTitleAttribute(): string
     {
