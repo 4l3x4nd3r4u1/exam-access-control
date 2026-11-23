@@ -9,7 +9,7 @@ import type { UserSession } from '../types/auth';
 import type { CourseGroup } from '../types/course';
 import type { InvitationExamOption } from '../types/examInvitation';
 import type { AcademicStaffMember } from '../types/staff';
-import { formatExamType, formatTime } from '../utils/examFormat';
+import { abbreviateExamType, formatExamType } from '../utils/examFormat';
 import { normalizeText } from '../utils/searchHelper';
 
 type InviteStep = 'EXAM' | 'TEACHER' | 'MESSAGE' | 'RESULT';
@@ -30,6 +30,7 @@ function InviteTeacherContent({
   const [selectedExam, setSelectedExam] = useState<InvitationExamOption | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<AcademicStaffMember | null>(null);
   const [examSearch, setExamSearch] = useState('');
+  const [examTypeFilter, setExamTypeFilter] = useState('');
   const [teacherSearch, setTeacherSearch] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -87,14 +88,21 @@ function InviteTeacherContent({
 
   const visibleExams = useMemo(() => {
     const query = normalizeText(examSearch);
-    if (!query) return examOptions;
 
-    return examOptions.filter(({ exam, course }) =>
-      normalizeText(
+    return examOptions.filter(({ exam, course }) => {
+      if (examTypeFilter && exam.exam_type !== examTypeFilter) return false;
+      if (!query) return true;
+
+      return normalizeText(
         `${course.subject_name} ${course.subject_code} ${course.group_code} ${exam.exam_type}`,
-      ).includes(query),
-    );
-  }, [examOptions, examSearch]);
+      ).includes(query);
+    });
+  }, [examOptions, examSearch, examTypeFilter]);
+
+  const examTypes = useMemo(
+    () => [...new Set(examOptions.map(({ exam }) => exam.exam_type))].sort(),
+    [examOptions],
+  );
 
   const visibleTeachers = useMemo(() => {
     const query = normalizeText(teacherSearch);
@@ -147,37 +155,54 @@ function InviteTeacherContent({
     }
   };
 
-  const goBack = () => {
-    setError(null);
-    if (step === 'TEACHER') setStep('EXAM');
-    if (step === 'MESSAGE') setStep('TEACHER');
-  };
-
   return (
     <div className="invite-teacher-flow">
-      <header className="invite-teacher-header">
-        {step !== 'EXAM' && step !== 'RESULT' ? (
-          <button type="button" className="invite-teacher-back" onClick={goBack}>
-            Volver
-          </button>
-        ) : <span />}
-        <p>Paso {step === 'EXAM' ? '1' : step === 'TEACHER' ? '2' : step === 'MESSAGE' ? '3' : '3'} de 3</p>
-      </header>
+      {step === 'RESULT' && (
+        <header className="invite-teacher-header invite-teacher-result-header">
+          <span />
+          <p>Paso 3 de 3</p>
+        </header>
+      )}
 
       {step === 'EXAM' && (
-        <section className="invite-teacher-step" aria-labelledby="invite-exam-title">
-          <h2 id="invite-exam-title">Seleccionar examen</h2>
-          <p>Elige el examen al que invitarás a otro docente.</p>
-          <label className="invite-teacher-search">
+        <section className="invite-teacher-step invite-teacher-list-step" aria-label="Seleccionar examen">
+          <label className="invite-teacher-search invite-teacher-mock-search">
             <span className="cg-visually-hidden">Buscar examen</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m16 16 5 5" />
+            </svg>
             <input
               type="search"
               value={examSearch}
               onChange={(event) => setExamSearch(event.target.value)}
-              placeholder="Buscar materia o examen"
+              placeholder="Buscar Materia"
               autoComplete="off"
             />
+            {examSearch && (
+              <button type="button" onClick={() => setExamSearch('')}>limpiar</button>
+            )}
           </label>
+
+          <div className="invite-teacher-filter-row">
+            <label>
+              <span className="cg-visually-hidden">Tipo de examen</span>
+              <select
+                value={examTypeFilter}
+                onChange={(event) => setExamTypeFilter(event.target.value)}
+              >
+                <option value="">Tipo</option>
+                {examTypes.map((type) => (
+                  <option value={type} key={type}>{formatExamType(type)}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="invite-teacher-count">
+            <span>Materias</span>
+            <strong>{visibleExams.length}</strong>
+          </div>
 
           <div className="invite-teacher-list" role="list" aria-label="Exámenes disponibles">
             {loading && <p className="invite-teacher-feedback">Cargando exámenes...</p>}
@@ -188,13 +213,14 @@ function InviteTeacherContent({
               <button
                 type="button"
                 role="listitem"
-                className="invite-teacher-row"
+                className="invite-teacher-row invite-teacher-exam-row"
                 key={option.exam.exam_id}
                 onClick={() => selectExam(option)}
               >
-                <strong>{option.course.subject_name}</strong>
-                <span>{formatExamType(option.exam.exam_type)} · G{option.course.group_code}</span>
-                <small>{option.exam.date} · {formatTime(option.exam.start_time)}</small>
+                <strong className="invite-teacher-row-title">{option.course.subject_name}</strong>
+                <span className="invite-teacher-chip">G:{option.course.group_code}</span>
+                <span className="invite-teacher-chip">{abbreviateExamType(option.exam.exam_type)}</span>
+                <span className="invite-teacher-row-action" aria-hidden="true">›</span>
               </button>
             ))}
           </div>
@@ -202,11 +228,13 @@ function InviteTeacherContent({
       )}
 
       {step === 'TEACHER' && selectedExam && (
-        <section className="invite-teacher-step" aria-labelledby="invite-teacher-title">
-          <h2 id="invite-teacher-title">Seleccionar docente</h2>
-          <p>Busca un docente activo para el examen de {selectedExam.course.subject_name}.</p>
-          <label className="invite-teacher-search">
+        <section className="invite-teacher-step invite-teacher-list-step" aria-label="Seleccionar docente">
+          <label className="invite-teacher-search invite-teacher-mock-search">
             <span className="cg-visually-hidden">Buscar docente</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m16 16 5 5" />
+            </svg>
             <input
               type="search"
               value={teacherSearch}
@@ -214,19 +242,29 @@ function InviteTeacherContent({
               placeholder="Buscar docente"
               autoComplete="off"
             />
+            {teacherSearch && (
+              <button type="button" onClick={() => setTeacherSearch('')}>limpiar</button>
+            )}
           </label>
-          <div className="invite-teacher-count">Docentes <strong>{visibleTeachers.length}</strong></div>
+          <div className="invite-teacher-count">
+            <span>Personas</span>
+            <strong>{visibleTeachers.length}</strong>
+          </div>
           <div className="invite-teacher-list" role="list" aria-label="Docentes">
             {visibleTeachers.map((teacher) => (
               <button
                 type="button"
                 role="listitem"
-                className="invite-teacher-row"
+                className="invite-teacher-row invite-teacher-person-row"
                 key={teacher.user_id}
                 onClick={() => selectTeacher(teacher)}
               >
-                <strong>{teacher.full_name}</strong>
-                <span>{teacher.email}</span>
+                <span className="invite-teacher-role-group">
+                  {teacher.roles.map((role) => (
+                    <span className="invite-teacher-role" key={role}>{role}</span>
+                  ))}
+                </span>
+                <strong className="invite-teacher-person-name">{teacher.full_name}</strong>
               </button>
             ))}
             {visibleTeachers.length === 0 && (
@@ -237,7 +275,7 @@ function InviteTeacherContent({
       )}
 
       {step === 'MESSAGE' && selectedExam && selectedTeacher && (
-        <section className="invite-teacher-step" aria-labelledby="invite-message-title">
+        <section className="invite-teacher-step invite-teacher-message-step" aria-labelledby="invite-message-title">
           <h2 id="invite-message-title">Invitar docente</h2>
           <dl className="invite-teacher-summary">
             <div><dt>Docente</dt><dd>{selectedTeacher.full_name}</dd></div>
@@ -255,15 +293,19 @@ function InviteTeacherContent({
             />
             <small>{message.length}/1000</small>
           </label>
-          <p className="invite-teacher-note">El docente recibirá el correo y tendrá acceso inmediato. No deberá aceptar la invitación.</p>
-          <button
-            type="button"
-            className="invite-teacher-primary"
-            onClick={submitInvitation}
-            disabled={submitting || !message.trim()}
-          >
-            {submitting ? 'Enviando...' : 'Mandar invitación'}
-          </button>
+          <div className="invite-teacher-message-actions">
+            <button type="button" className="invite-teacher-cancel" onClick={onClose}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="invite-teacher-primary"
+              onClick={submitInvitation}
+              disabled={submitting || !message.trim()}
+            >
+              {submitting ? 'Enviando...' : 'Mandar invitación'}
+            </button>
+          </div>
         </section>
       )}
 
@@ -282,7 +324,7 @@ function InviteTeacherContent({
 
       {error && <p className="invite-teacher-error" role="alert">{error}</p>}
 
-      {step !== 'RESULT' && (
+      {(step === 'EXAM' || step === 'TEACHER') && (
         <button type="button" className="invite-teacher-cancel" onClick={onClose}>
           Cancelar
         </button>

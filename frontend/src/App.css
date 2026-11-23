@@ -7228,3 +7228,230 @@
   outline-offset: 3px;
 }
 
+/* Invitación docente: pasos alineados con los mockups */
+.invite-teacher-list-step {
+  padding-top: 0;
+}
+
+.invite-teacher-mock-search {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #d9dadd;
+}
+
+.invite-teacher-mock-search svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: #111317;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.invite-teacher-mock-search input {
+  min-width: 0;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 18px;
+  box-shadow: none;
+}
+
+.invite-teacher-mock-search input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.invite-teacher-mock-search button {
+  padding: 8px 0 8px 8px;
+  border: 0;
+  background: transparent;
+  color: #202226;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.invite-teacher-filter-row {
+  display: flex;
+  align-items: center;
+  padding-top: 12px;
+}
+
+.invite-teacher-filter-row label {
+  position: relative;
+}
+
+.invite-teacher-filter-row label::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid #45484e;
+  border-bottom: 1.5px solid #45484e;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.invite-teacher-filter-row select {
+  min-width: 104px;
+  padding: 9px 32px 9px 12px;
+  border: 0;
+  border-radius: 9px;
+  appearance: none;
+  background: #f0f0f1;
+  color: #33363a;
+  font-size: 14px;
+}
+
+.invite-teacher-list-step .invite-teacher-count {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 16px 2px 9px;
+  color: #24262a;
+  font-size: 14px;
+}
+
+.invite-teacher-list-step .invite-teacher-count strong {
+  min-width: 25px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: #eeeeef;
+  font-size: 12px;
+  text-align: center;
+}
+
+.invite-teacher-list-step .invite-teacher-list {
+  gap: 0;
+  margin-top: 0;
+  padding-right: 3px;
+}
+
+.invite-teacher-list-step .invite-teacher-row {
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.invite-teacher-list-step .invite-teacher-row:nth-child(even) {
+  background: #e9e9ea;
+}
+
+.invite-teacher-list-step .invite-teacher-row:hover,
+.invite-teacher-list-step .invite-teacher-row:focus-visible {
+  background: #dfeaff;
+}
+
+.invite-teacher-exam-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 18px;
+  align-items: center;
+  gap: 7px;
+}
+
+.invite-teacher-row-title {
+  min-width: 0;
+  overflow: hidden;
+  color: #24262a;
+  font-size: 14px !important;
+  font-weight: 450 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-teacher-chip,
+.invite-teacher-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border: 1px solid #c9c9cb;
+  border-radius: 4px;
+  background: #f7f7f7;
+  color: #36383c !important;
+  font-size: 11px !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.invite-teacher-row-action {
+  color: #6b6e73 !important;
+  font-size: 20px !important;
+  text-align: right;
+}
+
+.invite-teacher-person-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+  align-items: center;
+  gap: 8px;
+}
+
+.invite-teacher-role-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.invite-teacher-person-name {
+  overflow: hidden;
+  color: #202226;
+  font-size: 14px !important;
+  font-weight: 450 !important;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-teacher-message-step {
+  padding-top: 4px;
+}
+
+.invite-teacher-message-step > h2 {
+  margin: 0 0 24px;
+  font-size: 24px;
+}
+
+.invite-teacher-message-step .invite-teacher-summary {
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 0;
+  background: transparent;
+}
+
+.invite-teacher-message-step .invite-teacher-summary div {
+  grid-template-columns: 76px 1fr;
+}
+
+.invite-teacher-message-step .invite-teacher-message textarea {
+  min-height: 150px;
+  background: #e9e9ea;
+}
+
+.invite-teacher-message-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.invite-teacher-message-actions .invite-teacher-primary,
+.invite-teacher-message-actions .invite-teacher-cancel {
+  width: 100%;
+  margin: 0;
+}
+
+.invite-teacher-result-header {
+  flex: 0 0 36px;
+}
+
