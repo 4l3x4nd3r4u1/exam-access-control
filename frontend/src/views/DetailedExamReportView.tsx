@@ -282,7 +282,7 @@ export function DetailedExamReportView({
         </button>
 
         <section className="der-heading is-detail">
-          <h1>Reporte detallado</h1>
+          <h1>Generar reporte de una materia</h1>
         </section>
 
         <div className="der-success-banner" role="status">
@@ -393,7 +393,7 @@ export function DetailedExamReportView({
         />
 
         <section className="der-heading is-detail">
-          <h1>Reporte detallado</h1>
+          <h1>Generar reporte de una materia</h1>
         </section>
 
         {detailLoading && (

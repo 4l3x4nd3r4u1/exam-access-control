@@ -442,7 +442,7 @@ export default function App() {
     },
     {
       functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
-      label: 'Reporte detallado',
+      label: 'Generar reporte de una materia',
       section: 'CONTROL' as DashboardSection,
       order: 5,
       icon: scheduledExamsIcon,
