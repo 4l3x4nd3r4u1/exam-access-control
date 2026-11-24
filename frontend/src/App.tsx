@@ -22,7 +22,7 @@ import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
 import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer';
 import { ExamSearchDrawer } from './components/ExamSearchDrawer';
 
-import { authService, hasFunction } from './services/authService';
+import { authService, hasFunction, hasRole } from './services/authService';
 import { BlackListView } from './views/BlackListView';
 
 import { FUNCTION_CODES } from './types/auth';
@@ -55,6 +55,8 @@ import inviteTeacherIcon from './assets/invitar_docente.svg';
 import { ExamReportsSearchDrawer } from './components/ExamReportsSearchDrawer';
 import { InviteTeacherDrawer } from './components/InviteTeacherDrawer';
 import type { ControlPointExam } from './types/controlPoint';
+import { SharedExamsView } from './views/SharedExamsView';
+import sharedExamsIcon from './assets/documento_examen.svg';
 
 type ApplicationScreen =
   | 'DASHBOARD'
@@ -66,7 +68,8 @@ type ApplicationScreen =
   | 'EXAM_ACCESS_CONTROL'
   | 'EXAM_REPORTS'
   | 'CONTROL_POINTS'
-  | 'CONTROL_POINT_INGRESS'; 
+  | 'CONTROL_POINT_INGRESS'
+  | 'SHARED_EXAMS'; 
 
 type DashboardSection =
   | 'ACADEMIC'
@@ -295,6 +298,16 @@ export default function App() {
     );
   }
 
+  if (screen === 'SHARED_EXAMS') {
+    return (
+      <SharedExamsView
+        teacherId={session.user_id}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   const menuItems = [
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
@@ -336,6 +349,19 @@ export default function App() {
       visible: hasFunction(
         session,
         FUNCTION_CODES.LIST_COURSE_EXAMS,
+      ),
+    },
+    {
+      functionCode: FUNCTION_CODES.SCHEDULE_EXAM,
+      label: 'Exámenes compartidos',
+      section: 'EXAMS' as DashboardSection,
+      order: 3,
+      icon: sharedExamsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setScreen('SHARED_EXAMS'),
+      visible: hasFunction(
+        session,
+        FUNCTION_CODES.SCHEDULE_EXAM,
       ),
     },
     {
@@ -411,10 +437,10 @@ export default function App() {
       icon: inviteTeacherIcon,
       iconClass: 'admin-invite-teacher-icon',
       open: () => setIsInviteTeacherDrawerOpen(true),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.INVITE_EXAM_TEACHER,
-      ),
+      visible:
+        hasFunction(session, FUNCTION_CODES.INVITE_EXAM_TEACHER) ||
+        hasFunction(session, FUNCTION_CODES.SCHEDULE_EXAM) ||
+        hasRole(session, 'DOCENTE'),
     },
     {
       functionCode: FUNCTION_CODES.IMPORT_ROSTER,

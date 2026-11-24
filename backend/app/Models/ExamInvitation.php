@@ -20,6 +20,9 @@ class ExamInvitation extends Model
         'examen_id',
         'docente_invitado_id',
         'docente_invitador_id',
+        'materia_grupo_id',
+        'materia_grupo_ids',
+        'estado',
         'mensaje',
         'correo_estado',
         'correo_enviado_en',
@@ -35,6 +38,11 @@ class ExamInvitation extends Model
     public function exam(): BelongsTo
     {
         return $this->belongsTo(Exam::class, 'examen_id');
+    }
+
+    public function courseGroup(): BelongsTo
+    {
+        return $this->belongsTo(CourseGroup::class, 'materia_grupo_id');
     }
 
     public function invitedTeacher(): BelongsTo

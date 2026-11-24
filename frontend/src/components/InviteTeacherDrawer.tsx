@@ -41,45 +41,66 @@ function InviteTeacherContent({
   useEffect(() => {
     let active = true;
 
-    const courseRequest = session.roles.includes('ADMIN')
-      ? courseService.getCourseGroups()
-      : courseService.getTeacherCourses(session.user_id);
+    const loadData = async () => {
+      try {
+        // 1. Cargar únicamente los grupos propios del docente autenticado (o todos si es ADMIN)
+        let myCourses: CourseGroup[] = [];
+        try {
+          if (session.roles.includes('ADMIN')) {
+            myCourses = await courseService.getCourseGroups();
+          } else {
+            const rawTeacherCourses = await courseService.getTeacherCourses(session.user_id);
+            // Filtrar estrictamente los grupos donde este usuario es el docente titular responsable
+            myCourses = rawTeacherCourses.filter(
+              (c) => Number(c.teacher_id) === Number(session.user_id),
+            );
+          }
+        } catch {
+          myCourses = [];
+        }
 
-    Promise.all([courseRequest, staffService.getAcademicStaff()])
-      .then(async ([courses, staff]) => {
-        const invitables = session.roles.includes('ADMIN')
-          ? courses
-          : courses.filter((course) => course.teacher_id === session.user_id);
+        const staff = await staffService.getAcademicStaff(true).catch(() => []);
 
-        const examsByCourse = await Promise.all(
-          invitables.map(async (course: CourseGroup) => {
-            const exams = await examService.getScheduledExams(course.course_group_id);
-            return exams.map((exam) => ({ exam, course }));
-          }),
-        );
+        // 2. Obtener los exámenes programados exclusivamente para los grupos propios del docente
+        let options: InvitationExamOption[] = [];
+        if (myCourses.length > 0) {
+          const examsByCourse = await Promise.all(
+            myCourses.map(async (course: CourseGroup) => {
+              try {
+                const exams = await examService.getScheduledExams(course.course_group_id);
+                return (exams || []).map((exam) => ({ exam, course }));
+              } catch {
+                return [];
+              }
+            }),
+          );
+          options = examsByCourse.flat();
+        }
 
         if (!active) return;
-        setExamOptions(examsByCourse.flat());
+
+        setExamOptions(options);
         setTeachers(
           staff.filter(
             (member) =>
-              member.user_id !== session.user_id &&
+              Number(member.user_id) !== Number(session.user_id) &&
               member.roles.includes('DOCENTE') &&
               member.is_active,
           ),
         );
-      })
-      .catch((requestError: unknown) => {
+      } catch (requestError: unknown) {
         if (!active) return;
         setError(
           requestError instanceof Error
             ? requestError.message
             : 'No se pudieron cargar los datos para la invitación.',
         );
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    };
+
+    loadData();
 
     return () => {
       active = false;
@@ -217,7 +238,16 @@ function InviteTeacherContent({
                 key={option.exam.exam_id}
                 onClick={() => selectExam(option)}
               >
-                <strong className="invite-teacher-row-title">{option.course.subject_name}</strong>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0, paddingRight: '8px' }}>
+                  <strong className="invite-teacher-row-title" style={{ textAlign: 'left', wordBreak: 'break-word' }}>
+                    {option.course.subject_name}
+                  </strong>
+                  {(option.exam.date || option.exam.start_time) && (
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '2px', textAlign: 'left' }}>
+                      {option.exam.date} {option.exam.start_time ? `• ${option.exam.start_time}` : ''}
+                    </small>
+                  )}
+                </div>
                 <span className="invite-teacher-chip">G:{option.course.group_code}</span>
                 <span className="invite-teacher-chip">{abbreviateExamType(option.exam.exam_type)}</span>
                 <span className="invite-teacher-row-action" aria-hidden="true">›</span>
