@@ -47,20 +47,49 @@ return new class extends Migration
             $table->index(['control_point_id', 'ended_at']);
         });
 
-        DB::statement("
-            ALTER TABLE control_points
-            ADD CONSTRAINT control_points_type_check
-            CHECK (control_type IN ('ENTRY', 'DURING_EXAM'))
-        ");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("
+                ALTER TABLE control_points
+                ADD CONSTRAINT control_points_type_check
+                CHECK (control_type IN ('ENTRY', 'DURING_EXAM'))
+            ");
 
-        DB::statement("
-            ALTER TABLE control_point_assignments
-            ADD CONSTRAINT control_point_assignments_dates_check
-            CHECK (
-                ended_at IS NULL
-                OR ended_at >= started_at
-            )
-        ");
+            DB::statement("
+                ALTER TABLE control_point_assignments
+                ADD CONSTRAINT control_point_assignments_dates_check
+                CHECK (
+                    ended_at IS NULL
+                    OR ended_at >= started_at
+                )
+            ");
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            foreach (['INSERT', 'UPDATE'] as $event) {
+                $suffix = strtolower($event);
+
+                DB::statement("
+                    CREATE TRIGGER control_points_type_check_{$suffix}
+                    BEFORE {$event} ON control_points
+                    FOR EACH ROW
+                    WHEN NEW.control_type NOT IN ('ENTRY', 'DURING_EXAM')
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Invalid control type');
+                    END
+                ");
+
+                DB::statement("
+                    CREATE TRIGGER control_point_assignments_dates_check_{$suffix}
+                    BEFORE {$event} ON control_point_assignments
+                    FOR EACH ROW
+                    WHEN NEW.ended_at IS NOT NULL
+                    AND NEW.ended_at < NEW.started_at
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Invalid assignment dates');
+                    END
+                ");
+            }
+        }
 
         DB::statement("
             CREATE UNIQUE INDEX control_point_assignments_active_unique

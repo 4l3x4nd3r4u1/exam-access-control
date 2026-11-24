@@ -28,17 +28,45 @@ return new class extends Migration
             $table->index(['receiver_assignment_id', 'status']);
         });
 
-        DB::statement("
-            ALTER TABLE control_point_rotation_requests
-            ADD CONSTRAINT control_point_rotation_status_check
-            CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED'))
-        ");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("
+                ALTER TABLE control_point_rotation_requests
+                ADD CONSTRAINT control_point_rotation_status_check
+                CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED'))
+            ");
 
-        DB::statement("
-            ALTER TABLE control_point_rotation_requests
-            ADD CONSTRAINT control_point_rotation_assignments_check
-            CHECK (requester_assignment_id <> receiver_assignment_id)
-        ");
+            DB::statement("
+                ALTER TABLE control_point_rotation_requests
+                ADD CONSTRAINT control_point_rotation_assignments_check
+                CHECK (requester_assignment_id <> receiver_assignment_id)
+            ");
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            foreach (['INSERT', 'UPDATE'] as $event) {
+                $suffix = strtolower($event);
+
+                DB::statement("
+                    CREATE TRIGGER control_point_rotation_status_check_{$suffix}
+                    BEFORE {$event} ON control_point_rotation_requests
+                    FOR EACH ROW
+                    WHEN NEW.status NOT IN ('PENDING', 'ACCEPTED', 'REJECTED')
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Invalid rotation status');
+                    END
+                ");
+
+                DB::statement("
+                    CREATE TRIGGER control_point_rotation_assignments_check_{$suffix}
+                    BEFORE {$event} ON control_point_rotation_requests
+                    FOR EACH ROW
+                    WHEN NEW.requester_assignment_id = NEW.receiver_assignment_id
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Invalid rotation assignments');
+                    END
+                ");
+            }
+        }
     }
 
     public function down(): void
