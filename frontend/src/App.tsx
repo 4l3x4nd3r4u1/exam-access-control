@@ -55,6 +55,7 @@ import inviteTeacherIcon from './assets/invitar_docente.svg';
 import { ExamReportsSearchDrawer } from './components/ExamReportsSearchDrawer';
 import { InviteTeacherDrawer } from './components/InviteTeacherDrawer';
 import type { ControlPointExam } from './types/controlPoint';
+import type { ControlPoint } from './types/controlPointRotation';
 import { SharedExamsView } from './views/SharedExamsView';
 import sharedExamsIcon from './assets/documento_examen.svg';
 
@@ -133,8 +134,10 @@ export default function App() {
     useState(false);
 
   // Examen y aula (punto de control) elegidos para el control de acceso.
-  const [accessControlTarget, setAccessControlTarget] =
-    useState<{ exam: ControlExam; room: ControlExamRoom } | null>(null);
+  const [accessControlTarget, setAccessControlTarget] = useState<{  exam: ControlExam;room: ControlExamRoom;points?: ControlPoint[];point: ControlPoint;} | null>(null);
+  
+ const [rotationFeedback, setRotationFeedback] =
+  useState<string | null>(null);
 
   const [selectedRoster, setSelectedRoster] =
     useState<ProcessedRoster | null>(null);
@@ -259,17 +262,44 @@ export default function App() {
   }
  
   if (screen === 'EXAM_ACCESS_CONTROL' && accessControlTarget) {
-    return (
-      <ExamAccessControlView
-        exam={accessControlTarget.exam}
-        room={accessControlTarget.room}
-        onBack={() => {
-          setAccessControlTarget(null);
-          setScreen('DASHBOARD');
-        }}
-      />
-    );
+  return (
+    <ExamAccessControlView
+  key={`${accessControlTarget.exam.exam_id}-${accessControlTarget.point.id}`}
+  exam={accessControlTarget.exam}
+  room={accessControlTarget.room}
+  points={accessControlTarget.points}
+  point={accessControlTarget.point}
+  rotationFeedback={rotationFeedback}
+onPointChange={(point) => {
+  const room = accessControlTarget.exam.rooms.find(
+    (item) => Number(item.room_id) === point.room_id,
+  );
+
+  if (!room || point.id === accessControlTarget.point.id) {
+    return;
   }
+
+  setRotationFeedback(
+    `Intercambio realizado exitosamente. Tu nuevo punto de control es ${room.room_name}.`,
+  );
+
+  setAccessControlTarget({
+  exam: accessControlTarget.exam,
+  room,
+  points: (accessControlTarget.points ?? []).map((item) =>
+    item.control_type === point.control_type ? point : item,
+  ),
+  point,
+});
+}}
+      onBack={() => {
+        setRotationFeedback(null);
+        setAccessControlTarget(null);
+        setScreen('DASHBOARD');
+      }}
+    />
+  );
+}
 
   if (screen === 'CONTROL_POINTS') {
     return (
@@ -723,15 +753,28 @@ export default function App() {
             onSaved={() => setIsAcademicUserDrawerOpen(false)}
             />
       
-      <ExamSearchDrawer
-        isOpen={isExamSearchDrawerOpen}
-        onClose={() => setIsExamSearchDrawerOpen(false)}
-        onSelect={(exam, room) => {
-          setAccessControlTarget({ exam, room });
-          setIsExamSearchDrawerOpen(false);
-          setScreen('EXAM_ACCESS_CONTROL');
-        }}
-      />
+     <ExamSearchDrawer
+  isOpen={isExamSearchDrawerOpen}
+  currentUserId={session.user_id}
+  onClose={() => setIsExamSearchDrawerOpen(false)}
+  onSelect={(exam, room, points) => {
+    const initialPoint =
+      points.find((point) => point.is_current) ??
+      points.find((point) => point.control_type === 'ENTRY');
+
+    if (!initialPoint) return;
+
+    setAccessControlTarget({
+      exam,
+      room,
+      points,
+      point: initialPoint,
+    });
+
+    setIsExamSearchDrawerOpen(false);
+    setScreen('EXAM_ACCESS_CONTROL');
+  }}
+/>
 
       <ExamReportsSearchDrawer
        isOpen={isExamReportsDrawerOpen}
