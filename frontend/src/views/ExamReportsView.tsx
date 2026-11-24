@@ -6,6 +6,7 @@ import type { ExamReport } from '../services/examReportService';
 import type { ControlPointExam } from '../types/controlPoint';
 import { formatExamType, formatTime } from '../utils/examFormat';
 
+
 interface ExamReportsViewProps {
   exam: ControlPointExam;
   onBack: () => void;
@@ -132,14 +133,6 @@ export function ExamReportsView({
         className="er-content"
         aria-label="Reportes del examen"
       >
-        <button
-          type="button"
-          className="er-back-link"
-          onClick={onBack}
-        >
-          <span aria-hidden="true">‹</span>
-          Volver a los exámenes
-        </button>
 
         <div className="er-exam-detail">
           <h2>{exam.subject_name}</h2>

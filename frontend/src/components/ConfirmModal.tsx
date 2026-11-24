@@ -10,6 +10,7 @@ export interface ConfirmModalProps {
   isLoading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  closeOnBackdrop?: boolean;
 }
 
 export function ConfirmModal({
@@ -20,6 +21,7 @@ export function ConfirmModal({
   cancelLabel = 'Cancelar',
   isDangerous = false,
   isLoading = false,
+  closeOnBackdrop = true,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -29,7 +31,7 @@ export function ConfirmModal({
     <div
       className="confirm-modal-overlay"
       role="presentation"
-      onMouseDown={onCancel}
+      onMouseDown={closeOnBackdrop && !isLoading ? onCancel : undefined}
     >
       <div
         className="confirm-modal-box"
