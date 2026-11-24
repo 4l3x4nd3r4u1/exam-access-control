@@ -1,0 +1,530 @@
+/* LISTA NEGRA - HISTORIAL DE EXPULSIONES (Mockup fiel) */
+
+.bl-screen {
+  width: min(402px, 100dvw);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 32px 22px 40px;
+  background: #ffffff;
+  color: #000000;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.bl-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+
+.bl-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  padding: 0;
+  color: #000000;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.bl-icon-btn:hover {
+  opacity: 0.65;
+}
+
+.bl-icon-btn:focus-visible {
+  outline: 2px solid #2875ed;
+  outline-offset: 2px;
+}
+
+.bl-icon-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bl-heading {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.bl-heading h1 {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.7px;
+  color: #000000;
+  margin: 0;
+}
+
+.bl-heading p {
+  margin: 7px 0 0;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  color: #666666;
+}
+
+.bl-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 0 5px 10px;
+  border-bottom: 1px solid #dedede;
+}
+
+.bl-search svg {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #333333;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.bl-search input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #000000;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14.5px;
+}
+
+.bl-search input::placeholder {
+  color: #999999;
+}
+
+.bl-search button {
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #555555;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.bl-search button:hover:not(:disabled) {
+  color: #000000;
+}
+
+.bl-search button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bl-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid #dedede;
+}
+
+.bl-filter-cell {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.bl-filter-cell + .bl-filter-cell {
+  border-left: 1px solid #dedede;
+}
+
+.bl-filter-select {
+  width: 100%;
+  height: 36px;
+  padding: 0 22px 0 7px;
+  border: 0;
+  background: transparent;
+  color: #666666;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  appearance: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bl-filter-select:focus {
+  outline: none;
+  color: #000000;
+}
+
+.bl-filter-chevron {
+  position: absolute;
+  right: 7px;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  fill: none;
+  stroke: #666666;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bl-list {
+  margin-top: 18px;
+  width: 100%;
+}
+
+.bl-list-header,
+.bl-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(74px, 0.8fr) 68px;
+  align-items: center;
+  gap: 8px;
+}
+
+.bl-list-header {
+  min-height: 35px;
+  padding: 0 8px;
+  border-bottom: 1px solid #dedede;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.bl-list-header > span:last-child {
+  text-align: right;
+}
+
+.bl-list-row {
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 8px;
+  border: 0;
+  border-bottom: 1px solid #eeeeee;
+  background: #ffffff;
+  text-align: left;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #000000;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.bl-list-row:nth-of-type(even) {
+  background: #eeeeee;
+}
+
+.bl-list-row:hover {
+  background: #e5e5e5;
+}
+
+.bl-list-row:focus-visible {
+  outline: 2px solid #2875ed;
+  outline-offset: -2px;
+}
+
+.bl-student-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bl-student-cell strong {
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.28;
+  color: #000000;
+  overflow-wrap: anywhere;
+}
+
+.bl-student-cell small {
+  font-size: 11px;
+  line-height: 1.25;
+  color: #666666;
+}
+
+.bl-sis-cell {
+  font-size: 12px;
+  color: #000000;
+  overflow-wrap: anywhere;
+}
+
+.bl-expulsion-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.bl-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: #fef2f2;
+  color: #a83c33;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.bl-count-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a83c33;
+  flex-shrink: 0;
+}
+
+.bl-row-chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #999999;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bl-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 20px 32px;
+  gap: 10px;
+}
+
+.bl-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #f4f4f7;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.bl-empty-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: #666666;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bl-empty-state h2 {
+  margin: 0;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #1c1c1e;
+  max-width: 280px;
+}
+
+.bl-empty-state p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #666666;
+  max-width: 280px;
+}
+
+.bl-feedback {
+  padding: 30px 8px;
+  color: #666666;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.bl-error {
+  color: #c72d2d;
+}
+
+/* DETALLE DEL ESTUDIANTE */
+
+.bl-detail {
+  width: 100%;
+  margin-top: 22px;
+}
+
+.bl-student-data {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #dedede;
+}
+
+.bl-student-data > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 8px;
+  border-bottom: 1px solid #dedede;
+}
+
+.bl-student-data > div span {
+  color: #666666;
+  font-size: 12px;
+}
+
+.bl-student-data > div strong {
+  color: #000000;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.bl-section-title {
+  margin: 22px 0 12px;
+  color: #000000;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.bl-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bl-record-card {
+  padding: 15px 12px;
+  border-radius: 12px;
+  background: #eeeeee;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bl-record-card.is-alt {
+  background: #ffffff;
+  border: 1px solid #dedede;
+}
+
+.bl-record-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bl-record-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bl-record-title-row strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+  overflow-wrap: anywhere;
+}
+
+.bl-expulsion-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: #fef2f2;
+  color: #a83c33;
+  font-size: 10.5px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.bl-expulsion-tag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a83c33;
+}
+
+.bl-record-subtitle {
+  font-size: 12px;
+  color: #666666;
+}
+
+.bl-record-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bl-record-meta p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #000000;
+  overflow-wrap: anywhere;
+}
+
+.bl-record-meta p span {
+  color: #666666;
+}
+
+.bl-record-reason {
+  padding-top: 10px;
+  border-top: 1px solid #d5d5d5;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bl-record-reason span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #000000;
+}
+
+.bl-record-reason p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.48;
+  color: #000000;
+  overflow-wrap: anywhere;
+}
+
+.bl-detail-back {
+  margin-top: 15px;
+  padding: 8px 0;
+  color: #2875ed;
+  background: transparent;
+  border: 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media (max-width: 360px) {
+  .bl-screen {
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .bl-list-header,
+  .bl-list-row {
+    grid-template-columns: minmax(0, 1.45fr) minmax(64px, 0.75fr) 62px;
+    gap: 5px;
+  }
+}

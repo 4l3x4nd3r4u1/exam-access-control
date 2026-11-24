@@ -1,20 +1,90 @@
-
-import { useEffect, useState, type FormEvent } from 'react';
-import { BottomDrawer } from '../components/BottomDrawer';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { blackListService } from '../services/blackListService';
 import type {
-  BlackListStudent,
   BlackListDetail,
+  BlackListSort,
+  BlackListStudent,
 } from '../types/blackList';
+import { formatExamType } from '../utils/examFormat';
+import '../styles/blackList.css';
 
 interface BlackListViewProps {
   onBack: () => void;
   onLogout: () => void;
 }
 
+function formatShortDate(value?: string | null): string {
+  if (!value) return 'Sin fecha';
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('es-BO');
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return 'No disponible';
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}:\d{2}))?/);
+  if (match) {
+    const datePart = `${match[3]}/${match[2]}/${match[1]}`;
+    return match[4] ? `${datePart} · ${match[4]}` : datePart;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('es-BO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function Topbar({
+  onBack,
+  onLogout,
+  backLabel,
+}: {
+  onBack: () => void;
+  onLogout: () => void;
+  backLabel: string;
+}) {
+  return (
+    <header className="bl-topbar">
+      <button
+        type="button"
+        className="bl-icon-btn"
+        onClick={onBack}
+        aria-label={backLabel}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 12H4M10 6l-6 6 6 6" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        className="bl-icon-btn"
+        onClick={onLogout}
+        aria-label="Cerrar sesión"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4.25" />
+          <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
+        </svg>
+      </button>
+    </header>
+  );
+}
+
 export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
   const [students, setStudents] = useState<BlackListStudent[]>([]);
+  const [availableGestiones, setAvailableGestiones] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [gestion, setGestion] = useState('');
+  const [sort, setSort] = useState<BlackListSort>('recent');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,32 +97,54 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  const loadStudents = async (value = '') => {
-    setIsLoading(true);
-    setError(null);
+  const loadStudents = useCallback(
+    async (
+      searchValue = search,
+      gestionValue = gestion,
+      sortValue = sort,
+    ) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const data = await blackListService.getStudents(value);
-      setStudents(data);
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'No se pudo cargar la lista de estudiantes.',
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      try {
+        const result = await blackListService.getStudents({
+          search: searchValue.trim() || undefined,
+          type: 'expulsions',
+          gestion: gestionValue || undefined,
+          sort: sortValue,
+        });
+        setStudents(result.students);
+        setAvailableGestiones(result.availableGestiones);
+      } catch (requestError) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'No se pudo cargar la lista de estudiantes.',
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [gestion, search, sort],
+  );
 
   useEffect(() => {
     let isMounted = true;
 
+    setIsLoading(true);
+    setError(null);
+
     blackListService
-      .getStudents()
-      .then((data) => {
+      .getStudents({
+        search: search.trim() || undefined,
+        type: 'expulsions',
+        gestion: gestion || undefined,
+        sort,
+      })
+      .then((result) => {
         if (isMounted) {
-          setStudents(data);
+          setStudents(result.students);
+          setAvailableGestiones(result.availableGestiones);
         }
       })
       .catch((requestError) => {
@@ -73,7 +165,9 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
     return () => {
       isMounted = false;
     };
-  }, []);
+    // Initial load & reactive filter/sort updates; explicit search submit handled via handleSearch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gestion, sort]);
 
   const handleSearchChange = (value: string) => {
     const validName = /^[\p{L}\s]*$/u.test(value);
@@ -83,14 +177,14 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
       setSearch(value);
 
       if (value.trim() === '') {
-        loadStudents();
+        void loadStudents('', gestion, sort);
       }
     }
   };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    loadStudents(search.trim());
+    void loadStudents(search.trim(), gestion, sort);
   };
 
   const handleOpenStudent = async (userId: number) => {
@@ -100,13 +194,13 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
     setIsDetailLoading(true);
 
     try {
-      const data = await blackListService.getStudentDetail(userId);
+      const data = await blackListService.getStudentDetail(userId, 'expulsions');
       setStudentDetail(data);
     } catch (requestError) {
       setDetailError(
         requestError instanceof Error
           ? requestError.message
-          : 'No se pudieron obtener los antecedentes del estudiante.',
+          : 'No se pudo obtener el historial de expulsiones del estudiante.',
       );
     } finally {
       setIsDetailLoading(false);
@@ -119,61 +213,43 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
     setDetailError(null);
   };
 
-  // HISTORIAL: se mantiene como pantalla completa.
+  // PANTALLA DETALLE: Historial de expulsiones del estudiante
   if (selectedStudentId !== null) {
+    const expulsionCount =
+      studentDetail?.total_expulsiones ??
+      studentDetail?.total_inhabilitaciones ??
+      0;
+
     return (
-      <main className="app-shell blacklist-screen blacklist-detail-screen">
-        <header className="blacklist-topbar">
-          <button
-            type="button"
-            className="blacklist-back"
-            onClick={handleBackToList}
-            aria-label="Volver al listado"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 12H4M10 6l-6 6 6 6" />
-            </svg>
-          </button>
+      <main className="app-shell bl-screen">
+        <Topbar
+          onBack={handleBackToList}
+          onLogout={onLogout}
+          backLabel="Volver al listado"
+        />
 
-          <button
-            type="button"
-            className="blacklist-logout"
-            onClick={onLogout}
-            aria-label="Cerrar sesión"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="8" r="4.25" />
-              <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
-            </svg>
-          </button>
-        </header>
-
-        <section className="blacklist-heading">
-          <h1>Antecedentes del estudiante</h1>
-
+        <section className="bl-heading">
+          <h1>Historial de expulsiones</h1>
           {studentDetail && (
             <p>
-              {studentDetail.total_inhabilitaciones}{' '}
-              {studentDetail.total_inhabilitaciones === 1
-                 ? 'antecedente'
-                 : 'antecedentes'}
+              {expulsionCount}{' '}
+              {expulsionCount === 1
+                ? 'expulsión registrada'
+                : 'expulsiones registradas'}
             </p>
           )}
         </section>
 
         {isDetailLoading && (
-          <p className="blacklist-feedback">
-            Cargando antecedentes...
-          </p>
+          <p className="bl-feedback">Cargando historial de expulsiones...</p>
         )}
 
         {detailError && (
-          <section className="blacklist-feedback" role="alert">
-            <p>{detailError}</p>
-
+          <section className="bl-feedback" role="alert">
+            <p className="bl-error">{detailError}</p>
             <button
               type="button"
-              className="blacklist-detail-back"
+              className="bl-detail-back"
               onClick={handleBackToList}
             >
               Volver al listado
@@ -182,8 +258,8 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
         )}
 
         {studentDetail && !isDetailLoading && (
-          <section className="blacklist-detail">
-            <div className="blacklist-student-data">
+          <section className="bl-detail">
+            <div className="bl-student-data">
               <div>
                 <span>Nombre completo</span>
                 <strong>{studentDetail.nombre}</strong>
@@ -200,177 +276,238 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
               </div>
             </div>
 
-            <h2>Historial de antecedentes</h2>
+            <h2 className="bl-section-title">Historial en exámenes</h2>
 
-            {studentDetail.antecedentes.map((antecedent, index) => (
-              <article
-                className="blacklist-antecedent"
-                key={`${antecedent.materia}-${antecedent.fecha}-${index}`}
-              >
-                <div className="blacklist-antecedent-heading">
-                  <strong>
-                    {antecedent.nombre_materia || 'Materia no disponible'}
-                  </strong>
-                  <span>{antecedent.materia || 'Sin sigla'}</span>
-                </div>
+            <div className="bl-records-list">
+              {studentDetail.antecedentes.map((antecedent, index) => {
+                const subtitleParts = [
+                  antecedent.materia || 'Sin sigla',
+                  antecedent.tipo_examen
+                    ? formatExamType(antecedent.tipo_examen)
+                    : null,
+                ].filter(Boolean);
 
-                <div className="blacklist-antecedent-info">
-                  <p>
-                    <span>Grupo:</span>{' '}
-                    {antecedent.grupo || 'No disponible'}
-                  </p>
+                return (
+                  <article
+                    className={`bl-record-card ${index % 2 === 1 ? 'is-alt' : ''}`}
+                    key={`${antecedent.materia ?? 'mat'}-${antecedent.fecha}-${index}`}
+                  >
+                    <div className="bl-record-head">
+                      <div className="bl-record-title-row">
+                        <strong>
+                          {antecedent.nombre_materia || 'Materia no disponible'}
+                        </strong>
 
-                  <p>
-                    <span>Gestión:</span>{' '}
-                    {antecedent.gestion || 'No disponible'}
-                  </p>
+                        <span className="bl-expulsion-tag">
+                          <span
+                            className="bl-expulsion-tag-dot"
+                            aria-hidden="true"
+                          />
+                          Expulsión
+                        </span>
+                      </div>
 
-                  <p>
-                    <span>Docente:</span>{' '}
-                    {antecedent.docente || 'No disponible'}
-                  </p>
+                      <span className="bl-record-subtitle">
+                        {subtitleParts.join(' · ')}
+                      </span>
+                    </div>
 
-                  <p>
-                    <span>Fecha:</span>{' '}
-                    {antecedent.fecha
-                      ? new Date(antecedent.fecha).toLocaleString('es-BO')
-                      : 'No disponible'}
-                  </p>
-                </div>
+                    <div className="bl-record-meta">
+                      <p>
+                        <span>Grupo:</span> {antecedent.grupo || 'No disponible'}
+                      </p>
+                      <p>
+                        <span>Gestión:</span>{' '}
+                        {antecedent.gestion || 'No disponible'}
+                      </p>
+                      <p>
+                        <span>Fecha:</span> {formatDateTime(antecedent.fecha)}
+                      </p>
+                      <p>
+                        <span>Punto de control:</span>{' '}
+                        {antecedent.aula || 'No registrado'}
+                      </p>
+                      <p>
+                        <span>Registrado por:</span>{' '}
+                        {antecedent.registrado_por ||
+                          antecedent.docente ||
+                          'No disponible'}
+                      </p>
+                    </div>
 
-                <div className="blacklist-antecedent-reason">
-                 <span>
-                  {antecedent.origen === 'PUNTOS_CONTROL'
-                   ? 'Motivo de expulsión desde Puntos de control'
-                   : 'Motivo de inhabilitación'}
-                  </span>
-                  <p>
-                   {antecedent.motivo || 'Sin motivo registrado'}
-                  </p>
-                </div>
-              </article>
-            ))}
+                    <div className="bl-record-reason">
+                      <span>Motivo de expulsión</span>
+                      <p>{antecedent.motivo || 'Sin motivo registrado'}</p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </section>
         )}
       </main>
     );
   }
 
-  // LISTADO: se presenta mediante el BottomDrawer existente.
+  // PANTALLA LISTADO: Lista negra de expulsiones
+  const hasActiveSearchOrFilter = Boolean(search.trim() || gestion);
+
   return (
-    <BottomDrawer
-      isOpen={true}
-      onClose={onBack}
-      ariaLabel="Estudiantes inhabilitados"
-      className="blacklist-bottom-drawer"
-    >
-      <div className="app-shell blacklist-screen blacklist-list-screen">
-        <header className="blacklist-topbar">
-          <button
-            type="button"
-            className="blacklist-back"
-            onClick={onBack}
-            aria-label="Volver al panel"
+    <main className="app-shell bl-screen">
+      <Topbar
+        onBack={onBack}
+        onLogout={onLogout}
+        backLabel="Volver al panel"
+      />
+
+      <section className="bl-heading">
+        <h1>Lista negra</h1>
+        <p>
+          {students.length}{' '}
+          {students.length === 1
+            ? 'estudiante con expulsiones'
+            : 'estudiantes con expulsiones'}
+        </p>
+      </section>
+
+      <form className="bl-search" onSubmit={handleSearch}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="10.8" cy="10.8" r="6.8" />
+          <path d="m16 16 4.5 4.5" />
+        </svg>
+
+        <input
+          type="text"
+          value={search}
+          onChange={(event) => handleSearchChange(event.target.value)}
+          placeholder="Buscar por nombre, código SIS o CI"
+          maxLength={150}
+          aria-label="Buscar estudiante"
+        />
+
+        <button type="submit" disabled={isLoading}>
+          Buscar
+        </button>
+      </form>
+
+      <div className="bl-filters">
+        <div className="bl-filter-cell">
+          <select
+            className="bl-filter-select"
+            value={gestion}
+            onChange={(event) => setGestion(event.target.value)}
+            aria-label="Filtrar por gestión"
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 12H4M10 6l-6 6 6 6" />
-            </svg>
-          </button>
+            <option value="">Gestión: Todas</option>
+            {availableGestiones.map((item) => (
+              <option key={item} value={item}>
+                Gestión: {item}
+              </option>
+            ))}
+          </select>
 
-          <button
-            type="button"
-            className="blacklist-logout"
-            onClick={onLogout}
-            aria-label="Cerrar sesión"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="8" r="4.25" />
-              <path d="M4.5 21c.85-4 3.3-6 7.5-6s6.65 2 7.5 6" />
-            </svg>
-          </button>
-        </header>
-
-        <section className="blacklist-heading">
-          <h1>Estudiantes con antecedentes</h1>
-          <p>
-            {students.length}{' '}
-            {students.length === 1 ? 'estudiante' : 'estudiantes'}
-          </p>
-        </section>
-
-        <form className="blacklist-search" onSubmit={handleSearch}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="10.8" cy="10.8" r="6.8" />
-            <path d="m16 16 4.5 4.5" />
+          <svg className="bl-filter-chevron" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 4.5L6 7.5L9 4.5" />
           </svg>
+        </div>
 
-          <input
-            type="text"
-            value={search}
-            onChange={(event) => handleSearchChange(event.target.value)}
-            placeholder="Buscar por nombre, código SIS o CI"
-            maxLength={150}
-            aria-label="Buscar estudiante"
-          />
+        <div className="bl-filter-cell">
+          <select
+            className="bl-filter-select"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as BlackListSort)}
+            aria-label="Ordenar listado"
+          >
+            <option value="recent">Orden: Más recientes</option>
+            <option value="count">Orden: Más expulsiones</option>
+          </select>
 
-          <button type="submit" disabled={isLoading}>
-            Buscar
-          </button>
-        </form>
+          <svg className="bl-filter-chevron" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 4.5L6 7.5L9 4.5" />
+          </svg>
+        </div>
+      </div>
 
-        <section
-          className="blacklist-list"
-          aria-label="Estudiantes con antecedentes"
-        >
-          <div className="blacklist-list-header">
-            <span>Estudiante</span>
-            <span>Código SIS</span>
-            <span>Antecedentes</span>
+      <section className="bl-list" aria-label="Lista negra de estudiantes">
+        <div className="bl-list-header">
+          <span>Estudiante</span>
+          <span>Código SIS</span>
+          <span>Expuls.</span>
+        </div>
+
+        {isLoading && (
+          <p className="bl-feedback">Cargando lista negra...</p>
+        )}
+
+        {error && (
+          <p className="bl-feedback bl-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        {!isLoading && !error && students.length === 0 && (
+          <div className="bl-empty-state">
+            <div className="bl-empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </div>
+
+            <h2>
+              {hasActiveSearchOrFilter
+                ? 'No se encontraron coincidencias para tu búsqueda'
+                : 'No hay estudiantes con expulsiones registradas'}
+            </h2>
+            <p>
+              {hasActiveSearchOrFilter
+                ? 'Prueba con otro nombre, código SIS, CI o cambia el filtro de gestión.'
+                : 'Los estudiantes expulsados durante un examen aparecerán automáticamente en este historial.'}
+            </p>
           </div>
+        )}
 
-          {isLoading && (
-            <p className="blacklist-feedback">
-              Cargando estudiantes...
-            </p>
-          )}
+        {!isLoading &&
+          !error &&
+          students.map((student) => {
+            const count =
+              student.total_expulsiones ?? student.total_inhabilitaciones;
 
-          {error && (
-            <p
-              className="blacklist-feedback blacklist-error"
-              role="alert"
-            >
-              {error}
-            </p>
-          )}
-
-          {!isLoading && !error && students.length === 0 && (
-            <p className="blacklist-feedback">
-              {search.trim()
-                ? 'No se encontraron coincidencias para tu búsqueda.'
-                : 'No hay estudiantes inhabilitados registrados.'}
-            </p>
-          )}
-
-          {!isLoading &&
-            !error &&
-            students.map((student) => (
+            return (
               <button
                 type="button"
-                className="blacklist-list-row"
+                className="bl-list-row"
                 key={student.user_id}
-                onClick={() => handleOpenStudent(student.user_id)}
+                onClick={() => void handleOpenStudent(student.user_id)}
               >
-                <div>
+                <div className="bl-student-cell">
                   <strong>{student.nombre}</strong>
-                  <small>CI: {student.ci || 'No registrado'}</small>
+                  <small>
+                    CI: {student.ci || 'No registrado'} · Últ.:{' '}
+                    {formatShortDate(student.ultima_fecha)}
+                  </small>
                 </div>
 
-                <span>{student.codigo_sis}</span>
-                <span>{student.total_inhabilitaciones}</span>
+                <span className="bl-sis-cell">{student.codigo_sis}</span>
+
+                <span className="bl-expulsion-cell">
+                  <span className="bl-count-pill">
+                    <span className="bl-count-dot" aria-hidden="true" />
+                    {count}
+                  </span>
+
+                  <svg
+                    className="bl-row-chevron"
+                    viewBox="0 0 12 12"
+                    aria-hidden="true"
+                  >
+                    <path d="M4.5 2.5L8 6L4.5 9.5" />
+                  </svg>
+                </span>
               </button>
-            ))}
-        </section>
-      </div>
-    </BottomDrawer>
+            );
+          })}
+      </section>
+    </main>
   );
 }

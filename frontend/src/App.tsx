@@ -69,7 +69,8 @@ type ApplicationScreen =
   | 'EXAM_REPORTS'
   | 'CONTROL_POINTS'
   | 'CONTROL_POINT_INGRESS'
-  | 'SHARED_EXAMS'; 
+  | 'SHARED_EXAMS'
+  | 'BLACKLIST'; 
 
 type DashboardSection =
   | 'ACADEMIC'
@@ -108,8 +109,6 @@ export default function App() {
 
    const [selectedReportExam, setSelectedReportExam] =
      useState<ControlPointExam | null>(null);
-
-  const [isBlackListOpen, setIsBlackListOpen] = useState(false);
 
   const [isImportDrawerOpen, setIsImportDrawerOpen] =
     useState(false);
@@ -159,7 +158,6 @@ export default function App() {
 
   setSession(null);
   setScreen('DASHBOARD');
-  setIsBlackListOpen(false);
 
   setSelectedRoster(null);
   setSelectedControlPoint(null);
@@ -308,6 +306,15 @@ export default function App() {
     );
   }
 
+  if (screen === 'BLACKLIST') {
+    return (
+      <BlackListView
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   const menuItems = [
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
@@ -397,11 +404,10 @@ export default function App() {
       order: 4,
       icon: blackListIcon,
       iconClass: 'admin-eligibility-icon',
-      open: () => setIsBlackListOpen(true),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY,
-      ),
+      open: () => setScreen('BLACKLIST'),
+      visible:
+        hasFunction(session, FUNCTION_CODES.MANAGE_STUDENT_ELIGIBILITY) ||
+        hasRole(session, 'ADMIN'),
     },
         {
       functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
@@ -756,13 +762,6 @@ export default function App() {
   session={session}
   onClose={() => setIsStudentEligibilityDrawerOpen(false)}
 />
-
-{isBlackListOpen && (
-  <BlackListView
-    onBack={() => setIsBlackListOpen(false)}
-    onLogout={handleLogout}
-  />
-)}
 
 </main>
   );
