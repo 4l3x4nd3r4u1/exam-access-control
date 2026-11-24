@@ -420,25 +420,31 @@ export function ScheduleExamDrawer({
   // ON  -> solo aulas recomendadas/precargadas del sistema
   // OFF -> solo aulas escritas manualmente por el docente
   const selectedRooms = useMemo<Array<AvailableRoom & { isManual?: boolean }>>(() => {
+    const safeAvailable = Array.isArray(availableRooms) ? availableRooms : [];
+    const safeManual = Array.isArray(manualRooms) ? manualRooms : [];
     if (isAutoRooms) {
-      return availableRooms
+      return safeAvailable
         .filter((room) =>
-          selectedAutoRoomIds.some((id) => String(id) === String(room.room_id)),
+          room && selectedAutoRoomIds.some((id) => String(id) === String(room.room_id)),
         )
-        .sort((a, b) => b.capacity - a.capacity);
+        .sort((a, b) => (Number(b.capacity) || 0) - (Number(a.capacity) || 0));
     }
 
-    return [...manualRooms].sort((a, b) => b.capacity - a.capacity);
+    return [...safeManual].sort((a, b) => (Number(b.capacity) || 0) - (Number(a.capacity) || 0));
   }, [isAutoRooms, availableRooms, selectedAutoRoomIds, manualRooms]);
 
   const hasInvalidCustomCapacity = useMemo(() => {
     if (isAutoRooms) return false;
-    return manualRooms.some((room) => room.capacity < 1 || room.capacity > 2000);
+    const safeManual = Array.isArray(manualRooms) ? manualRooms : [];
+    return safeManual.some((room) => {
+      const cap = Number(room?.capacity) || 0;
+      return cap < 1 || cap > 2000;
+    });
   }, [isAutoRooms, manualRooms]);
 
   const totalCapacity = useMemo(() => {
     return selectedRooms.reduce(
-      (sum, room) => sum + Math.max(0, room.capacity),
+      (sum, room) => sum + Math.max(0, Number(room?.capacity) || 0),
       0,
     );
   }, [selectedRooms]);
@@ -448,21 +454,22 @@ export function ScheduleExamDrawer({
 
     const counts = useEqualDistribution
       ? distributeStudentsEqually(
-          selectedRooms.map((room) => ({ capacity: Math.max(0, room.capacity) })),
+          selectedRooms.map((room) => ({ capacity: Math.max(0, Number(room?.capacity) || 0) })),
           totalEnrolled,
         )
       : null;
 
     let remainingCount = totalEnrolled;
     let studentOffset = 0;
+    const safeStudents = Array.isArray(enrolledStudents) ? enrolledStudents : [];
 
     return selectedRooms.map((room, i) => {
-      const effectiveCapacity = Math.max(0, room.capacity);
+      const effectiveCapacity = Math.max(0, Number(room?.capacity) || 0);
       const studentCount = counts
-        ? counts[i]
+        ? (counts[i] ?? 0)
         : Math.min(effectiveCapacity, remainingCount);
 
-      const students = enrolledStudents.slice(
+      const students = safeStudents.slice(
         studentOffset,
         studentOffset + studentCount,
       );
@@ -474,7 +481,9 @@ export function ScheduleExamDrawer({
         room,
         effectiveCapacity,
         studentCount,
-        studentUserIds: students.map((student) => student.userId),
+        studentUserIds: students
+          .filter((student) => student && student.userId !== undefined)
+          .map((student) => student.userId),
       };
     });
   }, [
@@ -496,15 +505,18 @@ export function ScheduleExamDrawer({
   }, [roomAllocations]);
 
   const selectedExamType = useMemo(() => {
+    if (!Array.isArray(examTypes)) return undefined;
     return examTypes.find((item) => item.value === selectedExamTypeId);
   }, [examTypes, selectedExamTypeId]);
 
   const availableAuxiliaries = useMemo(() => {
+    if (!Array.isArray(academicStaff)) return [];
     return academicStaff.filter(
       (m) =>
+        m &&
         m.is_active !== false &&
         Array.isArray(m.roles) &&
-        m.roles.some((r) => r.toUpperCase() === 'AUXILIAR'),
+        m.roles.some((r) => typeof r === 'string' && r.toUpperCase() === 'AUXILIAR'),
     );
   }, [academicStaff]);
 

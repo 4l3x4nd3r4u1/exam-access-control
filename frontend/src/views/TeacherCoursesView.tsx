@@ -141,10 +141,6 @@ export function TeacherCoursesView({
     }
 
     if (mode === 'SCHEDULE_EXAM') {
-      if (!selectedCourse.course.can_interact) {
-        return null;
-      }
-
       return (
         <main className="app-shell teacher-course-detail-screen">
           <ScheduleExamDrawer
@@ -158,7 +154,8 @@ export function TeacherCoursesView({
       );
     }
 
-    return null;
+    // Si no es un modo con vista secundaria, cerramos la selección
+    setSelectedCourse(null);
   }
 
   const Container = presentation === 'drawer' ? 'div' : 'main';

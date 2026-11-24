@@ -96,7 +96,7 @@ export function SharedExamsView({
           Exámenes Compartidos
         </h1>
         <p style={{ color: '#64748b', fontSize: '0.95rem', margin: 0 }}>
-          Visualiza y gestiona las evaluaciones conjuntas coordinadas entre grupos paralelos.
+          Revisa y organiza los exámenes conjuntos con otros docentes.
         </p>
       </div>
 
@@ -188,15 +188,19 @@ export function SharedExamsView({
                       </span>
                       <span
                         style={{
-                          background: '#dcfce7',
-                          color: '#15803d',
+                          background: item.status === 'ACEPTADO' ? '#dcfce7' : '#fef3c7',
+                          color: item.status === 'ACEPTADO' ? '#15803d' : '#b45309',
                           fontSize: '0.72rem',
                           fontWeight: 700,
                           padding: '2px 8px',
                           borderRadius: '12px',
                         }}
                       >
-                        ✓ Compartido
+                        {item.status === 'ACEPTADO'
+                          ? '✓ Compartido'
+                          : item.is_co_teacher
+                            ? '⏳ Invitación Pendiente'
+                            : '⏳ Esperando Respuesta'}
                       </span>
                     </div>
 
@@ -205,7 +209,14 @@ export function SharedExamsView({
                     </h2>
                     <p style={{ margin: 0, fontSize: '0.82rem', color: '#475569' }}>
                       Docentes: <strong style={{ color: '#0f172a' }}>{exam.host_teacher_name}</strong> (G{exam.host_group_code}) &amp;{' '}
-                      <strong style={{ color: '#0f172a' }}>{exam.co_teacher_name || 'Docente Invitado'}</strong> (G{exam.co_group_code || item.invited_group?.group_code || '2'})
+                      <strong style={{ color: '#0f172a' }}>{exam.co_teacher_name || 'Docente Invitado'}</strong>{' '}
+                      {item.status === 'ACEPTADO'
+                        ? (() => {
+                            const raw = item.invited_group?.group_code || exam.co_group_code || '2';
+                            const parts = String(raw).split(',').map(s => s.trim()).filter(Boolean);
+                            return parts.length > 1 ? `(G${parts.join(', G')})` : `(G${parts[0] || '2'})`;
+                          })()
+                        : '(Pendiente de grupo)'}
                     </p>
                   </div>
                 </div>
@@ -240,31 +251,95 @@ export function SharedExamsView({
                   </div>
                 </div>
 
-                {/* BOTÓN PARA MODIFICAR ESTUDIANTES Y AULAS */}
-                <div style={{ paddingTop: '2px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEdit(item)}
-                    style={{
-                      width: '100%',
-                      background: '#0284c7',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '10px 14px',
-                      fontSize: '0.88rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 2px 4px rgba(2, 132, 199, 0.25)',
-                    }}
-                  >
-                    <span>✏️</span>
-                    <span>Modificar Estudiantes y Aulas</span>
-                  </button>
+                {/* BOTÓN / ESTADO DE LA INVITACIÓN */}
+                <div style={{ paddingTop: '2px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {item.status === 'ACEPTADO' ? (
+                    <>
+                      <div
+                        style={{
+                          width: '100%',
+                          background: '#f0fdf4',
+                          color: '#166534',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '8px',
+                          padding: '10px 14px',
+                          fontSize: '0.86rem',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>✓</span>
+                        <span>Examen consolidado y coordinado entre docentes</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(item)}
+                        style={{
+                          width: '100%',
+                          background: '#475569',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '10px 14px',
+                          fontSize: '0.86rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
+                          transition: 'background-color 0.2s ease',
+                        }}
+                      >
+                        Ver asignación del examen
+                      </button>
+                    </>
+                  ) : item.is_co_teacher ? (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(item)}
+                      style={{
+                        width: '100%',
+                        background: '#2d6a4f',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        fontSize: '0.88rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
+                        transition: 'background-color 0.2s ease',
+                      }}
+                    >
+                      Aceptar y agregar estudiantes/aulas
+                    </button>
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        background: '#f8fafc',
+                        color: '#64748b',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        fontSize: '0.86rem',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      Esperando que el docente invitado acepte y asigne su grupo
+                    </div>
+                  )}
                 </div>
               </article>
             );

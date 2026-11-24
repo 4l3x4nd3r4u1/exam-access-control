@@ -69,12 +69,20 @@ class ExamInvitationService
                 'docente_invitado_id' => $invitedTeacher->id,
             ]);
 
-            $invitation->fill([
+            $fillData = [
                 'docente_invitador_id' => $inviter->id,
                 'mensaje' => trim($message),
                 'correo_estado' => ExamInvitation::MAIL_PENDING,
                 'correo_enviado_en' => null,
-            ])->save();
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('examen_invitacion', 'estado')) {
+                $fillData['estado'] = 'PENDIENTE';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('examen_invitacion', 'materia_grupo_id')) {
+                $fillData['materia_grupo_id'] = null;
+            }
+
+            $invitation->fill($fillData)->save();
 
             DB::table('registro_auditoria')->insert([
                 'usuario_id' => $inviter->id,

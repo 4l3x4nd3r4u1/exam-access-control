@@ -22,7 +22,7 @@ import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
 import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer';
 import { ExamSearchDrawer } from './components/ExamSearchDrawer';
 
-import { authService, hasFunction } from './services/authService';
+import { authService, hasFunction, hasRole } from './services/authService';
 import { BlackListView } from './views/BlackListView';
 
 import { FUNCTION_CODES } from './types/auth';
@@ -437,10 +437,10 @@ export default function App() {
       icon: inviteTeacherIcon,
       iconClass: 'admin-invite-teacher-icon',
       open: () => setIsInviteTeacherDrawerOpen(true),
-      visible: hasFunction(
-        session,
-        FUNCTION_CODES.INVITE_EXAM_TEACHER,
-      ),
+      visible:
+        hasFunction(session, FUNCTION_CODES.INVITE_EXAM_TEACHER) ||
+        hasFunction(session, FUNCTION_CODES.SCHEDULE_EXAM) ||
+        hasRole(session, 'DOCENTE'),
     },
     {
       functionCode: FUNCTION_CODES.IMPORT_ROSTER,
