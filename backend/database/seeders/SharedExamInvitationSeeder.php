@@ -196,6 +196,7 @@ class SharedExamInvitationSeeder extends Seeder
                 'docente_invitado_id' => $juan->id,
             ],
             [
+                'docente_invitador_id' => $ana->id,
                 'materia_grupo_id' => $juanGroup->id,
                 'estado' => 'ACEPTADO',
                 'mensaje' => 'Examen conjunto coordinado entre Grupo 1 (Ana Morales) y Grupo 2 (Juan Pérez).',
