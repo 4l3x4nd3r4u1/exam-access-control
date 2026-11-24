@@ -392,18 +392,6 @@ export function DetailedExamReportView({
           backLabel="Volver a exámenes finalizados"
         />
 
-        <button
-          type="button"
-          className="der-back-link"
-          onClick={() => {
-            setSelectedExamId(null);
-            setDetail(null);
-            setDetailError(null);
-          }}
-        >
-          <span aria-hidden="true">‹</span> Volver a exámenes finalizados
-        </button>
-
         <section className="der-heading is-detail">
           <h1>Reporte detallado</h1>
         </section>
