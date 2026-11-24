@@ -61,6 +61,7 @@ import sharedExamsIcon from './assets/documento_examen.svg';
 
 type ApplicationScreen =
   | 'DASHBOARD'
+  | 'BLACKLIST'
   | 'ACADEMIC_STAFF'
   | 'PROCESSED_ROSTERS'
   | 'PROCESSED_ROSTER_DETAIL'
@@ -70,8 +71,7 @@ type ApplicationScreen =
   | 'EXAM_REPORTS'
   | 'CONTROL_POINTS'
   | 'CONTROL_POINT_INGRESS'
-  | 'SHARED_EXAMS'
-  | 'BLACKLIST'; 
+  | 'SHARED_EXAMS'; 
 
 type DashboardSection =
   | 'ACADEMIC'
@@ -192,6 +192,15 @@ export default function App() {
     />
   );
 }
+
+  if (screen === 'BLACKLIST') {
+    return (
+      <BlackListView
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   if (screen === 'PROCESSED_ROSTERS') {
     return (
@@ -330,15 +339,6 @@ onPointChange={(point) => {
     return (
       <SharedExamsView
         teacherId={session.user_id}
-        onBack={() => setScreen('DASHBOARD')}
-        onLogout={handleLogout}
-      />
-    );
-  }
-
-  if (screen === 'BLACKLIST') {
-    return (
-      <BlackListView
         onBack={() => setScreen('DASHBOARD')}
         onLogout={handleLogout}
       />
