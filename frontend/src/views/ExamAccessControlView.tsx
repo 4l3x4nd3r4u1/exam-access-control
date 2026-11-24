@@ -4,20 +4,22 @@ import type { FormEvent, ReactNode } from 'react';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { courseService } from '../services/courseService';
 import { examAccessService } from '../services/examAccessService';
-import {
-  abbreviateExamType,
-  formatCheckInTime,
-  formatExamType,
-} from '../utils/examFormat';
+import {abbreviateExamType,formatCheckInTime,formatExamType,} from '../utils/examFormat';
 import { EXAM_STATUS_LABEL, getExamStatus } from '../utils/examStatus';
 import { normalizeText } from '../utils/searchHelper';
 import type { EnrolledStudent } from '../types/course';
 import type {AccessStudent,ControlExam,ControlExamRoom,DuringExamResponse, EntryCheckResponse,ExpulsionHistoryItem,} from '../types/examAccess';
+import type { ControlPoint } from '../types/controlPointRotation';
+import { ControlPointRotation } from '../components/ControlPointRotation';
+import { controlPointRotationService } from '../services/controlPointRotationService';
 
 interface ExamAccessControlViewProps {
   exam: ControlExam;
-  /** Aula del usuario autenticado (punto de control). */
   room: ControlExamRoom;
+  points?: ControlPoint[];
+  point?: ControlPoint;
+  onPointChange?: (point: ControlPoint) => void;
+  rotationFeedback?: string | null;
   onBack: () => void;
 }
 
@@ -110,12 +112,26 @@ function StudentLine({ student }: { student: AccessStudent | null }) {
 export function ExamAccessControlView({
   exam,
   room,
+  points,
+  point,
+  onPointChange,
+  rotationFeedback,
   onBack,
 }: ExamAccessControlViewProps) {
-  const [tab, setTab] = useState<AccessTab>('ENTRY');
+  const [tab, setTab] = useState<AccessTab>(
+  point?.control_type === 'DURING_EXAM'
+    ? 'DURING'
+    : 'ENTRY',
+);
+const activePoint = points?.find(
+  (item) =>
+    item.control_type ===
+    (tab === 'ENTRY' ? 'ENTRY' : 'DURING_EXAM'),
+) ?? point;
   const [query, setQuery] = useState('');
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isChangingPoint, setIsChangingPoint] = useState(false);
   const [feedback, setFeedback] = useState<
     { tone: 'ok' | 'error'; text: string } | null
   >(null);
@@ -169,12 +185,45 @@ export function ExamAccessControlView({
     setIsBusy(false);
   };
 
-  const changeTab = (next: AccessTab) => {
-    if (next === tab) return;
+  const changeTab = async (next: AccessTab) => {
+  if (next === tab || isChangingPoint) return;
+
+  const targetType = next === 'ENTRY' ? 'ENTRY' : 'DURING_EXAM';
+
+  const targetPoint = points?.find(
+    (item) => item.control_type === targetType,
+  );
+
+  if (!targetPoint) {
+    setFeedback({
+      tone: 'error',
+      text: 'No se encontró el punto de control correspondiente.',
+    });
+    return;
+  }
+
+  setIsChangingPoint(true);
+  setFeedback(null);
+
+  try {
+    await controlPointRotationService.join(
+      exam.exam_id,
+      targetPoint.id,
+    );
+
+    onPointChange?.(targetPoint);
     setTab(next);
     setShowSuggestions(false);
     resetResult();
-  };
+  } catch (error) {
+    setFeedback({
+      tone: 'error',
+      text: errorText(error, 'No se pudo cambiar el punto de control.'),
+    });
+  } finally {
+    setIsChangingPoint(false);
+  }
+};
 
   /** Ejecuta la consulta de la pestaña activa para un identificador. */
   const runSearch = async (
@@ -558,27 +607,43 @@ export function ExamAccessControlView({
           {room.room_name}
         </p>
       </section>
-
+   {activePoint && onPointChange && (
+  <ControlPointRotation
+    key={activePoint.id}
+    examId={exam.exam_id}
+    point={activePoint}
+    disabled={isBusy || isConfirmingExpulsion}
+    onPointChange={onPointChange}
+  />
+)}
+{rotationFeedback && (
+  <p className="cg-feedback" role="status">
+    {rotationFeedback}
+  </p>
+)}
       <div className="ec-tabs" role="tablist" aria-label="Tipo de control">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'ENTRY'}
-          className={tab === 'ENTRY' ? 'is-active' : ''}
-          onClick={() => changeTab('ENTRY')}
-        >
-          Ingreso
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'DURING'}
-          className={tab === 'DURING' ? 'is-active' : ''}
-          onClick={() => changeTab('DURING')}
-        >
-          Durante el examen
-        </button>
-      </div>
+  <button
+    type="button"
+    role="tab"
+    disabled={isChangingPoint}
+    aria-selected={tab === 'ENTRY'}
+    className={tab === 'ENTRY' ? 'is-active' : ''}
+    onClick={() => changeTab('ENTRY')}
+  >
+    Ingreso
+  </button>
+
+  <button
+    type="button"
+    role="tab"
+    disabled={isChangingPoint}
+    aria-selected={tab === 'DURING'}
+    className={tab === 'DURING' ? 'is-active' : ''}
+    onClick={() => changeTab('DURING')}
+  >
+    Durante el examen
+  </button>
+</div>
 
       <form className="ec-search-box" onSubmit={handleSubmit}>
         <label className="ec-search">
@@ -596,8 +661,8 @@ export function ExamAccessControlView({
               setShowSuggestions(true);
               if (outcome || feedback) resetResult();
             }}
-            placeholder="Cédula de identidad (CI)"
-            aria-label="CI del estudiante"
+            placeholder="Código SIS o CI"
+            aria-label="Código SIS o CI del estudiante"
             autoComplete="off"
           />
 
