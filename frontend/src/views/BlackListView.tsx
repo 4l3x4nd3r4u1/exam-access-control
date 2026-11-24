@@ -361,7 +361,7 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
       />
 
       <section className="bl-heading">
-        <h1>Lista negra</h1>
+        <h1>Registro de infractores</h1>
         <p>
           {students.length}{' '}
           {students.length === 1
@@ -428,7 +428,7 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
         </div>
       </div>
 
-      <section className="bl-list" aria-label="Lista negra de estudiantes">
+      <section className="bl-list" aria-label="Registro de infractores">
         <div className="bl-list-header">
           <span>Estudiante</span>
           <span>Código SIS</span>
@@ -436,7 +436,7 @@ export function BlackListView({ onBack, onLogout }: BlackListViewProps) {
         </div>
 
         {isLoading && (
-          <p className="bl-feedback">Cargando lista negra...</p>
+          <p className="bl-feedback">Cargando registro de infractores...</p>
         )}
 
         {error && (
