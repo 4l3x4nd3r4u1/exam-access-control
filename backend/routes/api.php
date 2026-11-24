@@ -13,7 +13,6 @@ use App\Http\Controllers\ExamStudentExpulsionController;
 use App\Http\Controllers\DuringExamController;
 use App\Http\Controllers\StudentRosterController;
 use App\Http\Controllers\TeacherCourseController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AcademicUserController;
 use App\Http\Controllers\CourseStudentController;
@@ -24,7 +23,7 @@ use App\Http\Controllers\BlackListController;
 use App\Http\Controllers\DetailedExamReportController;
 use App\Http\Controllers\ExamReportController;
 use App\Http\Controllers\SharedExamController;
-
+use App\Http\Controllers\ControlPointController;
 
 Route::get('/health', function () {
     return response()->json([
@@ -35,7 +34,7 @@ Route::get('/health', function () {
 });
 
 Route::post('/auth/login', [AuthController::class, 'login']);
-// rehacer
+
 Route::post('/student-roster/import', [StudentRosterController::class, 'import']);
 
 Route::get('/student-roster/template', [StudentRosterController::class, 'template']);
@@ -76,7 +75,8 @@ Route::middleware('auth.jwt')->group(function () {
         ->where('courseGroupId', '[0-9]+');
     Route::get('/rooms/available', [ExamController::class, 'availableRooms']);
     Route::get('/exams', [ExamController::class, 'all']);
-    Route::post('/exams/{examId}/extend-time', [ExamController::class, 'extendTime']) ->where('examId', '[0-9]+');
+    Route::post('/exams/{examId}/extend-time', [ExamController::class, 'extendTime'])
+        ->where('examId', '[0-9]+');
     Route::get('/exam-reports/assigned-exams', [ExamController::class, 'assignedForReports']);
     Route::post('/exam-access/check', [ExamAccessController::class, 'check']);
     Route::post('/exam-access/observations', [ExamStudentObservationController::class, 'store']);
@@ -105,9 +105,6 @@ Route::middleware('auth.jwt')->group(function () {
         ->where('invitationId', '[0-9]+');
 });
 
-/**
- * Catalog/Lookup tables endpoints for select inputs
- */
 Route::prefix('catalog')->group(function () {
     Route::get('/roles', [CatalogController::class, 'roles']);
     Route::get('/exam-student-statuses', [CatalogController::class, 'examStudentStatuses']);
@@ -120,3 +117,21 @@ Route::prefix('catalog')->group(function () {
     Route::get('/emails', [CatalogController::class, 'emails']);
     Route::get('/user-roles', [CatalogController::class, 'userRoles']);
 });
+
+Route::middleware('auth.jwt')
+    ->prefix('exams/{examId}/control-points')
+    ->where(['examId' => '[0-9]+'])
+    ->group(function () {
+        Route::get('/', [ControlPointController::class, 'index']);
+
+        Route::post('/join', [ControlPointController::class, 'join']);
+
+        Route::get('/rotation-requests', [ControlPointController::class, 'rotationRequests']);
+
+        Route::post('/rotation-requests', [ControlPointController::class, 'requestRotation']);
+
+        Route::post('/rotation-requests/{requestId}/respond', [ControlPointController::class, 'respondToRotation'])
+            ->where('requestId', '[0-9]+');
+
+        Route::get('/history', [ControlPointController::class, 'history']);
+    });

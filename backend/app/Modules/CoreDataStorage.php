@@ -47,7 +47,8 @@ use App\DTOs\UserRolesData;
 use App\DTOs\ExamRegistrationData;
 use App\DTOs\OperationResult;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-
+use App\Models\ControlPoint;
+use App\Services\ControlPointService;
 
 class CoreDataStorage
 {
@@ -59,6 +60,67 @@ class CoreDataStorage
      * @return UserSession
      * @throws InvalidCredentialsException
      */
+     
+        private function canAccessControlPoint(
+        Exam $exam,
+        int $userId,
+        ?int $roomId,
+        string $controlType
+    ): bool {
+        $service = app(ControlPointService::class);
+
+        if (!$service->isAuthorized($exam->id, $userId)) {
+            return false;
+        }
+
+        $assignment = $service->getActiveAssignment(
+            $exam->id,
+            $userId
+        );
+
+        if (!$assignment || !$assignment->controlPoint) {
+            return false;
+        }
+
+        $point = $assignment->controlPoint;
+
+        if ($roomId !== null && (int) $point->room_id !== $roomId) {
+            return false;
+        }
+
+        return $service->hasActiveAccess(
+            $exam->id,
+            (int) $point->room_id,
+            $userId,
+            $controlType
+        );
+    }
+
+    private function canRegisterControlObservation(
+        Exam $exam,
+        int $userId,
+        int $roomId
+    ): bool {
+        return $this->canAccessControlPoint(
+            $exam,
+            $userId,
+            $roomId,
+            ControlPoint::ENTRY
+        ) || $this->canAccessControlPoint(
+            $exam,
+            $userId,
+            $roomId,
+            ControlPoint::DURING_EXAM
+        );
+    }
+    
+    private function lockExamForControl(int $examId): Exam
+    {
+        return Exam::whereKey($examId)
+            ->lockForUpdate()
+            ->firstOrFail();
+    }
+
     public function authenticate(string $identifier, string $password): UserSession
     {
         $identifier = trim($identifier);
@@ -741,6 +803,7 @@ class CoreDataStorage
             ->orderBy('hora_inicio', 'asc')
             ->get()
             ->map(function (Exam $exam) use ($authenticatedUserId) {
+                $canAccessExam = app(ControlPointService::class) ->isAuthorized($exam->id, $authenticatedUserId);
                 $rooms = $exam->examRooms
                     ->map(fn(ExamRoom $examRoom) => new AllExamRoomSummary(
                         roomId: (string) $examRoom->aula_id,
@@ -748,8 +811,7 @@ class CoreDataStorage
                         assistantId: $examRoom->auxiliar_id !== null
                             ? (int) $examRoom->auxiliar_id
                             : null,
-                        canInteract: $examRoom->auxiliar_id !== null
-                            && (int) $examRoom->auxiliar_id === $authenticatedUserId,
+                        canInteract: $canAccessExam,
                     ))
                     ->values()
                     ->all();
@@ -893,23 +955,21 @@ class CoreDataStorage
             ->where('usuario_id', $student->usuario_id)
             ->first();
 
-        if ($examStudent !== null) {
             $authenticatedUserId = (int) auth()->id();
-            $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
-            $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-                ->where('aula_id', $examStudent->aula_id)
-                ->where('auxiliar_id', $authenticatedUserId)
-                ->exists();
 
-            if (!$isExamTeacher && !$isAssignedAssistant) {
-                return new ExamAccessResult(
-                    isSuccessful: false,
-                    data: [],
-                    message: 'No tiene permiso para validar el ingreso en este examen.',
-                    httpStatus: 403,
-                );
-            }
-        }
+        if (!$this->canAccessControlPoint(
+            $exam,
+            $authenticatedUserId,
+            $roomId,
+            ControlPoint::ENTRY
+        )) {
+        return new ExamAccessResult(
+            isSuccessful: false,
+            data: [],
+            message: 'No tiene autorización para realizar el control de ingreso en este punto.',
+            httpStatus: 403,
+        );
+     }
 
         // An exceptional entry or a previous normal entry takes precedence
         // over the current enrollment status: the student already entered
@@ -1054,6 +1114,19 @@ class CoreDataStorage
         }
 
         $entryResult = DB::transaction(function () use ($examId, $student, $presentStatusId, $roomId) {
+           
+            $lockedExam = $this->lockExamForControl($examId);
+
+            abort_unless(
+                $this->canAccessControlPoint(
+                $lockedExam,
+                (int) auth()->id(),
+                $roomId,
+                ControlPoint::ENTRY
+            ),
+                403
+            );
+            
             $lockedExamStudent = ExamStudent::where('examen_id', $examId)
                 ->where('usuario_id', $student->usuario_id)
                 ->lockForUpdate()
@@ -1266,17 +1339,16 @@ class CoreDataStorage
         }
 
         $authenticatedUserId = (int) auth()->id();
-        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
-        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('aula_id', $examStudent->aula_id)
-            ->where('auxiliar_id', $authenticatedUserId)
-            ->exists();
 
-        if (!$isExamTeacher && !$isAssignedAssistant) {
+        if (!$this->canRegisterControlObservation(
+            $exam,
+            $authenticatedUserId,
+            (int) $examStudent->aula_id
+        )) {
             return new ExamStudentObservationResult(
                 isSuccessful: false,
                 data: [],
-                message: 'No tiene permiso para registrar observaciones en este examen.',
+                message: 'No tiene permiso para registrar observaciones en este punto de control.',
                 httpStatus: 403,
             );
         }
@@ -1291,6 +1363,17 @@ class CoreDataStorage
             $authenticatedUserId,
             $cleanObservation
         ) {
+        
+        $lockedExam = $this->lockExamForControl($examId);
+
+            abort_unless(
+                $this->canRegisterControlObservation(
+                $lockedExam,
+                $authenticatedUserId,
+                (int) $examStudent->aula_id
+            ),
+            403
+        );
 
         DB::table('examen_estudiante')
             ->where('examen_id', $examId)
@@ -1415,18 +1498,18 @@ class CoreDataStorage
             );
         }
 
-        $authenticatedUserId = (int) auth()->id();
-        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
-        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('aula_id', $examStudent->aula_id)
-            ->where('auxiliar_id', $authenticatedUserId)
-            ->exists();
+            $authenticatedUserId = (int) auth()->id();
 
-        if (!$isExamTeacher && !$isAssignedAssistant) {
+        if (!$this->canAccessControlPoint(
+            $exam,
+            $authenticatedUserId,
+            (int) $examStudent->aula_id,
+            ControlPoint::ENTRY
+        )) {
             return new ExceptionalEntryResult(
                 isSuccessful: false,
                 data: [],
-                message: 'No tiene permiso para registrar un ingreso excepcional en este examen.',
+                message: 'No tiene permiso para registrar un ingreso excepcional en este punto de control.',
                 httpStatus: 403,
             );
         }
@@ -1458,60 +1541,100 @@ class CoreDataStorage
         $entryTime = now();
 
         
-        DB::transaction(function () use ($examStudent,$exceptionalStatusId,$cleanObservation,$entryTime,$authenticatedUserId,$student,$exam) {
+        
+$expulsionRegistered = DB::transaction(function () use (
+    $examStudent,
+    $expelledStatusId,
+    $cleanReason,
+    $eventTime,
+    $authenticatedUserId,
+    $student,
+    $exam
+) {
+    $lockedExam = $this->lockExamForControl($exam->id);
 
-            DB::table('examen_estudiante')
-                ->where('examen_id', $examStudent->examen_id)
-                ->where('usuario_id', $examStudent->usuario_id)
-                ->update([
-                    'estado_id' => $exceptionalStatusId,
-                    'observaciones' => $cleanObservation,
-                    'hora_ingreso' => $entryTime,
-                    'updated_at' => $entryTime,
-                ]);
+    abort_unless(
+        $this->canAccessControlPoint(
+            $lockedExam,
+            $authenticatedUserId,
+            (int) $examStudent->aula_id,
+            ControlPoint::DURING_EXAM
+        ),
+        403
+    );
 
-            DB::table('registro_acceso_examen')->insert([
-                'exam_id' => $examStudent->examen_id,
-                'aula_id' => $examStudent->aula_id,
-                'user_id_estudiante' => $examStudent->usuario_id,
-                'user_id_operador' => $authenticatedUserId,
-                'fecha' => $entryTime->toDateString(),
-                'hora' => $entryTime->toTimeString(),
-                'resultado' => 'EXCEPCION',
-                'observacion' => $cleanObservation,
-                'created_at' => $entryTime,
-                'updated_at' => $entryTime,
-            ]);
+    $lockedExamStudent = ExamStudent::where('examen_id', $examStudent->examen_id)
+        ->where('usuario_id', $examStudent->usuario_id)
+        ->lockForUpdate()
+        ->firstOrFail();
 
-            $student->loadMissing('user');
-            $exam->loadMissing('courseGroup.course');
+    if ((int) $lockedExamStudent->estado_id === (int) $expelledStatusId) {
+        return false;
+    }
 
-            $docente = User::find($authenticatedUserId);
-            $aula = Room::find($examStudent->aula_id);
+    DB::table('examen_estudiante')
+        ->where('examen_id', $lockedExamStudent->examen_id)
+        ->where('usuario_id', $lockedExamStudent->usuario_id)
+        ->update([
+            'estado_id' => $expelledStatusId,
+            'motivo_expulsion' => $cleanReason,
+            'updated_at' => $eventTime,
+        ]);
 
-            DB::table('registro_auditoria')->insert([
-                'usuario_id' => $authenticatedUserId,
-                'accion' => 'AUTORIZAR_INGRESO_EXCEPCIONAL',
-                'entidad_tipo' => 'examen_estudiante',
-                'entidad_id' => $student->usuario_id,
-                'detalles' => json_encode([
-                    'estudiante_id' => $student->usuario_id,
-                    'nombre_estudiante' => $student->user?->nombre,
-                    'ci' => $student->user?->ci,
-                    'codigo_sis' => $student->codigo_sis,
-                    'examen_id' => $exam->id,
-                    'materia' => $exam->courseGroup?->course?->nombre,
-                    'aula' => $aula?->nombre,
-                    'responsable' => $docente?->nombre,
-                    'descripcion' => $cleanObservation,
-                    'fecha_hora' => $entryTime->toIso8601String(),
-                ], JSON_UNESCAPED_UNICODE),
-                'fecha' => $entryTime,
-                'created_at' => $entryTime,
-                'updated_at' => $entryTime,
-            ]);
+    DB::table('registro_acceso_examen')->insert([
+        'exam_id' => $lockedExamStudent->examen_id,
+        'aula_id' => $lockedExamStudent->aula_id,
+        'user_id_estudiante' => $lockedExamStudent->usuario_id,
+        'user_id_operador' => $authenticatedUserId,
+        'fecha' => $eventTime->toDateString(),
+        'hora' => $eventTime->toTimeString(),
+        'resultado' => 'EXPULSION',
+        'observacion' => $cleanReason,
+        'created_at' => $eventTime,
+        'updated_at' => $eventTime,
+    ]);
 
-        });
+    $student->loadMissing('user');
+    $exam->loadMissing('courseGroup.course');
+
+    $docente = User::find($authenticatedUserId);
+    $aula = Room::find($lockedExamStudent->aula_id);
+
+    DB::table('registro_auditoria')->insert([
+        'usuario_id' => $authenticatedUserId,
+        'accion' => 'EXPULSAR_ESTUDIANTE',
+        'entidad_tipo' => 'examen_estudiante',
+        'entidad_id' => $student->usuario_id,
+        'detalles' => json_encode([
+            'estudiante_id' => $student->usuario_id,
+            'nombre_estudiante' => $student->user?->nombre,
+            'ci' => $student->user?->ci,
+            'codigo_sis' => $student->codigo_sis,
+            'examen_id' => $exam->id,
+            'materia' => $exam->courseGroup?->course?->nombre,
+            'aula' => $aula?->nombre,
+            'responsable' => $docente?->nombre,
+            'descripcion' => $cleanReason,
+            'fecha_hora' => $eventTime->toIso8601String(),
+        ], JSON_UNESCAPED_UNICODE),
+        'fecha' => $eventTime,
+        'created_at' => $eventTime,
+        'updated_at' => $eventTime,
+    ]);
+
+    return true;
+});
+
+if (!$expulsionRegistered) {
+    return new ExamStudentExpulsionResult(
+        isSuccessful: false,
+        data: [
+            'reason' => $examStudent->fresh()->motivo_expulsion,
+        ],
+        message: 'El estudiante ya fue expulsado de este examen.',
+        httpStatus: 409,
+    );
+}
 
         return new ExceptionalEntryResult(
             isSuccessful: true,
@@ -1575,18 +1698,18 @@ class CoreDataStorage
             );
         }
 
-        $authenticatedUserId = (int) auth()->id();
-        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
-        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('aula_id', $examStudent->aula_id)
-            ->where('auxiliar_id', $authenticatedUserId)
-            ->exists();
+            $authenticatedUserId = (int) auth()->id();
 
-        if (!$isExamTeacher && !$isAssignedAssistant) {
+        if (!$this->canAccessControlPoint(
+            $exam,
+            $authenticatedUserId,
+            (int) $examStudent->aula_id,
+            ControlPoint::DURING_EXAM
+        )) {
             return new ExamStudentExpulsionResult(
                 isSuccessful: false,
                 data: [],
-                message: 'No tiene permiso para registrar expulsiones en este examen.',
+                message: 'No tiene permiso para registrar expulsiones en este punto de control.',
                 httpStatus: 403,
             );
         }
@@ -1617,7 +1740,19 @@ class CoreDataStorage
         $eventTime = now();
 
         DB::transaction(function () use ($examStudent, $expelledStatusId, $cleanReason, $eventTime, $authenticatedUserId, $student,$exam) 
-        {
+        {   
+            $lockedExam = $this->lockExamForControl($exam->id);
+
+            abort_unless(
+            $this->canAccessControlPoint(
+                $lockedExam,
+                $authenticatedUserId,
+                (int) $examStudent->aula_id,
+                ControlPoint::DURING_EXAM
+            ),
+            403
+        );
+
             DB::table('examen_estudiante')
                 ->where('examen_id', $examStudent->examen_id)
                 ->where('usuario_id', $examStudent->usuario_id)
@@ -1722,21 +1857,22 @@ class CoreDataStorage
             ->where('usuario_id', $student->usuario_id)
             ->first();
 
-        $authenticatedUserId = (int) auth()->id();
-        $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
-        $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('auxiliar_id', $authenticatedUserId)
-            ->when(
-                $examStudent !== null,
-                fn($query) => $query->where('aula_id', $examStudent->aula_id)
-            )
-            ->exists();
+                $authenticatedUserId = (int) auth()->id();
 
-        if (!$isExamTeacher && !$isAssignedAssistant) {
+        $roomId = $examStudent?->aula_id !== null
+            ? (int) $examStudent->aula_id
+            : null;
+
+        if (!$this->canAccessControlPoint(
+            $exam,
+            $authenticatedUserId,
+            $roomId,
+            ControlPoint::DURING_EXAM
+        )) {
             return new DuringExamResult(
                 isSuccessful: false,
                 data: [],
-                message: 'No tiene permiso para consultar este examen.',
+                message: 'No tiene permiso para realizar la supervisión en este punto de control.',
                 httpStatus: 403,
             );
         }
