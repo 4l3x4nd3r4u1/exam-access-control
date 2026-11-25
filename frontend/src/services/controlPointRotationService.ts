@@ -34,6 +34,10 @@ export const controlPointRotationService = {
     );
   },
 
+  assignResponsibles(examId: string | number, assignments: { room_id: number; user_ids: number[] }[]): Promise<{ message: string; assigned_count: number }> {
+    return apiRequest(`${getEndpoint(examId)}/assignments`, jsonPost({ assignments }));
+  },
+
   join(
     examId: string | number,
     controlPointId: number,
@@ -44,6 +48,10 @@ export const controlPointRotationService = {
         control_point_id: controlPointId,
       }),
     );
+  },
+
+  transfer(examId: string | number, controlPointId: number): Promise<JoinControlPointResponse> {
+    return apiRequest<JoinControlPointResponse>(`${getEndpoint(examId)}/join`, jsonPost({ control_point_id: controlPointId, direct_transfer: true }));
   },
 
   getRotationRequests(

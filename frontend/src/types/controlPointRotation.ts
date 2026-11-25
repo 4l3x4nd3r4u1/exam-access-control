@@ -24,6 +24,7 @@ export interface ControlPoint {
   is_active: boolean;
   active_responsibles_count: number;
   is_current: boolean;
+  can_transfer_to_empty_room?: boolean;
   responsibles: ControlPointResponsible[];
 }
 
@@ -38,6 +39,7 @@ export interface ControlPointAssignment {
 export interface ControlPointsResponse {
   current_assignment: ControlPointAssignment | null;
   control_points: ControlPoint[];
+  unavailable_auxiliary_ids?: number[];
 }
 
 export interface JoinControlPointResponse {

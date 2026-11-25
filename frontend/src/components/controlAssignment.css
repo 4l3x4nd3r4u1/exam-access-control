@@ -1,0 +1,24 @@
+.ec-assignment-item:nth-child(even) .ec-assignment-row { background: #ebebeb; }
+.ec-assignment-row { display: flex; align-items: center; min-width: 0; }
+.ec-assignment-row > .cg-row { flex: 1; min-width: 0; width: auto; background: transparent; }
+.ec-assignment-row > .cg-row:not(:disabled):hover { background: #dcdcdc; }
+.ec-assignment-menu-toggle { display: grid; place-items: center; flex: 0 0 30px; height: 30px; padding: 3px; border: 0; background: transparent; color: #333; cursor: pointer; }
+.ec-assignment-menu-toggle svg { width: 19px; height: 19px; fill: currentColor; }
+.ec-assignment-menu-toggle:hover, .ec-assignment-menu-toggle[aria-expanded="true"] { background: #dcdcdc; border-radius: 5px; }
+.ec-assignment-menu { display: flex; justify-content: flex-end; padding: 4px 6px 6px; }
+.ec-assignment-menu button { font: inherit; font-size: 12px; padding: 7px 11px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; color: #111; cursor: pointer; }
+.ec-assignment-drawer h2 { margin: 0 0 4px; font-size: 18px; }
+.ec-assignment-subject { margin: 0 0 8px; font-size: 12px; color: #555; }
+.ec-assignment-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ec-assignment-room { margin: 8px 0; padding: 10px; border: 1px solid #dedede; border-radius: 8px; }
+.ec-assignment-room-title { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px; font-size: 13px; }
+.ec-assignment-room-title span, .ec-assignment-person small, .ec-assignment-empty { font-size: 11px; color: #555; }
+.ec-assignment-person { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 7px; font-size: 12px; }
+.ec-assignment-person small { text-align: right; flex-shrink: 0; }
+.ec-assignment-empty { margin: 8px 0 0; }
+.ec-assignment-staff { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 4px; border-bottom: 1px solid #e4e4e4; font-size: 12px; }
+.ec-assignment-staff span { min-width: 0; overflow-wrap: anywhere; }
+.ec-assignment-staff select { max-width: 48%; min-width: 95px; padding: 6px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; color: #111; font: inherit; }
+.ec-assignment-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 12px; flex-shrink: 0; flex-wrap: wrap; }
+.ec-assignment-actions .cg-cancel { margin: 0; min-width: 0; }
+.ec-assignment-actions .ec-assignment-back { border: 1px solid #d0d0d0; background: #fff; color: #111; }

@@ -18,6 +18,7 @@ export interface ControlExam {
   end_time: string;
   general_rules: string[];
   rooms: ControlExamRoom[];
+  can_assign_responsibles?: boolean;
 }
 
 export interface ControlExamsResponse {

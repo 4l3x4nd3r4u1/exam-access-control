@@ -56,6 +56,11 @@ class Exam extends Model
         )->withPivot('cupo_asignado', 'auxiliar_id')->withTimestamps();
     }
 
+    public function controlPoints(): HasMany
+    {
+        return $this->hasMany(ControlPoint::class, 'exam_id');
+    }
+
     public function examRooms(): HasMany
     {
         return $this->hasMany(ExamRoom::class, 'examen_id');

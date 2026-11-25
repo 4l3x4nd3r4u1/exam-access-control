@@ -826,6 +826,7 @@ class CoreDataStorage
                     startTime: (string) $exam->hora_inicio,
                     endTime: (string) $exam->hora_fin,
                     rooms: $rooms,
+                    canAssignResponsibles: $authenticatedUserId === (int) $exam->courseGroup?->docente_id && (bool) auth()->user()?->hasFunction('GESTIONAR_PUNTOS_CONTROL_EXAMEN'),
                     generalRules: $exam->rules
                         ->pluck('descripcion')
                         ->values()
@@ -860,7 +861,8 @@ class CoreDataStorage
                     })
                     ->orWhereHas('examRooms', function ($roomQuery) use ($authenticatedUserId) {
                         $roomQuery->where('auxiliar_id', $authenticatedUserId);
-                    });
+                    })
+                    ->orWhereHas('controlPoints.assignments', fn ($assignmentQuery) => $assignmentQuery->where('user_id', $authenticatedUserId));
             })
                 ->orderBy('fecha', 'asc')
                 ->orderBy('hora_inicio', 'asc')
@@ -880,7 +882,7 @@ class CoreDataStorage
                                 (
                                     $examRoom->auxiliar_id !== null &&
                                     (int) $examRoom->auxiliar_id === $authenticatedUserId
-                                ),
+                                ) || $exam->controlPoints()->where('room_id', $examRoom->aula_id)->whereHas('assignments', fn ($query) => $query->where('user_id', $authenticatedUserId))->exists(),
                             ))
                                 ->values()
                                 ->all();
@@ -3232,4 +3234,5 @@ if (!$expulsionRegistered) {
         return true;
     }
 }
+
 

@@ -22,19 +22,32 @@ class ControlPointController extends Controller
         );
     }
 
+    public function assignResponsibles(Request $request, int $examId): JsonResponse
+    {
+        $validated = $request->validate([
+            'assignments' => ['required', 'array', 'min:1'],
+            'assignments.*.room_id' => ['required', 'integer', 'min:1', 'distinct'],
+            'assignments.*.user_ids' => ['required', 'array', 'min:1'],
+            'assignments.*.user_ids.*' => ['required', 'integer', 'min:1'],
+        ]);
+        return response()->json($this->service->assignResponsibles($examId, (int) auth()->id(), $validated['assignments']));
+    }
+
     public function join(
         Request $request,
         int $examId
     ): JsonResponse {
         $validated = $request->validate([
             'control_point_id' => ['required', 'integer', 'min:1'],
+            'direct_transfer' => ['sometimes', 'boolean'],
         ]);
 
         return response()->json(
             $this->service->join(
                 $examId,
                 (int) $validated['control_point_id'],
-                (int) auth()->id()
+                (int) auth()->id(),
+                (bool) ($validated['direct_transfer'] ?? false)
             )
         );
     }

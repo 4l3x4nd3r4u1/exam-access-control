@@ -34,7 +34,113 @@ class ControlPointService
             ->where('auxiliar_id', $userId)
             ->exists();
 
-        return $isExamTeacher || $isAssignedAssistant;
+        return $isExamTeacher || $isAssignedAssistant || (
+            $user->hasRole('AUXILIAR') &&
+            $user->hasFunction('GESTIONAR_PUNTOS_CONTROL_EXAMEN') &&
+            $this->activeAssignmentQuery($examId, $userId)->exists()
+        );
+    }
+
+    private function overlappingAuxiliaryIds(Exam $exam): array
+    {
+        $overlapping = Exam::query()->where('id', '!=', $exam->id)
+            ->where('activo', true)
+            ->whereDate('fecha', $exam->fecha->format('Y-m-d'))
+            ->where('hora_inicio', '<', $exam->hora_fin)
+            ->where('hora_fin', '>', $exam->hora_inicio);
+
+        $ids = $overlapping->pluck('id');
+        $assigned = ControlPointAssignment::whereNull('ended_at')
+            ->whereHas('controlPoint', fn ($query) => $query->whereIn('exam_id', $ids)->where('is_active', true))
+            ->pluck('user_id');
+        $legacy = ExamRoom::whereIn('examen_id', $ids)->whereNotNull('auxiliar_id')->pluck('auxiliar_id');
+
+        return $assigned->merge($legacy)->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    private function isEligibleResponsible(?User $user, int $teacherId): bool
+    {
+        return $user !== null && $user->activo
+            && $user->hasFunction('GESTIONAR_PUNTOS_CONTROL_EXAMEN')
+            && ((int) $user->id === $teacherId || $user->hasRole('AUXILIAR'));
+    }
+
+    private function roomResponsibleCount(int $examId, int $roomId): int
+    {
+        $teacherId = (int) Exam::with('courseGroup')->findOrFail($examId)->courseGroup?->docente_id;
+        return ControlPointAssignment::whereNull('ended_at')
+            ->whereHas('controlPoint', fn ($query) => $query->where('exam_id', $examId)
+                ->where('room_id', $roomId)->where('is_active', true))
+            ->with('user')->get()->filter(fn ($row) => $this->isEligibleResponsible($row->user, $teacherId))
+            ->pluck('user_id')->unique()->count();
+    }
+
+    private function validateDirectTransfer(int $examId, int $userId, ControlPointAssignment $assignment, ControlPoint $origin, ControlPoint $destination): void
+    {
+        $user = User::findOrFail($userId);
+        $teacherId = (int) Exam::with('courseGroup')->findOrFail($examId)->courseGroup?->docente_id;
+        abort_unless($origin->is_active && $this->isEligibleResponsible($user, $teacherId), 403, 'Solo los responsables habilitados pueden trasladarse.');
+        abort_if((int) $origin->room_id === (int) $destination->room_id, 422, 'Selecciona otra aula.');
+        abort_if($origin->control_type !== $destination->control_type, 422, 'El traslado debe conservar el tipo de punto de control.');
+        abort_if($this->roomResponsibleCount($examId, (int) $origin->room_id) < 2, 409, 'No puedes abandonar el aula porque eres el único responsable asignado.');
+        $pending = ControlPointRotationRequest::where('status', ControlPointRotationRequest::PENDING)
+            ->whereHas('requesterAssignment', fn ($query) => $query->whereNull('ended_at'))
+            ->whereHas('receiverAssignment', fn ($query) => $query->whereNull('ended_at'))
+            ->where(fn ($query) => $query->where('requester_assignment_id', $assignment->id)->orWhere('receiver_assignment_id', $assignment->id))->exists();
+        abort_if($pending, 409, 'Debes resolver la solicitud de intercambio pendiente antes de trasladarte.');
+        abort_if($this->roomResponsibleCount($examId, (int) $destination->room_id) !== 0, 409, 'El aula ya tiene responsables. Solicita un intercambio.');
+    }
+
+    public function assignResponsibles(int $examId, int $teacherId, array $assignments): array
+    {
+        return DB::transaction(function () use ($examId, $teacherId, $assignments) {
+            $exam = Exam::whereKey($examId)->lockForUpdate()->firstOrFail();
+            $teacher = User::find($teacherId);
+            abort_unless($teacher && $teacher->activo && $teacher->hasFunction('GESTIONAR_PUNTOS_CONTROL_EXAMEN') && (int) $exam->courseGroup?->docente_id === $teacherId, 403, 'Solo el docente titular puede asignar responsables.');
+            $this->validateExamAvailability($exam);
+            $this->initializeControlPoints($exam);
+            $userIds = collect($assignments)->flatMap(fn ($allocation) => $allocation['user_ids'])->map(fn ($id) => (int) $id)->unique()->sort()->values();
+            User::whereIn('id', $userIds)->orderBy('id')->lockForUpdate()->get();
+            $unavailable = $this->overlappingAuxiliaryIds($exam);
+            $seen = [];
+            $count = 0;
+            foreach ($assignments as $allocation) {
+                $roomId = (int) $allocation['room_id'];
+                abort_unless(ExamRoom::where('examen_id', $examId)->where('aula_id', $roomId)->exists(), 422, 'El aula no pertenece al examen.');
+                $point = ControlPoint::where('exam_id', $examId)->where('room_id', $roomId)->where('control_type', ControlPoint::ENTRY)->where('is_active', true)->firstOrFail();
+                foreach ($allocation['user_ids'] as $id) {
+                    $id = (int) $id;
+                    abort_if(isset($seen[$id]), 422, 'Un responsable solo puede asignarse a un aula por examen.');
+                    $seen[$id] = true;
+                    $user = User::find($id);
+                    abort_unless($this->isEligibleResponsible($user, $teacherId), 422, 'El usuario no es un responsable habilitado.');
+                    $existing = $this->activeAssignmentQuery($examId, $id)->with('controlPoint')->lockForUpdate()->first();
+                    if ($existing) {
+                        abort_if((int) $existing->controlPoint->room_id !== $roomId, 409, 'El responsable ya tiene otra aula. Utiliza la rotación.');
+                        continue;
+                    }
+                    abort_if(in_array($id, $unavailable, true), 409, "El responsable {$user->nombre} está asignado a otro examen con horario superpuesto.");
+                    ControlPointAssignment::create([
+                        'control_point_id' => $point->id,
+                        'user_id' => $id,
+                        'started_at' => now(),
+                        'ended_at' => null,
+                    ]);
+                    $count++;
+                }
+            }
+            $coveredRooms = ControlPointAssignment::whereNull('ended_at')
+                ->whereHas('controlPoint', fn ($query) => $query->where('exam_id', $examId)->where('is_active', true))
+                ->with(['controlPoint', 'user'])
+                ->get()
+                ->filter(fn ($assignment) => $this->isEligibleResponsible($assignment->user, $teacherId))
+                ->map(fn ($assignment) => (int) $assignment->controlPoint->room_id)
+                ->unique();
+            $missingRooms = ExamRoom::where('examen_id', $examId)->pluck('aula_id')
+                ->map(fn ($id) => (int) $id)->diff($coveredRooms);
+            abort_if($missingRooms->isNotEmpty(), 422, 'Debes asignar al menos un responsable a cada aula antes de guardar. No se guardó ninguna asignación.');
+            return ['message' => 'Responsables asignados correctamente.', 'assigned_count' => $count];
+        });
     }
 
     private function getAuthorizedExam(
@@ -133,6 +239,11 @@ class ControlPointService
                 $userId
             );
 
+            $actor = User::findOrFail($userId);
+            $origin = $currentAssignment?->controlPoint;
+            $canLeave = $origin && $origin->is_active && $this->isEligibleResponsible($actor, (int) $exam->courseGroup?->docente_id)
+                && $this->roomResponsibleCount($examId, (int) $origin->room_id) >= 2;
+
             $points = ControlPoint::where('exam_id', $examId)
                 ->where('is_active', true)
                 ->with([
@@ -142,7 +253,7 @@ class ControlPointService
                 ->orderBy('room_id')
                 ->orderBy('control_type')
                 ->get()
-                ->map(function (ControlPoint $point) use ($userId) {
+                ->map(function (ControlPoint $point) use ($userId, $examId, $origin, $canLeave) {
                     return [
                         'id' => $point->id,
                         'exam_id' => $point->exam_id,
@@ -152,6 +263,10 @@ class ControlPointService
                         'is_active' => $point->is_active,
                         'active_responsibles_count' =>
                             $point->activeAssignments->count(),
+                        'can_transfer_to_empty_room' => (bool) ($canLeave
+                            && (int) $point->room_id !== (int) $origin->room_id
+                            && $point->control_type === $origin->control_type
+                            && $this->roomResponsibleCount($examId, (int) $point->room_id) === 0),
                         'is_current' => $point->activeAssignments
                             ->contains(
                                 fn ($assignment) =>
@@ -173,16 +288,18 @@ class ControlPointService
             return [
                 'current_assignment' => $currentAssignment,
                 'control_points' => $points,
+                'unavailable_auxiliary_ids' => (int) $exam->courseGroup?->docente_id === $userId ? $this->overlappingAuxiliaryIds($exam) : [],
             ];
         });
     }
 
     
-    public function join(int $examId,int $pointId,int $userId): array {
+    public function join(int $examId,int $pointId,int $userId, bool $directTransfer = false): array {
         return DB::transaction(function () use (
             $examId,
             $pointId,
-            $userId
+            $userId,
+            $directTransfer
         ) {
             $this->getAuthorizedExam($examId, $userId);
 
@@ -203,6 +320,14 @@ class ControlPointService
                 $userId
             )->lockForUpdate()->first();
 
+            abort_if($directTransfer && !$currentAssignment, 409, 'No tienes una asignación activa para trasladarte.');
+            if (!$currentAssignment) {
+                $user = User::whereKey($userId)->lockForUpdate()->firstOrFail();
+                if ($this->isEligibleResponsible($user, (int) $exam->courseGroup?->docente_id)) {
+                    abort_if(in_array($userId, $this->overlappingAuxiliaryIds($exam), true), 409, 'Ya estás asignado a otro examen con horario superpuesto.');
+                }
+            }
+
             if ($currentAssignment) {
                 if ((int) $currentAssignment->control_point_id === $pointId) {
                     return [
@@ -215,17 +340,22 @@ class ControlPointService
                     $currentAssignment->control_point_id
                 )->firstOrFail();
 
-                abort_if(
-                    (int) $currentPoint->room_id !== (int) $point->room_id,
-                    409,
-                    'No puedes cambiar de aula mientras tienes una asignación activa.'
-                );
+                if ($directTransfer) {
+                    $this->validateDirectTransfer($examId, $userId, $currentAssignment, $currentPoint, $point);
+                } else {
+                    abort_if(
+                        (int) $currentPoint->room_id !== (int) $point->room_id,
+                        409,
+                        'No puedes cambiar de aula mientras tienes una asignación activa.'
+                    );
 
-                abort_if(
-                    $currentPoint->control_type === $point->control_type,
-                    409,
-                    'El cambio solo está permitido entre Ingreso y Durante el examen.'
-                );
+                    abort_if(
+                        $currentPoint->control_type === $point->control_type,
+                        409,
+                        'El cambio solo está permitido entre Ingreso y Durante el examen.'
+                    );
+
+                }
 
                 $rotationTime = now();
 
@@ -242,7 +372,7 @@ class ControlPointService
             ]);
 
             return [
-                'message' => 'Punto de control asignado correctamente.',
+                'message' => $directTransfer ? 'Punto de control actualizado correctamente.' : 'Punto de control asignado correctamente.',
                 'assignment' => $assignment->load('controlPoint.room'),
             ];
         });
