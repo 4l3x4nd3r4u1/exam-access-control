@@ -58,6 +58,7 @@ import type { ControlPointExam } from './types/controlPoint';
 import type { ControlPoint } from './types/controlPointRotation';
 import { SharedExamsView } from './views/SharedExamsView';
 import sharedExamsIcon from './assets/documento_examen.svg';
+import { DetailedExamReportView } from './views/DetailedExamReportView';
 
 type ApplicationScreen =
   | 'DASHBOARD'
@@ -71,7 +72,8 @@ type ApplicationScreen =
   | 'EXAM_REPORTS'
   | 'CONTROL_POINTS'
   | 'CONTROL_POINT_INGRESS'
-  | 'SHARED_EXAMS'; 
+  | 'SHARED_EXAMS'
+  | 'DETAILED_EXAM_REPORTS'; 
 
 type DashboardSection =
   | 'ACADEMIC'
@@ -345,6 +347,15 @@ onPointChange={(point) => {
     );
   }
 
+  if (screen === 'DETAILED_EXAM_REPORTS') {
+    return (
+      <DetailedExamReportView
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   const menuItems = [
     {
       functionCode: FUNCTION_CODES.VIEW_ASSIGNED_COURSES,
@@ -464,6 +475,20 @@ onPointChange={(point) => {
         session,
         FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
       ),
+    },
+    {
+      functionCode: FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS,
+      label: 'Generar reporte de una materia',
+      section: 'CONTROL' as DashboardSection,
+      order: 5,
+      icon: scheduledExamsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setScreen('DETAILED_EXAM_REPORTS'),
+      visible:
+        hasFunction(session, FUNCTION_CODES.MANAGE_EXAM_CHECKPOINTS) ||
+        hasFunction(session, FUNCTION_CODES.LIST_COURSE_EXAMS) ||
+        hasRole(session, 'ADMIN') ||
+        hasRole(session, 'DOCENTE'),
     },
     {
       functionCode: FUNCTION_CODES.INVITE_EXAM_TEACHER,
