@@ -116,6 +116,8 @@ Route::middleware('auth.jwt')
     ->group(function () {
         Route::get('/', [ControlPointController::class, 'index']);
 
+        Route::post('/assignments', [ControlPointController::class, 'assignResponsibles']);
+
         Route::post('/join', [ControlPointController::class, 'join']);
 
         Route::get('/rotation-requests', [ControlPointController::class, 'rotationRequests']);

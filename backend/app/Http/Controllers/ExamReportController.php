@@ -197,7 +197,8 @@ class ExamReportController extends Controller
                     })
                     ->orWhereHas('examRooms', function ($roomQuery) use ($userId) {
                         $roomQuery->where('auxiliar_id', $userId);
-                    });
+                    })
+                    ->orWhereHas('controlPoints.assignments', fn ($assignmentQuery) => $assignmentQuery->where('user_id', $userId));
             })
             ->exists();
     }

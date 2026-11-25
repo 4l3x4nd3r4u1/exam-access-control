@@ -19,6 +19,7 @@ class AllExamSummary
         public readonly string $endTime,
         public readonly array $rooms,
         public readonly array $generalRules = [],
+        public readonly bool $canAssignResponsibles = false,
     ) {}
 
     public function toArray(): array
@@ -37,6 +38,7 @@ class AllExamSummary
                 $this->rooms
             ),
             'general_rules' => $this->generalRules,
+            'can_assign_responsibles' => $this->canAssignResponsibles,
         ];
     }
 }

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import './controlAssignment.css';
 import { BottomDrawer } from './BottomDrawer';
+import { AssignControlResponsibles } from './AssignControlResponsibles';
 import { examAccessService } from '../services/examAccessService';
 import { abbreviateExamType, formatExamType } from '../utils/examFormat';
 import { EXAM_STATUS_LABEL, getExamStatus } from '../utils/examStatus';
@@ -61,6 +63,8 @@ function ExamSearchContent({
   const [type, setType] = useState(ALL);
   const [status, setStatus] = useState<ControlExamStatus | typeof ALL>(ALL);
   const [year, setYear] = useState(ALL);
+  const [menuExamId, setMenuExamId] = useState<string | null>(null);
+  const [assignmentExam, setAssignmentExam] = useState<ControlExam | null>(null);
   const [selectedExam, setSelectedExam] = useState<ControlExam | null>(null);
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
@@ -119,6 +123,7 @@ function ExamSearchContent({
   async function handleExamSelection(exam: ControlExam) {
     if (isSelectingPoint) return;
     setIsSelectingPoint(true);
+    setMenuExamId(null);
     setPointError(null);
     setSelectedRoomId(null);
 
@@ -156,7 +161,23 @@ function ExamSearchContent({
         return;
       }
 
-      setControlPoints(activePoints);
+      const availableRoomIds = new Set(activePoints.map((point) => point.room_id));
+      const availableExamRooms = exam.rooms.filter((room) =>
+        availableRoomIds.has(Number(room.room_id)) && room.can_interact,
+      );
+
+      if (availableExamRooms.length === 1) {
+        await openRoom(exam, availableExamRooms[0], activePoints);
+        return;
+      }
+
+      if (availableExamRooms.length === 0) {
+        throw new Error('No existen aulas disponibles.');
+      }
+
+      setControlPoints(activePoints.filter((point) =>
+        availableExamRooms.some((room) => Number(room.room_id) === point.room_id),
+      ));
       setSelectedExam(exam);
     } catch (requestError: unknown) {
       setPointError(requestError instanceof Error ? requestError.message : 'No se pudo iniciar el control del examen.');
@@ -250,6 +271,10 @@ function ExamSearchContent({
       ),
     [controlPoints],
   );
+
+  if (assignmentExam) {
+    return <AssignControlResponsibles exam={assignmentExam} currentUserId={currentUserId} onBack={() => setAssignmentExam(null)} />;
+  }
 
   if (selectedExam) {
     return (
@@ -410,21 +435,35 @@ function ExamSearchContent({
         {!isLoading &&
           !error &&
           visibleRows.map(({ exam, status: examStatus }) => {
-            const canOpen = examStatus === 'EN_CURSO';
+            const canOpen = examStatus === 'EN_CURSO' && exam.rooms.some((room) => room.can_interact);
+
+            const canAssign = Boolean(exam.can_assign_responsibles) && examStatus !== 'FINALIZADO';
+            const canPrepare = canAssign && examStatus === 'PROXIMAMENTE';
+            const canSelect = canOpen || canPrepare;
+            const menuOpen = menuExamId === exam.exam_id;
 
             return (
+              <div key={exam.exam_id} role="listitem" className="ec-assignment-item">
+                <div className="ec-assignment-row">
               <button
                 type="button"
-                role="listitem"
-                className={`cg-row${canOpen ? '' : ' is-disabled'}`}
-                key={exam.exam_id}
-                disabled={!canOpen || isSelectingPoint}
+                className={`cg-row${canSelect ? '' : ' is-disabled'}`}
+                disabled={!canSelect || isSelectingPoint}
                 title={
-                  canOpen
-                    ? undefined
-                    : 'Solo se pueden controlar exámenes en curso.'
+                  canPrepare
+                    ? 'Asignar responsables antes del examen'
+                    : canOpen
+                      ? undefined
+                      : 'Solo se pueden controlar exámenes en curso.'
                 }
-                onClick={() => void handleExamSelection(exam)}
+                onClick={() => {
+                  if (canPrepare) {
+                    setMenuExamId(null);
+                    setAssignmentExam(exam);
+                    return;
+                  }
+                  if (canOpen) void handleExamSelection(exam);
+                }}
               >
                 <span className="cg-row-name">{exam.subject_name}</span>
                 <span className="cg-chip">G{exam.group}</span>
@@ -433,6 +472,34 @@ function ExamSearchContent({
                 </span>
                 <StatusIcon status={examStatus} />
               </button>
+                  {canAssign && (
+                    <button
+                      type="button"
+                      className="ec-assignment-menu-toggle"
+                      aria-label={`Opciones de ${exam.subject_name}, grupo ${exam.group}`}
+                      aria-expanded={menuOpen}
+                      disabled={isSelectingPoint}
+                      onClick={() => setMenuExamId(menuOpen ? null : exam.exam_id)}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="5" r="1.7" />
+                        <circle cx="12" cy="12" r="1.7" />
+                        <circle cx="12" cy="19" r="1.7" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {canAssign && menuOpen && (
+                  <div className="ec-assignment-menu">
+                    <button type="button" disabled={isSelectingPoint} onClick={() => {
+                      setMenuExamId(null);
+                      setAssignmentExam(exam);
+                    }}>
+                      Asignar responsables
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
       </div>

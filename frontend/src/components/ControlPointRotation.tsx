@@ -32,6 +32,7 @@ export function ControlPointRotation({
   const [isBusy, setIsBusy] = useState(false);
   const [targetPointId, setTargetPointId] = useState<number | null>(null);
   const [receiverId, setReceiverId] = useState<number | null>(null);
+  const [directTransfer, setDirectTransfer] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -61,12 +62,8 @@ export function ControlPointRotation({
     (item) => item.user_id === receiverId,
   );
 
-  const availablePoints = points.filter(
-  (item) =>
-    item.room_id !== point.room_id &&
-    item.is_active &&
-    item.active_responsibles_count > 0,
-);
+  const canTransfer = (item: ControlPoint) => item.can_transfer_to_empty_room === true;
+  const availablePoints = points.filter((item) => item.room_id !== point.room_id && item.is_active && (item.active_responsibles_count > 0 || canTransfer(item)));
 
   useEffect(() => {
     let active = true;
@@ -154,6 +151,7 @@ export function ControlPointRotation({
     setFeedback(null);
     setTargetPointId(null);
     setReceiverId(null);
+    setDirectTransfer(false);
     setIsBusy(true);
 
     try {
@@ -176,7 +174,7 @@ export function ControlPointRotation({
   async function sendRequest() {
     if (
       targetPointId === null ||
-      receiverId === null ||
+      (!directTransfer && receiverId === null) ||
       isBusy
     ) {
       return;
@@ -186,6 +184,21 @@ export function ControlPointRotation({
     setFeedback(null);
 
     try {
+      if (directTransfer) {
+        if (!selectedPoint || !canTransfer(selectedPoint)) {
+          setIsConfirming(false);
+          setFeedback('El traslado ya no está disponible.');
+          return;
+        }
+        const response = await controlPointRotationService.transfer(examId, targetPointId);
+        const destination = points.find((item) => item.id === response.assignment.control_point_id);
+        setIsConfirming(false);
+        setIsOpen(false);
+        setFeedback(response.message);
+        if (destination) latestPointChange.current(destination);
+        return;
+      }
+      if (receiverId === null) return;
       const response =
         await controlPointRotationService.requestRotation(
           examId,
@@ -280,6 +293,7 @@ export function ControlPointRotation({
     setIsOpen(false);
     setTargetPointId(null);
     setReceiverId(null);
+    setDirectTransfer(false);
   }
 
   return (
@@ -317,7 +331,7 @@ export function ControlPointRotation({
         cancelLabel="Cancelar"
         isLoading={isBusy}
         onConfirm={() => {
-          if (selectedPoint && selectedResponsible) {
+          if (selectedPoint && (selectedResponsible || (directTransfer && canTransfer(selectedPoint)))) {
             setIsConfirming(true);
           }
         }}
@@ -335,6 +349,12 @@ export function ControlPointRotation({
                     <strong>{item.room_name}</strong>
                   </p>
 
+                  {canTransfer(item) && (
+                    <label className="cg-row">
+                      <input type="radio" name="rotation-responsible" checked={directTransfer && targetPointId === item.id} onChange={() => { setTargetPointId(item.id); setReceiverId(null); setDirectTransfer(true); }} />
+                      <span className="cg-row-name">Trasladarme a esta aula sin responsables</span>
+                    </label>
+                  )}
                   {item.responsibles.map((responsible) => (
                     <label
                       className="cg-row"
@@ -350,6 +370,7 @@ export function ControlPointRotation({
                         onChange={() => {
                           setTargetPointId(item.id);
                           setReceiverId(responsible.user_id);
+                          setDirectTransfer(false);
                         }}
                       />
 
@@ -373,8 +394,8 @@ export function ControlPointRotation({
 
       <ConfirmModal
         isOpen={isConfirming}
-        title="Solicitar intercambio"
-        confirmLabel="Enviar solicitud"
+        title={directTransfer ? "Confirmar traslado" : "Solicitar intercambio"}
+        confirmLabel={directTransfer ? "Trasladarme" : "Enviar solicitud"}
         cancelLabel="Cancelar"
         isLoading={isBusy}
         onConfirm={() => void sendRequest()}
@@ -383,10 +404,10 @@ export function ControlPointRotation({
         }}
         message={
           <div>
-            <p>
+            {directTransfer ? <p>¿Deseas trasladarte al aula seleccionada?</p> : <p>
               Enviarás una solicitud de intercambio a{' '}
               <strong>{selectedResponsible?.name}</strong>.
-            </p>
+            </p>}
 
             <p>
               Punto actual: {point.room_name} ·{' '}
