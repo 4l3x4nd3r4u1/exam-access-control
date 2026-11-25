@@ -20,6 +20,7 @@ use App\Http\Controllers\ProcessedRosterController;
 use App\Http\Controllers\StudentStatusController;
 use App\Http\Controllers\StudentCourseGroupController;
 use App\Http\Controllers\BlackListController;
+use App\Http\Controllers\DetailedExamReportController;
 use App\Http\Controllers\ExamReportController;
 use App\Http\Controllers\SharedExamController;
 use App\Http\Controllers\ControlPointController;
@@ -51,6 +52,13 @@ Route::middleware('auth.jwt')->group(function () {
     Route::post('/exams/{examId}/reports', [ExamReportController::class, 'store']);
     Route::get('/exams/{examId}/reports', [ExamReportController::class, 'index']);
     Route::get('/exams/{examId}/reports/{reportId}/pdf', [ExamReportController::class, 'download']);
+    Route::get('/detailed-exam-reports/finished-exams', [DetailedExamReportController::class, 'finishedExams']);
+    Route::get('/detailed-exam-reports/{examId}', [DetailedExamReportController::class, 'show'])
+        ->where('examId', '[0-9]+');
+    Route::post('/detailed-exam-reports/{examId}/generate', [DetailedExamReportController::class, 'generate'])
+        ->where('examId', '[0-9]+');
+    Route::get('/detailed-exam-reports/{examId}/{reportId}/pdf', [DetailedExamReportController::class, 'downloadPdf'])
+        ->where(['examId' => '[0-9]+', 'reportId' => '[0-9]+']);
     Route::post('/exams/{exam}/invitations', [ExamInvitationController::class, 'store'])
         ->where('exam', '[0-9]+');
 });
