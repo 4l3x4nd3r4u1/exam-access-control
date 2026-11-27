@@ -16,6 +16,7 @@ class AvailableRoomsRequest extends FormRequest
         return [
             'date' => 'required|date_format:Y-m-d',
             'startTime' => 'required|date_format:H:i',
+            'endTime' => 'nullable|date_format:H:i|after:startTime',
         ];
     }
 
@@ -26,6 +27,8 @@ class AvailableRoomsRequest extends FormRequest
             'date.date_format' => 'La fecha debe tener formato YYYY-MM-DD.',
             'startTime.required' => 'La hora de inicio es obligatoria.',
             'startTime.date_format' => 'La hora debe tener formato HH:MM.',
+            'endTime.date_format' => 'La hora de finalización debe tener formato HH:MM.',
+            'endTime.after' => 'La hora de finalización debe ser posterior a la hora de inicio.',
         ];
     }
 }

@@ -74,6 +74,24 @@ function CourseGroupSearchContent({
     };
   }, [onlyTeacherCourses, currentUserId]);
 
+  // Cargar IDs de materias propias para identificar visualmente las del docente
+  useEffect(() => {
+    if (!currentUserId || onlyTeacherCourses) return;
+    let isMounted = true;
+    courseService
+      .getTeacherCourses(currentUserId)
+      .then((items) => {
+        if (isMounted) {
+          setMyCourseIds(new Set(items.map((item) => String(item.course_group_id))));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUserId, onlyTeacherCourses]);
+
   // 2) "Mis materias": GET /teachers/{user_id}/courses (se pide una sola vez)
   const toggleOnlyMine = () => {
     if (onlyMine) {
@@ -199,19 +217,36 @@ function CourseGroupSearchContent({
 
         {!busy &&
           !error &&
-          visibleGroups.map((group) => (
-            <button
-              type="button"
-              role="listitem"
-              className="cg-row"
-              key={group.course_group_id}
-              onClick={() => onSelect(group)}
-            >
-              <span className="cg-row-name">{group.subject_name}</span>
-              <span className="cg-chip">G:{group.group_code}</span>
-              <span className="cg-chip">{group.academic_term}</span>
-            </button>
-          ))}
+          visibleGroups.map((group) => {
+            const isMine =
+              Boolean(group.can_interact) ||
+              (group.teacher_id !== undefined &&
+                group.teacher_id !== null &&
+                Number(group.teacher_id) === Number(currentUserId)) ||
+              Boolean(myCourseIds && myCourseIds.has(String(group.course_group_id)));
+
+            return (
+              <button
+                type="button"
+                role="listitem"
+                className={`cg-row ${isMine ? 'is-mine' : ''}`}
+                key={group.course_group_id}
+                onClick={() => onSelect(group)}
+              >
+                <span className="cg-row-name">{group.subject_name}</span>
+                <span className="cg-chip">G:{group.group_code}</span>
+                <span className="cg-chip">{group.academic_term}</span>
+                {isMine && (
+                  <span
+                    className="cg-mine-arrow"
+                    title="Tu materia asignada"
+                  >
+                    &gt;
+                  </span>
+                )}
+              </button>
+            );
+          })}
 
         {!busy && !error && visibleGroups.length === 0 && (
           <p className="cg-feedback">

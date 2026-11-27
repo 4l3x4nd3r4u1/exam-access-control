@@ -22,7 +22,7 @@ import { ScheduleExamDrawer } from './components/ScheduleExamDrawer';
 import { StudentEligibilityDrawer } from './components/StudentEligibilityDrawer';
 import { ExamSearchDrawer } from './components/ExamSearchDrawer';
 
-import { authService, hasFunction } from './services/authService';
+import { authService, hasFunction, hasRole } from './services/authService';
 
 import { FUNCTION_CODES } from './types/auth';
 import type { UserSession } from './types/auth';
@@ -46,6 +46,10 @@ import { ControlPointIngressView } from './views/ControlPointIngressView';
 import type { ControlPointSelection } from './types/controlPoint';
 import './App.css';
 import { AcademicUserDrawer } from './components/NewAcademicUserDrawer';
+import { SharedExamsView } from './views/SharedExamsView';
+import { InviteTeacherDrawer } from './components/InviteTeacherDrawer';
+import inviteTeacherIcon from './assets/invitar_docente.svg';
+import sharedExamsIcon from './assets/documento_examen.svg';
 
 
 type ApplicationScreen =
@@ -57,7 +61,8 @@ type ApplicationScreen =
 |   'ENROLLED_STUDENTS'
   | 'EXAM_ACCESS_CONTROL'
   | 'CONTROL_POINTS'
-  | 'CONTROL_POINT_INGRESS'; 
+  | 'CONTROL_POINT_INGRESS'
+  | 'SHARED_EXAMS'; 
 
 /** Drawer de búsqueda de materia abierto desde el panel. */
 type CourseSearchTarget = 'SCHEDULED_EXAMS' | 'ENROLLED_STUDENTS' | 'SCHEDULE_EXAM';
@@ -89,6 +94,9 @@ export default function App() {
     useState(false);
 
   const [isExamSearchDrawerOpen, setIsExamSearchDrawerOpen] =
+    useState(false);
+
+  const [isInviteTeacherDrawerOpen, setIsInviteTeacherDrawerOpen] =
     useState(false);
 
   // Examen y aula (punto de control) elegidos para el control de acceso.
@@ -125,6 +133,7 @@ export default function App() {
     setCourseForScheduleExam(null);
     setAccessControlTarget(null);
     setIsExamSearchDrawerOpen(false);
+    setIsInviteTeacherDrawerOpen(false);
 
     setIsImportDrawerOpen(false);
     setIsAssignedCoursesDrawerOpen(false);
@@ -227,6 +236,16 @@ export default function App() {
           setSelectedControlPoint(null);
           setScreen('CONTROL_POINTS');
         }}
+      />
+    );
+  }
+
+  if (screen === 'SHARED_EXAMS') {
+    return (
+      <SharedExamsView
+        teacherId={session.user_id}
+        onBack={() => setScreen('DASHBOARD')}
+        onLogout={handleLogout}
       />
     );
   }
@@ -377,6 +396,22 @@ export default function App() {
       open: () => setScreen('CONTROL_POINTS'),
       visible: true,
     },
+    {
+      functionCode: 'shared-exams',
+      label: 'Exámenes Compartidos',
+      icon: sharedExamsIcon,
+      iconClass: 'admin-exams-icon',
+      open: () => setScreen('SHARED_EXAMS'),
+      visible: hasFunction(session, FUNCTION_CODES.SCHEDULE_EXAM) || hasRole(session, 'DOCENTE'),
+    },
+    {
+      functionCode: 'invite-exam-teacher',
+      label: 'Invitar Docente a Examen',
+      icon: inviteTeacherIcon,
+      iconClass: 'admin-invite-teacher-icon',
+      open: () => setIsInviteTeacherDrawerOpen(true),
+      visible: hasFunction(session, FUNCTION_CODES.SCHEDULE_EXAM) || hasRole(session, 'DOCENTE'),
+    },
   ].filter((item) => item.visible);
 
   return (
@@ -521,6 +556,14 @@ export default function App() {
           setScreen('EXAM_ACCESS_CONTROL');
         }}
       />
+
+      {isInviteTeacherDrawerOpen && (
+        <InviteTeacherDrawer
+          isOpen={isInviteTeacherDrawerOpen}
+          onClose={() => setIsInviteTeacherDrawerOpen(false)}
+          session={session}
+        />
+      )}
 
       <StudentEligibilityDrawer
         isOpen={isStudentEligibilityDrawerOpen}

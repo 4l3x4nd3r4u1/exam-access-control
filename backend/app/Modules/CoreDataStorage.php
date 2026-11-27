@@ -330,11 +330,43 @@ class CoreDataStorage
                     throw new \Exception("El tipo de examen con ID {$data->examTypeId} no existe.");
                 }
 
-                // Validate rooms exist
-                $roomIds = array_column($data->rooms, 'roomId');
-                $existingRooms = Room::whereIn('id', $roomIds)->count();
-                if ($existingRooms !== count($roomIds)) {
-                    throw new \Exception("Una o más aulas no existen.");
+                // Resolve or create rooms (standard catalog room or custom manual room)
+                $resolvedRooms = [];
+                foreach ($data->rooms as $roomInput) {
+                    if (!empty($roomInput->roomId)) {
+                        $roomModel = Room::find($roomInput->roomId);
+                        if (!$roomModel) {
+                            throw new \Exception("Una o más aulas seleccionadas no existen.");
+                        }
+                    } else {
+                        $customName = trim((string) ($roomInput->customRoomName ?? ''));
+                        if ($customName === '') {
+                            throw new \Exception("Cada aula debe tener un identificador o nombre válido.");
+                        }
+
+                        $requestedCap = max(
+                            1,
+                            (int) ($roomInput->customRoomCapacity
+                                ?? $roomInput->assignedCapacity
+                                ?? max(count($roomInput->students), 1))
+                        );
+
+                        $roomModel = Room::whereRaw('LOWER(nombre) = ?', [mb_strtolower($customName)])->first();
+                        if (!$roomModel) {
+                            $roomModel = Room::create([
+                                'nombre' => $customName,
+                                'capacidad' => $requestedCap,
+                                'activo' => true,
+                            ]);
+                        }
+                    }
+
+                    $resolvedRooms[] = [
+                        'room' => $roomModel,
+                        'students' => $roomInput->students,
+                        'auxiliarId' => $roomInput->auxiliarId,
+                        'assignedCapacity' => $roomInput->assignedCapacity,
+                    ];
                 }
 
                 // Validate exam type ID
@@ -343,7 +375,16 @@ class CoreDataStorage
                 }
 
                 // Check for duplicate exam (same course group, exam type, and date)
-                $existingExam = Exam::where('materia_grupo_id', $data->courseGroupId)
+                $allGroupIds = array_unique(array_filter(array_merge([$data->courseGroupId], $data->courseGroupIds ?? [])));
+
+                $existingExam = Exam::where(function ($query) use ($allGroupIds) {
+                        $query->whereIn('materia_grupo_id', $allGroupIds);
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('examen', 'materia_grupo_ids')) {
+                            foreach ($allGroupIds as $gid) {
+                                $query->orWhereJsonContains('materia_grupo_ids', $gid);
+                            }
+                        }
+                    })
                     ->where('tipo_examen_id', $data->examTypeId)
                     ->where('fecha', $data->date)
                     ->where('activo', true)
@@ -353,8 +394,10 @@ class CoreDataStorage
                     throw new \Exception("Ya existe un examen programado para esta materia, tipo y fecha.");
                 }
 
-                // Calculate end time (start + 1:30h)
-                $endTime = \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
+                // Calculate end time (custom end time or start + 1:30h)
+                $endTime = $data->endTime && trim($data->endTime) !== ''
+                    ? \Carbon\Carbon::parse($data->endTime)->format('H:i')
+                    : \Carbon\Carbon::parse($data->startTime)->addMinutes(90)->format('H:i');
 
                 // Get default status: AUSENTE
                 $ausenteStatus = ExamStudentStatus::where('nombre', 'AUSENTE')->first();
@@ -363,14 +406,19 @@ class CoreDataStorage
                 }
 
                 // Create exam
-                $exam = Exam::create([
+                $examAttributes = [
                     'materia_grupo_id' => $data->courseGroupId,
                     'tipo_examen_id' => $data->examTypeId,
                     'fecha' => $data->date,
                     'hora_inicio' => $data->startTime,
                     'hora_fin' => $endTime,
                     'activo' => true,
-                ]);
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('examen', 'materia_grupo_ids')) {
+                    $examAttributes['materia_grupo_ids'] = $allGroupIds;
+                }
+
+                $exam = Exam::create($examAttributes);
 
                 if (!$exam || !$exam->id) {
                     throw new \Exception("No se pudo crear el examen.");
@@ -386,21 +434,33 @@ class CoreDataStorage
                     throw new \Exception("Uno o más estudiantes no existen en la base de datos.");
                 }
 
-                // Assign rooms with students
-                foreach ($data->rooms as $room) {
+                // Assign rooms with students and assistants
+                $auxiliarIds = $data->auxiliarIds ?? [];
+                $numAux = count($auxiliarIds);
+
+                foreach ($resolvedRooms as $index => $resolved) {
+                    $roomModel = $resolved['room'];
+                    $students = $resolved['students'];
+                    $assignedCap = $resolved['assignedCapacity'] !== null && $resolved['assignedCapacity'] > 0
+                        ? (int) $resolved['assignedCapacity']
+                        : count($students);
+
+                    $roomAuxId = $resolved['auxiliarId']
+                        ?? ($numAux > 0 ? $auxiliarIds[$index % $numAux] : null);
+
                     $examRoom = ExamRoom::create([
                         'examen_id' => $exam->id,
-                        'aula_id' => $room->roomId,
-                        'cupo_asignado' => count($room->students),
-                        'auxiliar_id' => $room->auxiliarId,
+                        'aula_id' => $roomModel->id,
+                        'cupo_asignado' => $assignedCap,
+                        'auxiliar_id' => $roomAuxId,
                     ]);
 
                     // Assign students to this room
-                    foreach ($room->students as $studentId) {
+                    foreach ($students as $studentId) {
                         ExamStudent::create([
                             'examen_id' => $exam->id,
                             'usuario_id' => $studentId,
-                            'aula_id' => $room->roomId,
+                            'aula_id' => $roomModel->id,
                             'estado_id' => $ausenteStatus->id,
                             'observaciones' => null,
                         ]);
@@ -467,9 +527,11 @@ class CoreDataStorage
      * @param string $startTime
      * @return array<RoomSummary>
      */
-    public function getAvailableRooms(string $date, string $startTime): array
+    public function getAvailableRooms(string $date, string $startTime, ?string $customEndTime = null): array
     {
-        $endTime = \Carbon\Carbon::parse($startTime)->addMinutes(90)->format('H:i');
+        $endTime = $customEndTime && trim($customEndTime) !== ''
+            ? \Carbon\Carbon::parse($customEndTime)->format('H:i')
+            : \Carbon\Carbon::parse($startTime)->addMinutes(90)->format('H:i');
 
         // Find rooms that have exams overlapping with the requested time slot
         $reservedRoomIds = ExamRoom::whereHas('exam', function ($query) use ($date, $startTime, $endTime) {
@@ -497,7 +559,12 @@ class CoreDataStorage
     public function getExamsByCourseGroup(int $courseGroupId): array
     {
         return Exam::with(['examType', 'rooms'])
-            ->where('materia_grupo_id', $courseGroupId)
+            ->where(function ($query) use ($courseGroupId) {
+                $query->where('materia_grupo_id', $courseGroupId);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('examen', 'materia_grupo_ids')) {
+                    $query->orWhereJsonContains('materia_grupo_ids', $courseGroupId);
+                }
+            })
             ->where('activo', true)
             ->orderBy('fecha', 'asc')
             ->get()
@@ -538,6 +605,9 @@ class CoreDataStorage
             ->orderBy('hora_inicio', 'asc')
             ->get()
             ->map(function (Exam $exam) use ($authenticatedUserId) {
+                $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
+                $isExamAssistant = $exam->examRooms->contains(fn($er) => (int) $er->auxiliar_id === $authenticatedUserId);
+
                 $rooms = $exam->examRooms
                     ->map(fn(ExamRoom $examRoom) => new AllExamRoomSummary(
                         roomId: (string) $examRoom->aula_id,
@@ -545,8 +615,7 @@ class CoreDataStorage
                         assistantId: $examRoom->auxiliar_id !== null
                             ? (int) $examRoom->auxiliar_id
                             : null,
-                        canInteract: $examRoom->auxiliar_id !== null
-                            && (int) $examRoom->auxiliar_id === $authenticatedUserId,
+                        canInteract: $isExamTeacher || $isExamAssistant,
                     ))
                     ->values()
                     ->all();
@@ -625,7 +694,6 @@ class CoreDataStorage
             $authenticatedUserId = (int) auth()->id();
             $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
             $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-                ->where('aula_id', $examStudent->aula_id)
                 ->where('auxiliar_id', $authenticatedUserId)
                 ->exists();
 
@@ -996,7 +1064,6 @@ class CoreDataStorage
         $authenticatedUserId = (int) auth()->id();
         $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
         $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('aula_id', $examStudent->aula_id)
             ->where('auxiliar_id', $authenticatedUserId)
             ->exists();
 
@@ -1108,7 +1175,6 @@ class CoreDataStorage
         $authenticatedUserId = (int) auth()->id();
         $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
         $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('aula_id', $examStudent->aula_id)
             ->where('auxiliar_id', $authenticatedUserId)
             ->exists();
 
@@ -1237,7 +1303,6 @@ class CoreDataStorage
         $authenticatedUserId = (int) auth()->id();
         $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
         $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
-            ->where('aula_id', $examStudent->aula_id)
             ->where('auxiliar_id', $authenticatedUserId)
             ->exists();
 
@@ -1355,10 +1420,6 @@ class CoreDataStorage
         $isExamTeacher = (int) ($exam->courseGroup?->docente_id ?? 0) === $authenticatedUserId;
         $isAssignedAssistant = ExamRoom::where('examen_id', $examId)
             ->where('auxiliar_id', $authenticatedUserId)
-            ->when(
-                $examStudent !== null,
-                fn($query) => $query->where('aula_id', $examStudent->aula_id)
-            )
             ->exists();
 
         if (!$isExamTeacher && !$isAssignedAssistant) {

@@ -214,6 +214,16 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(CourseGroup::class, 'docente_id');
     }
 
+    public function receivedExamInvitations(): HasMany
+    {
+        return $this->hasMany(ExamInvitation::class, 'docente_invitado_id');
+    }
+
+    public function sentExamInvitations(): HasMany
+    {
+        return $this->hasMany(ExamInvitation::class, 'docente_invitador_id');
+    }
+
     // Alias for legacy taught courses
     public function courseGroups(): HasMany
     {

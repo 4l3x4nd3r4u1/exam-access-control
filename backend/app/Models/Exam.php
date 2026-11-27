@@ -16,6 +16,7 @@ class Exam extends Model
 
     protected $fillable = [
         'materia_grupo_id',
+        'materia_grupo_ids',
         'tipo_examen_id',
         'fecha',
         'hora_inicio',
@@ -28,6 +29,7 @@ class Exam extends Model
         return [
             'fecha' => 'date',
             'activo' => 'boolean',
+            'materia_grupo_ids' => 'array',
         ];
     }
 
@@ -66,9 +68,19 @@ class Exam extends Model
         return $this->hasMany(ExamStudent::class, 'examen_id');
     }
 
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(ExamInvitation::class, 'examen_id');
+    }
+
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AccessAuditLog::class, 'exam_id');
+    }
+
+    public function sharedInvitations(): HasMany
+    {
+        return $this->hasMany(SharedExamInvitation::class, 'examen_id');
     }
 
     // Accessors for backward compatibility

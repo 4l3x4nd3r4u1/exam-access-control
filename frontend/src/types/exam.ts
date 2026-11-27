@@ -58,7 +58,10 @@ export interface AvailableRoomsResponse {
 }
 
 export interface ScheduleExamRoomPayload {
-  roomId: number;
+  roomId?: number | null;
+  customRoomName?: string;
+  customRoomCapacity?: number;
+  assignedCapacity?: number;
   students: number[];
   auxiliarId?: number | null;
 }
@@ -73,9 +76,12 @@ export interface ScheduleExamPayload {
   examTypeId: number;
   date: string;
   startTime: string;
+  endTime?: string;
   rooms: ScheduleExamRoomPayload[];
   generalRules: string[];
   studentRules: ScheduleExamStudentRuleData[];
+  courseGroupIds?: number[];
+  auxiliarIds?: number[];
 }
 
 export interface StudentEnrollmentCheckResponse {
